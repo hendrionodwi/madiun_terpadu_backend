@@ -54,4 +54,40 @@ class WasteProcessingRecord extends Model
     {
         return $this->belongsTo(Tps3rWasteDeposit::class, 'tps3r_waste_deposit_id');
     }
+
+    /**
+     * Get human-readable process method label.
+     */
+    public function getProcessMethodLabelAttribute(): string
+    {
+        return match ($this->process_method) {
+            'composting' => 'Pengomposan',
+            'sorting' => 'Pemilahan',
+            'shredding' => 'Pencacahan',
+            'recycling' => 'Daur Ulang',
+            'residue_handling' => 'Penanganan Residu',
+            default => ucfirst(str_replace('_', ' ', $this->process_method)),
+        };
+    }
+
+    /**
+     * Get human-readable waste type / category label.
+     */
+    public function getWasteTypeLabelAttribute(): string
+    {
+        $categoryName = MasterData::where('group', 'waste_category')
+            ->where('code', $this->waste_type)
+            ->value('name');
+
+        if ($categoryName) {
+            return $categoryName;
+        }
+
+        return match ($this->waste_type) {
+            'organik' => 'Organik',
+            'anorganik_daur_ulang' => 'Anorganik Daur Ulang',
+            'residu' => 'Residu',
+            default => ucwords(str_replace('_', ' ', $this->waste_type)),
+        };
+    }
 }

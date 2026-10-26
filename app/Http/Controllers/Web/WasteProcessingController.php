@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\MasterData;
 use App\Models\Tps3rWasteDeposit;
 use App\Models\User;
 use App\Models\WasteProcessingRecord;
@@ -15,6 +16,22 @@ use Symfony\Component\HttpFoundation\Response;
 
 class WasteProcessingController extends Controller
 {
+    /**
+     * Daftar metode pengolahan baku TPS3R Kota Madiun.
+     *
+     * @return array<string, string>
+     */
+    public static function processMethods(): array
+    {
+        return [
+            'composting' => 'Pengomposan (Kompos Organik)',
+            'sorting' => 'Pemilahan Lanjutan',
+            'shredding' => 'Pencacahan Plastik / Organik',
+            'recycling' => 'Daur Ulang Anorganik',
+            'residue_handling' => 'Penanganan Residu (TPA Winongo)',
+        ];
+    }
+
     public function index(Request $request): View
     {
         /** @var User $user */
@@ -22,10 +39,18 @@ class WasteProcessingController extends Controller
         $profile = $user->pengelolaTps3rProfile;
         abort_if($profile === null, Response::HTTP_UNPROCESSABLE_ENTITY, 'Lengkapi profil TPS3R terlebih dahulu.');
 
+        // Ambil kategori sampah dari Data Master yang aktif
+        $masterCategories = MasterData::query()
+            ->where('group', 'waste_category')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'code', 'name', 'pillar']);
+
         return view('dashboard.tps3r.processing', [
             'records' => WasteProcessingRecord::query()
                 ->where('pengelola_id', $user->id)
-                ->with('deposit:id,nomor_resi')
+                ->with('deposit:id,nomor_resi,jenis_sampah,berat_kg')
                 ->latest('started_on')
                 ->latest('id')
                 ->paginate(15),
@@ -34,15 +59,29 @@ class WasteProcessingController extends Controller
                 ->latest('tanggal_setor')
                 ->limit(50)
                 ->get(['id', 'nomor_resi', 'jenis_sampah', 'berat_kg']),
+            'masterCategories' => $masterCategories,
+            'processMethods' => self::processMethods(),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
+        // Ambil kode kategori dari Data Master agar validasi dinamis
+        $masterCategoryCodes = MasterData::query()
+            ->where('group', 'waste_category')
+            ->where('is_active', true)
+            ->pluck('code')
+            ->all();
+
+        $allowedWasteTypes = array_unique(array_merge(
+            ['organik', 'anorganik_daur_ulang', 'residu'],
+            $masterCategoryCodes
+        ));
+
         $validated = $request->validate([
             'tps3r_waste_deposit_id' => ['nullable', 'integer', 'exists:tps3r_waste_deposits,id'],
-            'process_method' => ['required', Rule::in(['composting', 'sorting', 'shredding', 'recycling', 'residue_handling'])],
-            'waste_type' => ['required', Rule::in(['organik', 'anorganik_daur_ulang', 'residu'])],
+            'process_method' => ['required', Rule::in(array_keys(self::processMethods()))],
+            'waste_type' => ['required', Rule::in($allowedWasteTypes)],
             'input_weight_kg' => ['required', 'numeric', 'min:0.1', 'max:999999.99'],
             'started_on' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],

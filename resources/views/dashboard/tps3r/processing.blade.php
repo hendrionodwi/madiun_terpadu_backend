@@ -3,7 +3,7 @@
         <div>
             <p class="text-sm font-semibold text-teal-700 dark:text-teal-400">Operasional TPS3R</p>
             <h1 class="text-2xl font-bold text-zinc-950 dark:text-white">Proses Pengolahan Sampah</h1>
-            <p class="mt-1 text-sm text-zinc-500">Catat batch dari bahan masuk hingga hasil olahan selesai.</p>
+            <p class="mt-1 text-sm text-zinc-500">Catat batch dari bahan masuk hingga hasil olahan selesai, terintegrasi dengan Data Master.</p>
         </div>
 
         @if (session('status'))
@@ -22,42 +22,75 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('dashboard.tps3r.processing.store') }}" class="grid gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 md:grid-cols-3">
+        <!-- Form Pembuatan Batch Pengolahan (Auto-sync dengan Setoran & Data Master) -->
+        <form method="POST" action="{{ route('dashboard.tps3r.processing.store') }}" 
+              x-data="{
+                  selectedDepositId: '',
+                  deposits: {{ Js::from($deposits->keyBy('id')) }},
+                  inputWeight: '{{ old('input_weight_kg', '') }}',
+                  wasteType: '{{ old('waste_type', '') }}',
+                  onDepositChange() {
+                      if (this.selectedDepositId && this.deposits[this.selectedDepositId]) {
+                          const dep = this.deposits[this.selectedDepositId];
+                          this.inputWeight = dep.berat_kg;
+                          this.wasteType = dep.jenis_sampah;
+                      }
+                  }
+              }" 
+              class="grid gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 md:grid-cols-3">
             @csrf
 
             <label class="grid gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                <span>Setoran sumber</span>
-                <select name="tps3r_waste_deposit_id" class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
-                    <option value="">Tanpa referensi setoran</option>
+                <span class="flex items-center justify-between">
+                    <span>Setoran sumber</span>
+                    <span class="text-[11px] text-teal-600 dark:text-teal-400 font-normal">Otomatis isi berat & jenis</span>
+                </span>
+                <select name="tps3r_waste_deposit_id" x-model="selectedDepositId" @change="onDepositChange()" class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                    <option value="">Tanpa referensi setoran (Input Manual)</option>
                     @foreach ($deposits as $deposit)
                         <option value="{{ $deposit->id }}">
-                            {{ $deposit->nomor_resi }} · {{ number_format($deposit->berat_kg, 1, ',', '.') }} kg
+                            {{ $deposit->nomor_resi }} · {{ number_format($deposit->berat_kg, 1, ',', '.') }} kg ({{ ucwords(str_replace('_', ' ', $deposit->jenis_sampah)) }})
                         </option>
                     @endforeach
                 </select>
             </label>
 
             <label class="grid gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                <span>Metode</span>
+                <span>Metode pengolahan</span>
                 <select name="process_method" required class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
-                    @foreach (['composting' => 'Pengomposan', 'sorting' => 'Pemilahan', 'shredding' => 'Pencacahan', 'recycling' => 'Daur ulang', 'residue_handling' => 'Penanganan residu'] as $value => $label)
+                    @foreach ($processMethods as $value => $label)
                         <option value="{{ $value }}">{{ $label }}</option>
                     @endforeach
                 </select>
             </label>
 
             <label class="grid gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                <span>Jenis sampah</span>
-                <select name="waste_type" required class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
-                    <option value="organik">Organik</option>
-                    <option value="anorganik_daur_ulang">Anorganik daur ulang</option>
-                    <option value="residu">Residu</option>
+                <span class="flex items-center justify-between">
+                    <span>Jenis sampah</span>
+                    <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-normal">Data Master</span>
+                </span>
+                <select name="waste_type" x-model="wasteType" required class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                    <option value="">Pilih jenis sampah</option>
+                    <optgroup label="3 Pilar Utama Sampah Kota Madiun">
+                        <option value="organik">Organik (Pakan Maggot / Kompos)</option>
+                        <option value="anorganik_daur_ulang">Anorganik Daur Ulang (Plastik / Logam / Kertas)</option>
+                        <option value="residu">Residu (Kirim TPA Winongo)</option>
+                    </optgroup>
+                    @if (isset($masterCategories) && $masterCategories->isNotEmpty())
+                        <optgroup label="Kategori Sampah Data Master DLH">
+                            @foreach ($masterCategories as $cat)
+                                <option value="{{ $cat->code }}">
+                                    {{ $cat->name }} (Pilar: {{ ucfirst(str_replace('_', ' ', $cat->pillar ?? 'umum')) }})
+                                </option>
+                            @endforeach
+                        </optgroup>
+                    @endif
                 </select>
             </label>
 
             <label class="grid gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 <span>Berat masuk (kg)</span>
-                <input type="number" step="0.01" min="0.1" name="input_weight_kg" required class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                <input type="number" step="0.01" min="0.1" name="input_weight_kg" x-model="inputWeight" required placeholder="0.0" class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
             </label>
 
             <label class="grid gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
@@ -96,54 +129,84 @@
                                         {{ $record->deposit?->nomor_resi ?? 'Tanpa resi' }} · {{ $record->started_on->format('d M Y') }}
                                     </p>
                                 </td>
-                                <td class="px-4 py-4 capitalize text-zinc-800 dark:text-zinc-200">
-                                    {{ str_replace('_', ' ', $record->process_method) }}
-                                    <p class="text-xs text-zinc-500">
-                                        {{ str_replace('_', ' ', $record->waste_type) }}
+                                <td class="px-4 py-4 text-zinc-800 dark:text-zinc-200">
+                                    <p class="font-semibold text-teal-800 dark:text-teal-300">
+                                        {{ $record->process_method_label }}
+                                    </p>
+                                    <p class="text-xs text-zinc-500 font-medium mt-0.5">
+                                        🏷️ {{ $record->waste_type_label }}
                                     </p>
                                 </td>
                                 <td class="px-4 py-4 text-zinc-800 dark:text-zinc-200">
-                                    Masuk {{ number_format($record->input_weight_kg, 1, ',', '.') }} kg
+                                    <span class="font-medium">Masuk: {{ number_format($record->input_weight_kg, 1, ',', '.') }} kg</span>
                                     @if ($record->output_weight_kg !== null)
-                                        <p class="text-xs text-zinc-500">
-                                            Hasil {{ number_format($record->output_weight_kg, 1, ',', '.') }} kg
+                                        <p class="text-xs text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">
+                                            ✓ Hasil: {{ number_format($record->output_weight_kg, 1, ',', '.') }} kg
                                         </p>
                                     @endif
                                 </td>
                                 <td class="px-4 py-4">
-                                    <span class="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-bold uppercase text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                                        {{ $record->status }}
+                                    @php
+                                        $badgeStyles = match ($record->status) {
+                                            'completed' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
+                                            'processing' => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
+                                            'planned' => 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300',
+                                            'cancelled' => 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 line-through',
+                                            default => 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
+                                        };
+                                        $statusLabels = [
+                                            'planned' => 'Direncanakan',
+                                            'processing' => 'Diproses',
+                                            'completed' => 'Selesai',
+                                            'cancelled' => 'Dibatalkan',
+                                        ];
+                                    @endphp
+                                    <span class="rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wider {{ $badgeStyles }}">
+                                        {{ $statusLabels[$record->status] ?? $record->status }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-4">
-                                    @if (in_array($record->status, ['planned', 'processing'], true))
-                                        <form method="POST" action="{{ route('dashboard.tps3r.processing.update', $record) }}" class="flex min-w-72 items-center gap-2">
+                                    @if ($record->status === 'planned')
+                                        {{-- Transisi dari Planned: hanya ke Processing atau Cancelled --}}
+                                        <form method="POST" action="{{ route('dashboard.tps3r.processing.update', $record) }}" class="flex min-w-64 items-center gap-2">
                                             @csrf
                                             @method('PATCH')
 
-                                            <select name="status" class="min-w-28 rounded-lg border border-zinc-300 px-2.5 py-1.5 text-xs outline-none focus:border-teal-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
-                                                @if ($record->status === 'planned')
-                                                    <option value="processing">Proses</option>
-                                                @endif
-                                                <option value="completed">Selesai</option>
+                                            <select name="status" class="rounded-lg border border-zinc-300 px-2.5 py-1.5 text-xs outline-none focus:border-teal-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                                                <option value="processing">Mulai Proses</option>
                                                 <option value="cancelled">Batalkan</option>
                                             </select>
-
-                                            <input type="number" step="0.01" min="0" name="output_weight_kg" placeholder="Hasil kg" class="w-24 rounded-lg border border-zinc-300 px-2.5 py-1.5 text-xs outline-none focus:border-teal-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
 
                                             <button type="submit" class="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-700">
                                                 Simpan
                                             </button>
                                         </form>
+                                    @elseif ($record->status === 'processing')
+                                        {{-- Transisi dari Processing: ke Completed (wajib hasil kg) atau Cancelled --}}
+                                        <form method="POST" action="{{ route('dashboard.tps3r.processing.update', $record) }}" class="flex min-w-72 items-center gap-2">
+                                            @csrf
+                                            @method('PATCH')
+
+                                            <select name="status" class="rounded-lg border border-zinc-300 px-2.5 py-1.5 text-xs outline-none focus:border-teal-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                                                <option value="completed">Selesaikan</option>
+                                                <option value="cancelled">Batalkan</option>
+                                            </select>
+
+                                            <input type="number" step="0.01" min="0" name="output_weight_kg" placeholder="Hasil kg" class="w-24 rounded-lg border border-zinc-300 px-2.5 py-1.5 text-xs outline-none focus:border-teal-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+
+                                            <button type="submit" class="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-700">
+                                                Selesai
+                                            </button>
+                                        </form>
                                     @else
-                                        <span class="text-xs text-zinc-400">Final</span>
+                                        <span class="text-xs text-zinc-400 font-semibold italic">Arsip Final</span>
                                     @endif
                                 </td>
                             </tr>
                         @empty
                             <tr>
                                 <td colspan="5" class="px-4 py-10 text-center text-zinc-500">
-                                    Belum ada batch pengolahan.
+                                    Belum ada batch pengolahan sampah tercatat.
                                 </td>
                             </tr>
                         @endforelse
