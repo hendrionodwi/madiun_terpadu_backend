@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         @include('partials.head')
     </head>
-    <body class="min-h-screen bg-white dark:bg-zinc-800">
+    <body class="min-h-screen bg-civic-canvas dark:bg-slate-950">
         <flux:header container class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.toggle class="lg:hidden mr-2" icon="bars-2" inset="left" />
 
@@ -17,28 +17,20 @@
 
             <flux:spacer />
 
-            <flux:navbar class="me-1.5 space-x-0.5 rtl:space-x-reverse py-0!">
-                <flux:tooltip :content="__('Search')" position="bottom">
-                    <flux:navbar.item class="!h-10 [&>div>svg]:size-5" icon="magnifying-glass" href="#" :label="__('Search')" />
-                </flux:tooltip>
-                <flux:tooltip :content="__('Repository')" position="bottom">
+            <flux:navbar class="me-1.5 space-x-1 rtl:space-x-reverse py-0!">
+                <flux:tooltip :content="__('Beranda Publik')" position="bottom">
                     <flux:navbar.item
                         class="h-10 max-lg:hidden [&>div>svg]:size-5"
-                        icon="folder-git-2"
-                        href="https://github.com/laravel/livewire-starter-kit"
+                        icon="globe-alt"
+                        :href="route('home')"
                         target="_blank"
-                        :label="__('Repository')"
+                        :label="__('Beranda Publik')"
                     />
                 </flux:tooltip>
-                <flux:tooltip :content="__('Documentation')" position="bottom">
-                    <flux:navbar.item
-                        class="h-10 max-lg:hidden [&>div>svg]:size-5"
-                        icon="book-open-text"
-                        href="https://laravel.com/docs/starter-kits#livewire"
-                        target="_blank"
-                        :label="__('Documentation')"
-                    />
-                </flux:tooltip>
+                <div x-data class="flex items-center">
+                    <flux:button x-show="$flux.appearance !== 'dark'" x-on:click="$flux.appearance = 'dark'" icon="moon" variant="subtle" class="!h-10 !w-10" :label="__('Mode Gelap')" />
+                    <flux:button x-show="$flux.appearance === 'dark'" x-on:click="$flux.appearance = 'light'" icon="sun" variant="subtle" class="!h-10 !w-10" :label="__('Mode Terang')" />
+                </div>
             </flux:navbar>
 
             <x-desktop-user-menu />
@@ -62,11 +54,8 @@
             <flux:spacer />
 
             <flux:sidebar.nav>
-                <flux:sidebar.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
-                    {{ __('Repository') }}
-                </flux:sidebar.item>
-                <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
-                    {{ __('Documentation') }}
+                <flux:sidebar.item icon="globe-alt" :href="route('home')" target="_blank">
+                    {{ __('Beranda Publik') }}
                 </flux:sidebar.item>
             </flux:sidebar.nav>
         </flux:sidebar>

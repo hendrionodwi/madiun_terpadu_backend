@@ -34,6 +34,11 @@ use Illuminate\Support\Carbon;
     'kapasitas_harian_kg',
     'latitude',
     'longitude',
+    'midtrans_merchant_id',
+    'midtrans_client_key',
+    'midtrans_server_key',
+    'midtrans_is_production',
+    'midtrans_is_active',
 ])]
 class PengelolaTps3rProfile extends Model
 {
@@ -51,7 +56,18 @@ class PengelolaTps3rProfile extends Model
             'kapasitas_harian_kg' => 'float',
             'latitude' => 'float',
             'longitude' => 'float',
+            'midtrans_server_key' => 'encrypted',
+            'midtrans_is_production' => 'boolean',
+            'midtrans_is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Check if this TPS3R has active and complete Midtrans credentials.
+     */
+    public function isMidtransConfigured(): bool
+    {
+        return $this->midtrans_is_active && ! empty($this->midtrans_server_key) && ! empty($this->midtrans_client_key);
     }
 
     /**

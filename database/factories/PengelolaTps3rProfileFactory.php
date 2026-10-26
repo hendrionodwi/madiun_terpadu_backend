@@ -30,4 +30,18 @@ class PengelolaTps3rProfileFactory extends Factory
             'longitude' => fake()->longitude(111.51, 111.55),
         ];
     }
+
+    /**
+     * Indicate that the TPS3R has active Midtrans credentials.
+     */
+    public function withMidtrans(bool $isProduction = false): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'midtrans_merchant_id' => 'M-'.fake()->numerify('######'),
+            'midtrans_client_key' => 'SB-Mid-client-'.fake()->lexify('????????????'),
+            'midtrans_server_key' => 'SB-Mid-server-'.fake()->lexify('????????????'),
+            'midtrans_is_production' => $isProduction,
+            'midtrans_is_active' => true,
+        ]);
+    }
 }

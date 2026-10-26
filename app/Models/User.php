@@ -6,8 +6,10 @@ use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -37,6 +39,9 @@ use Laravel\Sanctum\HasApiTokens;
  * @property-read PengelolaTps3rProfile|null $pengelolaTps3rProfile
  * @property-read PemrakarsaProfile|null $pemrakarsaProfile
  * @property-read AdminDlhProfile|null $adminDlhProfile
+ * @property-read Collection<int, OrderFulfillment> $orderFulfillments
+ * @property-read Collection<int, FundWithdrawalRequest> $fundWithdrawalRequests
+ * @property-read EntityVerification|null $entityVerification
  * @property-read Model|null $profile
  */
 #[Fillable(['name', 'email', 'password', 'role', 'phone_number', 'avatar', 'is_active'])]
@@ -109,6 +114,46 @@ class User extends Authenticatable
     public function adminDlhProfile(): HasOne
     {
         return $this->hasOne(AdminDlhProfile::class);
+    }
+
+    /**
+     * Relation to Complaints submitted by user.
+     *
+     * @return HasMany<Complaint, $this>
+     */
+    public function complaints(): HasMany
+    {
+        return $this->hasMany(Complaint::class, 'pelapor_id');
+    }
+
+    /** @return HasMany<OrderFulfillment, $this> */
+    public function orderFulfillments(): HasMany
+    {
+        return $this->hasMany(OrderFulfillment::class, 'seller_id');
+    }
+
+    /** @return HasMany<FundWithdrawalRequest, $this> */
+    public function fundWithdrawalRequests(): HasMany
+    {
+        return $this->hasMany(FundWithdrawalRequest::class);
+    }
+
+    /** @return HasOne<EntityVerification, $this> */
+    public function entityVerification(): HasOne
+    {
+        return $this->hasOne(EntityVerification::class);
+    }
+
+    /** @return HasMany<PickupSchedule, $this> */
+    public function pickupSchedules(): HasMany
+    {
+        return $this->hasMany(PickupSchedule::class, 'warga_id');
+    }
+
+    /** @return HasMany<RouteSession, $this> */
+    public function routeSessions(): HasMany
+    {
+        return $this->hasMany(RouteSession::class, 'petugas_id');
     }
 
     /**

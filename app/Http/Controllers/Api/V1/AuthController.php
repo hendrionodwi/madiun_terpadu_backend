@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Auth\LoginRequest;
 use App\Http\Requests\Api\Auth\RegisterRequest;
+use App\Http\Requests\Api\Auth\UpdateProfileRequest;
 use App\Http\Resources\Api\UserResource;
 use App\Models\User;
 use App\Models\WargaProfile;
@@ -127,6 +128,39 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Data profil berhasil diambil.',
+            'data' => new UserResource($user),
+        ], Response::HTTP_OK);
+    }
+
+    /** Update the authenticated user's basic profile. */
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $validated = $request->validated();
+
+        DB::transaction(function () use ($user, $validated): void {
+            $user->update([
+                'name' => $validated['name'],
+                'phone_number' => $validated['phone_number'] ?? null,
+            ]);
+
+            if ($user->isWarga()) {
+                $user->wargaProfile()->updateOrCreate([], [
+                    'alamat' => $validated['alamat'] ?? null,
+                    'rt' => $validated['rt'] ?? null,
+                    'rw' => $validated['rw'] ?? null,
+                    'kelurahan' => $validated['kelurahan'] ?? null,
+                    'kecamatan' => $validated['kecamatan'] ?? null,
+                ]);
+            }
+        });
+
+        $user->refresh()->load($this->profileRelationFor($user->role));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profil berhasil diperbarui.',
             'data' => new UserResource($user),
         ], Response::HTTP_OK);
     }

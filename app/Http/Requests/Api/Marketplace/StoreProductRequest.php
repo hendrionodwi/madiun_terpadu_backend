@@ -1,0 +1,51 @@
+<?php
+
+namespace App\Http\Requests\Api\Marketplace;
+
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreProductRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'nama_produk' => ['required', 'string', 'max:255'],
+            'deskripsi' => ['nullable', 'string', 'max:2000'],
+            'kategori' => ['required', 'string', 'in:pupuk_kompos,kerajinan_plastik,maggot_pakan,ecobrick,lainnya'],
+            'harga' => ['required', 'numeric', 'min:0'],
+            'stok' => ['required', 'integer', 'min:0'],
+            'foto' => ['nullable', 'string', 'max:255'],
+            'is_available' => ['nullable', 'boolean'],
+        ];
+    }
+
+    /**
+     * Get custom error messages for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'nama_produk.required' => 'Nama produk wajib diisi.',
+            'kategori.required' => 'Kategori produk daur ulang wajib dipilih.',
+            'kategori.in' => 'Kategori harus salah satu dari: pupuk_kompos, kerajinan_plastik, maggot_pakan, ecobrick, lainnya.',
+            'harga.required' => 'Harga produk wajib diisi.',
+            'stok.required' => 'Stok produk wajib diisi.',
+        ];
+    }
+}
