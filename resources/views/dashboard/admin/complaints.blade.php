@@ -191,85 +191,288 @@
 
                     <!-- Formulir Tindak Lanjut: 1. Penugasan Petugas Lapangan & 2. Finalisasi Status -->
                     <div class="border-t border-zinc-100 pt-4 text-xs dark:border-zinc-800">
-                        <div class="grid grid-cols-1 gap-3 2xl:grid-cols-2">
-                            <!-- Form Disposisi Petugas (SRS Butir 2) -->
-                            <form method="POST" action="{{ route('dashboard.admin.complaints.assign', $aduan->id) }}" class="min-w-0 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
-                                @csrf
-                                @method('PATCH')
-
-                                <div class="flex items-start gap-3">
-                                    <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-base dark:bg-blue-900/60" aria-hidden="true">👷‍♂️</span>
-                                    <div class="min-w-0">
-                                        <h4 class="font-bold text-blue-950 dark:text-blue-100">Penugasan Lapangan</h4>
-                                        <p class="mt-0.5 text-[11px] leading-4 text-blue-700/80 dark:text-blue-300/80">Pilih petugas dan berikan instruksi kerja yang jelas.</p>
+                        @if ($aduan->status === 'selesai')
+                            <div class="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-800/60 dark:bg-emerald-950/30">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div class="flex items-center gap-3">
+                                        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white text-base font-bold shadow-sm" aria-hidden="true">✓</span>
+                                        <div>
+                                            <h4 class="font-bold text-emerald-950 dark:text-emerald-100">Tiket Aduan Telah Selesai Ditangani</h4>
+                                            <p class="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-300">
+                                                Aduan telah tuntas dibersihkan dan status di aplikasi warga sudah otomatis selesai.
+                                                @if ($aduan->instruksi_admin)
+                                                    <span class="block mt-0.5 text-zinc-600 dark:text-zinc-400 font-medium italic">Catatan akhir: "{{ $aduan->instruksi_admin }}"</span>
+                                                @endif
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-
-                                <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                    <label class="min-w-0 space-y-1.5">
-                                        <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Petugas lapangan</span>
-                                        <select name="petugas_id" required class="min-h-10 w-full min-w-0 rounded-xl border border-blue-200 bg-white px-3 py-2 font-semibold text-zinc-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-blue-900 dark:bg-zinc-900 dark:text-zinc-100">
-                                            <option value="">Pilih petugas</option>
-                                            @foreach ($petugasList as $p)
-                                                <option value="{{ $p->id }}" @selected($aduan->assigned_petugas_id === $p->id)>
-                                                    👷‍♂️ {{ $p->name }} ({{ $p->petugasLapanganProfile->nama_wilayah_tugas ?? $p->petugasLapanganProfile->id_wilayah_rute ?? 'Armada Kota' }})
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </label>
-
-                                    <label class="min-w-0 space-y-1.5">
-                                        <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Instruksi DLH</span>
-                                        <input type="text" name="instruksi_admin" placeholder="Contoh: verifikasi dan bersihkan lokasi" value="{{ $aduan->instruksi_admin }}" class="min-h-10 w-full min-w-0 rounded-xl border border-blue-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-blue-900 dark:bg-zinc-900 dark:text-zinc-100">
-                                    </label>
-                                </div>
-
-                                <div class="mt-3 flex justify-end">
-                                    <button type="submit" class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto dark:focus:ring-offset-zinc-900">
-                                        <span aria-hidden="true">↗</span>
-                                        {{ $aduan->assigned_petugas_id ? 'Perbarui Penugasan' : 'Tugaskan Petugas' }}
+                                    <button type="button" onclick="document.getElementById('edit-forms-{{ $aduan->id }}').classList.toggle('hidden')" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-zinc-900 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-50 dark:hover:bg-zinc-800 font-semibold transition shrink-0 shadow-xs">
+                                        ✏️ Perbarui Catatan / Buka Kembali
                                     </button>
                                 </div>
-                            </form>
 
-                            <!-- Form Finalisasi Status Akhir (SRS Butir 3) -->
-                            <form method="POST" action="{{ route('dashboard.admin.complaints.finalize', $aduan->id) }}" class="min-w-0 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
-                                @csrf
-                                @method('PATCH')
+                                <div id="edit-forms-{{ $aduan->id }}" class="hidden mt-4 pt-4 border-t border-emerald-200/60 dark:border-emerald-800/60">
+                                    <div class="grid grid-cols-1 gap-3 2xl:grid-cols-2">
+                                        <!-- Form Disposisi Petugas (SRS Butir 2) -->
+                                        <form method="POST" action="{{ route('dashboard.admin.complaints.assign', $aduan->id) }}" class="min-w-0 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
+                                            @csrf
+                                            @method('PATCH')
 
-                                <div class="flex items-start gap-3">
-                                    <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-base dark:bg-emerald-900/60" aria-hidden="true">✓</span>
-                                    <div class="min-w-0">
-                                        <h4 class="font-bold text-emerald-950 dark:text-emerald-100">Finalisasi Aduan</h4>
-                                        <p class="mt-0.5 text-[11px] leading-4 text-emerald-700/80 dark:text-emerald-300/80">Perbarui hasil penanganan dan catatan akhir DLH.</p>
+                                            <div class="flex items-start gap-3">
+                                                <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-base dark:bg-blue-900/60" aria-hidden="true">👷‍♂️</span>
+                                                <div class="min-w-0">
+                                                    <h4 class="font-bold text-blue-950 dark:text-blue-100">Penugasan Lapangan</h4>
+                                                    <p class="mt-0.5 text-[11px] leading-4 text-blue-700/80 dark:text-blue-300/80">Pilih petugas dan berikan instruksi kerja yang jelas.</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                <label class="min-w-0 space-y-1.5">
+                                                    <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Petugas lapangan</span>
+                                                    <select name="petugas_id" required class="min-h-10 w-full min-w-0 rounded-xl border border-blue-200 bg-white px-3 py-2 font-semibold text-zinc-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-blue-900 dark:bg-zinc-900 dark:text-zinc-100">
+                                                        <option value="">Pilih petugas</option>
+                                                        @foreach ($petugasList as $p)
+                                                            <option value="{{ $p->id }}" @selected($aduan->assigned_petugas_id === $p->id)>
+                                                                👷‍♂️ {{ $p->name }} ({{ $p->petugasLapanganProfile->nama_wilayah_tugas ?? $p->petugasLapanganProfile->id_wilayah_rute ?? 'Armada Kota' }})
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </label>
+
+                                                <label class="min-w-0 space-y-1.5">
+                                                    <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Instruksi DLH</span>
+                                                    <input type="text" name="instruksi_admin" placeholder="Contoh: verifikasi dan bersihkan lokasi" value="{{ $aduan->instruksi_admin }}" class="min-h-10 w-full min-w-0 rounded-xl border border-blue-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-blue-900 dark:bg-zinc-900 dark:text-zinc-100">
+                                                </label>
+                                            </div>
+
+                                            <div class="mt-3 flex justify-end">
+                                                <button type="submit" class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto dark:focus:ring-offset-zinc-900">
+                                                    <span aria-hidden="true">↗</span>
+                                                    {{ $aduan->assigned_petugas_id ? 'Perbarui Penugasan' : 'Tugaskan Petugas' }}
+                                                </button>
+                                            </div>
+                                        </form>
+
+                                        <!-- Form Finalisasi Status Akhir (SRS Butir 3) -->
+                                        <form method="POST" action="{{ route('dashboard.admin.complaints.finalize', $aduan->id) }}" class="min-w-0 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+                                            @csrf
+                                            @method('PATCH')
+
+                                            <div class="flex items-start gap-3">
+                                                <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-base dark:bg-emerald-900/60" aria-hidden="true">✓</span>
+                                                <div class="min-w-0">
+                                                    <h4 class="font-bold text-emerald-950 dark:text-emerald-100">Finalisasi Aduan</h4>
+                                                    <p class="mt-0.5 text-[11px] leading-4 text-emerald-700/80 dark:text-emerald-300/80">Perbarui hasil penanganan dan catatan akhir DLH.</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                <label class="min-w-0 space-y-1.5">
+                                                    <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Status penanganan</span>
+                                                    <select name="status" class="min-h-10 w-full min-w-0 rounded-xl border border-emerald-200 bg-white px-3 py-2 font-semibold text-zinc-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-emerald-900 dark:bg-zinc-900 dark:text-zinc-100">
+                                                        <option value="ditindaklanjuti" {{ in_array($aduan->status, ['ditindaklanjuti', 'dalam_proses']) ? 'selected' : '' }}>Ditindaklanjuti (Proses Penanganan / Armada)</option>
+                                                        <option value="selesai" {{ $aduan->status === 'selesai' ? 'selected' : '' }}>Selesai (Sudah Bersih & Tertangani)</option>
+                                                        <option value="ditolak" {{ $aduan->status === 'ditolak' ? 'selected' : '' }}>Tolak Aduan (Tidak Valid / Hoax)</option>
+                                                    </select>
+                                                </label>
+
+                                                <label class="min-w-0 space-y-1.5">
+                                                    <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Catatan tindak lanjut</span>
+                                                    <input type="text" name="admin_note" placeholder="Tambahkan catatan akhir" value="{{ $aduan->instruksi_admin }}" class="min-h-10 w-full min-w-0 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-emerald-900 dark:bg-zinc-900 dark:text-zinc-100">
+                                                </label>
+                                            </div>
+
+                                            <div class="mt-3 flex justify-end">
+                                                <button type="submit" class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 sm:w-auto dark:focus:ring-offset-zinc-900">
+                                                    <span aria-hidden="true">✓</span>
+                                                    Simpan Status Akhir
+                                                </button>
+                                            </div>
+                                        </form>
                                     </div>
                                 </div>
-
-                                <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                    <label class="min-w-0 space-y-1.5">
-                                        <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Status penanganan</span>
-                                        <select name="status" class="min-h-10 w-full min-w-0 rounded-xl border border-emerald-200 bg-white px-3 py-2 font-semibold text-zinc-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-emerald-900 dark:bg-zinc-900 dark:text-zinc-100">
-                                            <option value="ditindaklanjuti" {{ $aduan->status === 'ditindaklanjuti' ? 'selected' : '' }}>Ditindaklanjuti</option>
-                                            <option value="selesai" {{ $aduan->status === 'selesai' ? 'selected' : '' }}>Selesai (Sudah Bersih)</option>
-                                            <option value="ditolak" {{ $aduan->status === 'ditolak' ? 'selected' : '' }}>Tolak Aduan</option>
-                                            <option value="dalam_proses" {{ $aduan->status === 'dalam_proses' ? 'selected' : '' }}>Dalam Proses</option>
-                                        </select>
-                                    </label>
-
-                                    <label class="min-w-0 space-y-1.5">
-                                        <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Catatan tindak lanjut</span>
-                                        <input type="text" name="admin_note" placeholder="Tambahkan catatan akhir" class="min-h-10 w-full min-w-0 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-emerald-900 dark:bg-zinc-900 dark:text-zinc-100">
-                                    </label>
-                                </div>
-
-                                <div class="mt-3 flex justify-end">
-                                    <button type="submit" class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 sm:w-auto dark:focus:ring-offset-zinc-900">
-                                        <span aria-hidden="true">✓</span>
-                                        Simpan Status Akhir
+                            </div>
+                        @elseif ($aduan->status === 'ditolak')
+                            <div class="rounded-2xl border border-red-200 bg-red-50/80 p-4 dark:border-red-800/60 dark:bg-red-950/30">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div class="flex items-center gap-3">
+                                        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white text-base font-bold shadow-sm" aria-hidden="true">✕</span>
+                                        <div>
+                                            <h4 class="font-bold text-red-950 dark:text-red-100">Tiket Aduan Ditolak</h4>
+                                            <p class="mt-0.5 text-[11px] text-red-700 dark:text-red-300">
+                                                Aduan dinyatakan tidak valid atau fiktif.
+                                                @if ($aduan->instruksi_admin)
+                                                    <span class="block mt-0.5 text-zinc-600 dark:text-zinc-400 font-medium italic">Alasan penolakan: "{{ $aduan->instruksi_admin }}"</span>
+                                                @endif
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="document.getElementById('edit-forms-{{ $aduan->id }}').classList.toggle('hidden')" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-300 dark:border-red-700 bg-white dark:bg-zinc-900 text-red-800 dark:text-red-200 hover:bg-red-50 dark:hover:bg-zinc-800 font-semibold transition shrink-0 shadow-xs">
+                                        ✏️ Kelola Ulang Tiket
                                     </button>
                                 </div>
-                            </form>
-                        </div>
+
+                                <div id="edit-forms-{{ $aduan->id }}" class="hidden mt-4 pt-4 border-t border-red-200/60 dark:border-red-800/60">
+                                    <div class="grid grid-cols-1 gap-3 2xl:grid-cols-2">
+                                        <!-- Form Disposisi Petugas (SRS Butir 2) -->
+                                        <form method="POST" action="{{ route('dashboard.admin.complaints.assign', $aduan->id) }}" class="min-w-0 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
+                                            @csrf
+                                            @method('PATCH')
+
+                                            <div class="flex items-start gap-3">
+                                                <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-base dark:bg-blue-900/60" aria-hidden="true">👷‍♂️</span>
+                                                <div class="min-w-0">
+                                                    <h4 class="font-bold text-blue-950 dark:text-blue-100">Penugasan Lapangan</h4>
+                                                    <p class="mt-0.5 text-[11px] leading-4 text-blue-700/80 dark:text-blue-300/80">Pilih petugas dan berikan instruksi kerja yang jelas.</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                <label class="min-w-0 space-y-1.5">
+                                                    <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Petugas lapangan</span>
+                                                    <select name="petugas_id" required class="min-h-10 w-full min-w-0 rounded-xl border border-blue-200 bg-white px-3 py-2 font-semibold text-zinc-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-blue-900 dark:bg-zinc-900 dark:text-zinc-100">
+                                                        <option value="">Pilih petugas</option>
+                                                        @foreach ($petugasList as $p)
+                                                            <option value="{{ $p->id }}" @selected($aduan->assigned_petugas_id === $p->id)>
+                                                                👷‍♂️ {{ $p->name }} ({{ $p->petugasLapanganProfile->nama_wilayah_tugas ?? $p->petugasLapanganProfile->id_wilayah_rute ?? 'Armada Kota' }})
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </label>
+
+                                                <label class="min-w-0 space-y-1.5">
+                                                    <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Instruksi DLH</span>
+                                                    <input type="text" name="instruksi_admin" placeholder="Contoh: verifikasi dan bersihkan lokasi" value="{{ $aduan->instruksi_admin }}" class="min-h-10 w-full min-w-0 rounded-xl border border-blue-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-blue-900 dark:bg-zinc-900 dark:text-zinc-100">
+                                                </label>
+                                            </div>
+
+                                            <div class="mt-3 flex justify-end">
+                                                <button type="submit" class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto dark:focus:ring-offset-zinc-900">
+                                                    <span aria-hidden="true">↗</span>
+                                                    {{ $aduan->assigned_petugas_id ? 'Perbarui Penugasan' : 'Tugaskan Petugas' }}
+                                                </button>
+                                            </div>
+                                        </form>
+
+                                        <!-- Form Finalisasi Status Akhir (SRS Butir 3) -->
+                                        <form method="POST" action="{{ route('dashboard.admin.complaints.finalize', $aduan->id) }}" class="min-w-0 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+                                            @csrf
+                                            @method('PATCH')
+
+                                            <div class="flex items-start gap-3">
+                                                <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-base dark:bg-emerald-900/60" aria-hidden="true">✓</span>
+                                                <div class="min-w-0">
+                                                    <h4 class="font-bold text-emerald-950 dark:text-emerald-100">Finalisasi Aduan</h4>
+                                                    <p class="mt-0.5 text-[11px] leading-4 text-emerald-700/80 dark:text-emerald-300/80">Perbarui hasil penanganan dan catatan akhir DLH.</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                <label class="min-w-0 space-y-1.5">
+                                                    <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Status penanganan</span>
+                                                    <select name="status" class="min-h-10 w-full min-w-0 rounded-xl border border-emerald-200 bg-white px-3 py-2 font-semibold text-zinc-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-emerald-900 dark:bg-zinc-900 dark:text-zinc-100">
+                                                        <option value="ditindaklanjuti" {{ in_array($aduan->status, ['ditindaklanjuti', 'dalam_proses']) ? 'selected' : '' }}>Ditindaklanjuti (Proses Penanganan / Armada)</option>
+                                                        <option value="selesai" {{ $aduan->status === 'selesai' ? 'selected' : '' }}>Selesai (Sudah Bersih & Tertangani)</option>
+                                                        <option value="ditolak" {{ $aduan->status === 'ditolak' ? 'selected' : '' }}>Tolak Aduan (Tidak Valid / Hoax)</option>
+                                                    </select>
+                                                </label>
+
+                                                <label class="min-w-0 space-y-1.5">
+                                                    <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Catatan tindak lanjut</span>
+                                                    <input type="text" name="admin_note" placeholder="Tambahkan catatan akhir" value="{{ $aduan->instruksi_admin }}" class="min-h-10 w-full min-w-0 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-emerald-900 dark:bg-zinc-900 dark:text-zinc-100">
+                                                </label>
+                                            </div>
+
+                                            <div class="mt-3 flex justify-end">
+                                                <button type="submit" class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 sm:w-auto dark:focus:ring-offset-zinc-900">
+                                                    <span aria-hidden="true">✓</span>
+                                                    Simpan Status Akhir
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        @else
+                            <div class="grid grid-cols-1 gap-3 2xl:grid-cols-2">
+                                <!-- Form Disposisi Petugas (SRS Butir 2) -->
+                                <form method="POST" action="{{ route('dashboard.admin.complaints.assign', $aduan->id) }}" class="min-w-0 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
+                                    @csrf
+                                    @method('PATCH')
+
+                                    <div class="flex items-start gap-3">
+                                        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-base dark:bg-blue-900/60" aria-hidden="true">👷‍♂️</span>
+                                        <div class="min-w-0">
+                                            <h4 class="font-bold text-blue-950 dark:text-blue-100">Penugasan Lapangan</h4>
+                                            <p class="mt-0.5 text-[11px] leading-4 text-blue-700/80 dark:text-blue-300/80">Pilih petugas dan berikan instruksi kerja yang jelas.</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <label class="min-w-0 space-y-1.5">
+                                            <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Petugas lapangan</span>
+                                            <select name="petugas_id" required class="min-h-10 w-full min-w-0 rounded-xl border border-blue-200 bg-white px-3 py-2 font-semibold text-zinc-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-blue-900 dark:bg-zinc-900 dark:text-zinc-100">
+                                                <option value="">Pilih petugas</option>
+                                                @foreach ($petugasList as $p)
+                                                    <option value="{{ $p->id }}" @selected($aduan->assigned_petugas_id === $p->id)>
+                                                        👷‍♂️ {{ $p->name }} ({{ $p->petugasLapanganProfile->nama_wilayah_tugas ?? $p->petugasLapanganProfile->id_wilayah_rute ?? 'Armada Kota' }})
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </label>
+
+                                        <label class="min-w-0 space-y-1.5">
+                                            <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Instruksi DLH</span>
+                                            <input type="text" name="instruksi_admin" placeholder="Contoh: verifikasi dan bersihkan lokasi" value="{{ $aduan->instruksi_admin }}" class="min-h-10 w-full min-w-0 rounded-xl border border-blue-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-blue-900 dark:bg-zinc-900 dark:text-zinc-100">
+                                        </label>
+                                    </div>
+
+                                    <div class="mt-3 flex justify-end">
+                                        <button type="submit" class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto dark:focus:ring-offset-zinc-900">
+                                            <span aria-hidden="true">↗</span>
+                                            {{ $aduan->assigned_petugas_id ? 'Perbarui Penugasan' : 'Tugaskan Petugas' }}
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <!-- Form Finalisasi Status Akhir (SRS Butir 3) -->
+                                <form method="POST" action="{{ route('dashboard.admin.complaints.finalize', $aduan->id) }}" class="min-w-0 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+                                    @csrf
+                                    @method('PATCH')
+
+                                    <div class="flex items-start gap-3">
+                                        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-base dark:bg-emerald-900/60" aria-hidden="true">✓</span>
+                                        <div class="min-w-0">
+                                            <h4 class="font-bold text-emerald-950 dark:text-emerald-100">Finalisasi Aduan</h4>
+                                            <p class="mt-0.5 text-[11px] leading-4 text-emerald-700/80 dark:text-emerald-300/80">Perbarui hasil penanganan dan catatan akhir DLH.</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <label class="min-w-0 space-y-1.5">
+                                            <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Status penanganan</span>
+                                            <select name="status" class="min-h-10 w-full min-w-0 rounded-xl border border-emerald-200 bg-white px-3 py-2 font-semibold text-zinc-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-emerald-900 dark:bg-zinc-900 dark:text-zinc-100">
+                                                <option value="ditindaklanjuti" {{ in_array($aduan->status, ['ditindaklanjuti', 'dalam_proses']) ? 'selected' : '' }}>Ditindaklanjuti (Proses Penanganan / Armada)</option>
+                                                <option value="selesai" {{ $aduan->status === 'selesai' ? 'selected' : '' }}>Selesai (Sudah Bersih & Tertangani)</option>
+                                                <option value="ditolak" {{ $aduan->status === 'ditolak' ? 'selected' : '' }}>Tolak Aduan (Tidak Valid / Hoax)</option>
+                                            </select>
+                                        </label>
+
+                                        <label class="min-w-0 space-y-1.5">
+                                            <span class="block font-semibold text-zinc-700 dark:text-zinc-300">Catatan tindak lanjut</span>
+                                            <input type="text" name="admin_note" placeholder="Tambahkan catatan akhir" value="{{ $aduan->instruksi_admin }}" class="min-h-10 w-full min-w-0 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-emerald-900 dark:bg-zinc-900 dark:text-zinc-100">
+                                        </label>
+                                    </div>
+
+                                    <div class="mt-3 flex justify-end">
+                                        <button type="submit" class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 sm:w-auto dark:focus:ring-offset-zinc-900">
+                                            <span aria-hidden="true">✓</span>
+                                            Simpan Status Akhir
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        @endif
                     </div>
                 </div>
             @empty
