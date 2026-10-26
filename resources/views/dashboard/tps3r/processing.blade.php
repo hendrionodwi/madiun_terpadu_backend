@@ -116,22 +116,6 @@
                     </div>
                 </div>
             </div>
-                    <optgroup label="3 Pilar Utama Sampah Kota Madiun">
-                        <option value="organik">Organik (Pakan Maggot / Kompos)</option>
-                        <option value="anorganik_daur_ulang">Anorganik Daur Ulang (Plastik / Logam / Kertas)</option>
-                        <option value="residu">Residu (Kirim TPA Winongo)</option>
-                    </optgroup>
-                    @if (isset($masterCategories) && $masterCategories->isNotEmpty())
-                        <optgroup label="Kategori Sampah Data Master DLH">
-                            @foreach ($masterCategories as $cat)
-                                <option value="{{ $cat->code }}">
-                                    {{ $cat->name }} (Pilar: {{ ucfirst(str_replace('_', ' ', $cat->pillar ?? 'umum')) }})
-                                </option>
-                            @endforeach
-                        </optgroup>
-                    @endif
-                </select>
-            </label>
 
             <label class="grid gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 <span>Berat masuk (kg)</span>
