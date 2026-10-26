@@ -40,41 +40,41 @@
               class="grid gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 md:grid-cols-3">
             @csrf
 
-            <label class="grid gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+            <label class="grid min-w-0 gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 <span>Setoran sumber</span>
-                <select name="tps3r_waste_deposit_id" x-model="selectedDepositId" @change="onDepositChange()" class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
-                    <option value="">Tanpa referensi setoran (Input Manual / Stok Gudang)</option>
+                <select name="tps3r_waste_deposit_id" x-model="selectedDepositId" @change="onDepositChange()" class="w-full truncate rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                    <option value="">Tanpa referensi (Manual / Stok)</option>
                     @foreach ($deposits as $deposit)
-                        <option value="{{ $deposit->id }}">
-                            {{ $deposit->nomor_resi }} · {{ number_format($deposit->berat_kg, 1, ',', '.') }} kg ({{ ucwords(str_replace('_', ' ', $deposit->jenis_sampah)) }})
+                        <option value="{{ $deposit->id }}" title="{{ $deposit->nomor_resi }} ({{ number_format($deposit->berat_kg, 1, ',', '.') }} kg)">
+                            {{ $deposit->nomor_resi }} ({{ number_format($deposit->berat_kg, 1, ',', '.') }} kg)
                         </option>
                     @endforeach
                 </select>
             </label>
 
-            <label class="grid gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+            <label class="grid min-w-0 gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 <span>Metode pengolahan</span>
-                <select name="process_method" required class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                <select name="process_method" required class="w-full truncate rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
                     @foreach ($processMethods as $value => $label)
                         <option value="{{ $value }}">{{ $label }}</option>
                     @endforeach
                 </select>
             </label>
 
-            <label class="grid gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+            <label class="grid min-w-0 gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 <span>Jenis sampah</span>
-                <select name="waste_type" x-model="wasteType" required class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                <select name="waste_type" x-model="wasteType" required class="w-full truncate rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
                     <option value="">Pilih jenis sampah</option>
-                    <optgroup label="3 Pilar Utama Sampah Kota Madiun">
-                        <option value="organik">Organik (Pakan Maggot / Kompos)</option>
-                        <option value="anorganik_daur_ulang">Anorganik Daur Ulang (Plastik / Logam / Kertas)</option>
-                        <option value="residu">Residu (Kirim TPA Winongo)</option>
+                    <optgroup label="3 Pilar Utama">
+                        <option value="organik">Organik</option>
+                        <option value="anorganik_daur_ulang">Anorganik Daur Ulang</option>
+                        <option value="residu">Residu</option>
                     </optgroup>
                     @if (isset($masterCategories) && $masterCategories->isNotEmpty())
-                        <optgroup label="Kategori Sampah Data Master DLH">
+                        <optgroup label="Data Master">
                             @foreach ($masterCategories as $cat)
-                                <option value="{{ $cat->code }}">
-                                    {{ $cat->name }} (Pilar: {{ ucfirst(str_replace('_', ' ', $cat->pillar ?? 'umum')) }})
+                                <option value="{{ $cat->code }}" title="{{ $cat->name }} (Pilar: {{ ucfirst($cat->pillar ?? 'umum') }})">
+                                    {{ \Illuminate\Support\Str::limit($cat->name, 26) }}
                                 </option>
                             @endforeach
                         </optgroup>

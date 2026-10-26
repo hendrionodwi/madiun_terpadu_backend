@@ -24,11 +24,11 @@ class WasteProcessingController extends Controller
     public static function processMethods(): array
     {
         return [
-            'composting' => 'Pengomposan (Kompos Organik)',
-            'sorting' => 'Pemilahan Lanjutan',
-            'shredding' => 'Pencacahan Plastik / Organik',
-            'recycling' => 'Daur Ulang Anorganik',
-            'residue_handling' => 'Penanganan Residu (TPA Winongo)',
+            'composting' => 'Pengomposan',
+            'sorting' => 'Pemilahan',
+            'shredding' => 'Pencacahan',
+            'recycling' => 'Daur Ulang',
+            'residue_handling' => 'Penanganan Residu',
         ];
     }
 

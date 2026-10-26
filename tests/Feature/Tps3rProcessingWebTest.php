@@ -41,7 +41,7 @@ test('pengelola tps3r can view waste processing dashboard page without blade err
         ->assertSee('Operasional TPS3R')
         ->assertSee('Buat batch pengolahan')
         ->assertSee('Kardus Bekas Box')
-        ->assertSee('3 Pilar Utama Sampah Kota Madiun')
+        ->assertSee('3 Pilar Utama')
         ->assertSee('Masuk: 50,0 kg')
         ->assertSee('Hasil: 20,0 kg');
 });
