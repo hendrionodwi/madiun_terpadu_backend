@@ -43,10 +43,10 @@
             <label class="grid gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 <span class="flex items-center justify-between">
                     <span>Setoran sumber</span>
-                    <span class="text-[11px] text-teal-600 dark:text-teal-400 font-normal">Otomatis isi berat & jenis</span>
+                    <span class="text-[11px] text-teal-600 dark:text-teal-400 font-normal">Manifest Muatan Masuk</span>
                 </span>
                 <select name="tps3r_waste_deposit_id" x-model="selectedDepositId" @change="onDepositChange()" class="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
-                    <option value="">Tanpa referensi setoran (Input Manual)</option>
+                    <option value="">Tanpa referensi setoran (Input Manual / Stok Gudang)</option>
                     @foreach ($deposits as $deposit)
                         <option value="{{ $deposit->id }}">
                             {{ $deposit->nomor_resi }} · {{ number_format($deposit->berat_kg, 1, ',', '.') }} kg ({{ ucwords(str_replace('_', ' ', $deposit->jenis_sampah)) }})
@@ -54,6 +54,43 @@
                     @endforeach
                 </select>
             </label>
+
+            <!-- Panel Pintar Rincian Fraksi Muatan Truk (Jika satu setoran terdiri dari multi-jenis sampah) -->
+            <template x-if="selectedDepositId && deposits[selectedDepositId]">
+                <div class="md:col-span-3 -mt-1 p-3 rounded-xl bg-teal-50/90 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-900/60 text-xs">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div class="flex items-center gap-2 text-teal-950 dark:text-teal-200">
+                            <span class="text-base">🚚</span>
+                            <div>
+                                <span class="font-bold">Muatan Truk #<span x-text="deposits[selectedDepositId].nomor_resi"></span>:</span>
+                                <span class="text-zinc-600 dark:text-zinc-300">Total berat terdata <strong x-text="Number(deposits[selectedDepositId].berat_kg).toLocaleString('id-ID', {minimumFractionDigits: 1})"></strong> kg.</span>
+                                <span class="block text-[11px] text-teal-700 dark:text-teal-400">Pilih fraksi pilah di bawah untuk memproses per bagian, atau ubah angka berat secara manual:</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <template x-if="deposits[selectedDepositId].berat_organik_pilah_kg > 0">
+                                <button type="button" @click="wasteType = 'organik'; inputWeight = deposits[selectedDepositId].berat_organik_pilah_kg" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition shadow-xs">
+                                    🌱 Fraksi Organik (<span x-text="deposits[selectedDepositId].berat_organik_pilah_kg"></span> kg)
+                                </button>
+                            </template>
+                            <template x-if="deposits[selectedDepositId].berat_anorganik_pilah_kg > 0">
+                                <button type="button" @click="wasteType = 'anorganik_daur_ulang'; inputWeight = deposits[selectedDepositId].berat_anorganik_pilah_kg" class="px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] transition shadow-xs">
+                                    ♻️ Fraksi Anorganik (<span x-text="deposits[selectedDepositId].berat_anorganik_pilah_kg"></span> kg)
+                                </button>
+                            </template>
+                            <template x-if="deposits[selectedDepositId].berat_residu_pilah_kg > 0">
+                                <button type="button" @click="wasteType = 'residu'; inputWeight = deposits[selectedDepositId].berat_residu_pilah_kg" class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] transition shadow-xs">
+                                    🗑️ Fraksi Residu (<span x-text="deposits[selectedDepositId].berat_residu_pilah_kg"></span> kg)
+                                </button>
+                            </template>
+                            <button type="button" @click="inputWeight = deposits[selectedDepositId].berat_kg; wasteType = deposits[selectedDepositId].jenis_sampah" class="px-2.5 py-1 rounded-lg border border-teal-300 dark:border-teal-700 bg-white dark:bg-zinc-800 hover:bg-teal-100 text-teal-900 dark:text-teal-200 font-semibold text-[11px] transition">
+                                Pakai Semua Muatan (<span x-text="deposits[selectedDepositId].berat_kg"></span> kg)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
 
             <label class="grid gap-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 <span>Metode pengolahan</span>

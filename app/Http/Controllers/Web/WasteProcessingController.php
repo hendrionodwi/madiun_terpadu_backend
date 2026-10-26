@@ -58,7 +58,15 @@ class WasteProcessingController extends Controller
                 ->where('pengelola_id', $user->id)
                 ->latest('tanggal_setor')
                 ->limit(50)
-                ->get(['id', 'nomor_resi', 'jenis_sampah', 'berat_kg']),
+                ->get([
+                    'id',
+                    'nomor_resi',
+                    'jenis_sampah',
+                    'berat_kg',
+                    'berat_organik_pilah_kg',
+                    'berat_anorganik_pilah_kg',
+                    'berat_residu_pilah_kg',
+                ]),
             'masterCategories' => $masterCategories,
             'processMethods' => self::processMethods(),
         ]);
