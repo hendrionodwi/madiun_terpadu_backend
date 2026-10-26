@@ -101,7 +101,7 @@
                             </button>
                         </template>
                         <template x-if="deposits[selectedDepositId]?.berat_anorganik_pilah_kg > 0">
-                            <button type="button" @click="wasteType = 'anorganik_daur_ulang'; inputWeight = deposits[selectedDepositId].berat_anorganik_pilah_kg" class="px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] transition shadow-xs">
+                            <button type="button" @click="wasteType = 'anorganik_daur_ulang'; inputWeight = deposits[selectedDepositId].berat_anorganik_pilah_kg" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] transition shadow-xs">
                                 ♻️ Fraksi Anorganik (<span x-text="deposits[selectedDepositId].berat_anorganik_pilah_kg"></span> kg)
                             </button>
                         </template>
