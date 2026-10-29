@@ -1,5 +1,5 @@
 <x-layouts::app :title="__('Katalog Produk Daur Ulang TPS3R')">
-    <div class="mx-auto flex w-full max-w-7xl flex-col gap-6 p-2 md:p-4" x-data="{ editModalOpen: false, activeProduct: {} }">
+    <div class="mx-auto flex w-full max-w-7xl flex-col gap-6 p-2 md:p-4" x-data="{ editModalOpen: false, activeProduct: {}, newPhotoPreview: null, editPhotoPreview: null }">
         <!-- Header Page -->
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -115,7 +115,7 @@
                 </span>
             </div>
 
-            <form method="POST" action="{{ route('dashboard.tps3r.store-product') }}" class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <form method="POST" action="{{ route('dashboard.tps3r.store-product') }}" enctype="multipart/form-data" class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 @csrf
                 <label class="grid gap-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
                     Nama Produk
@@ -154,6 +154,26 @@
                     @error('deskripsi')<span class="text-xs text-red-600">{{ $message }}</span>@enderror
                 </label>
 
+                <!-- Field Unggah Foto Produk dengan Live Preview -->
+                <div class="grid gap-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300 md:col-span-2 xl:col-span-3">
+                    <span>Foto Produk (Opsional)</span>
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <template x-if="newPhotoPreview">
+                            <div class="relative size-16 shrink-0 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 shadow-xs bg-zinc-100 dark:bg-zinc-800">
+                                <img :src="newPhotoPreview" class="size-full object-cover">
+                                <button type="button" @click="newPhotoPreview = null; $refs.newPhotoInput.value = ''" class="absolute top-1 right-1 rounded-full bg-rose-600/90 hover:bg-rose-700 text-white size-4 flex items-center justify-center text-[10px]" title="Hapus foto">✕</button>
+                            </div>
+                        </template>
+
+                        <label class="flex flex-1 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 bg-zinc-50/60 p-3 text-center transition hover:border-amber-500 hover:bg-amber-50/50 dark:border-zinc-700 dark:bg-zinc-800/60 dark:hover:border-amber-500">
+                            <svg class="size-5 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span class="text-xs text-zinc-600 dark:text-zinc-300 font-medium" x-text="newPhotoPreview ? 'Ganti foto produk terpilih...' : 'Pilih Foto Produk (Format: JPG, JPEG, PNG, WEBP — Maks. 2MB)'"></span>
+                            <input type="file" name="foto" x-ref="newPhotoInput" accept="image/png,image/jpeg,image/webp" class="sr-only" @change="const file = $event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (e) => { newPhotoPreview = e.target.result; }; reader.readAsDataURL(file); } else { newPhotoPreview = null; }">
+                        </label>
+                    </div>
+                    @error('foto')<span class="text-xs text-red-600">{{ $message }}</span>@enderror
+                </div>
+
                 <div class="flex items-center gap-3 md:col-span-2 xl:col-span-2 pt-2">
                     <input type="hidden" name="is_available" value="0">
                     <label class="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 cursor-pointer">
@@ -188,7 +208,7 @@
                 <table class="w-full text-left text-sm">
                     <thead class="bg-zinc-50 text-xs uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                         <tr>
-                            <th class="px-4 py-3">Nama Produk</th>
+                            <th class="px-4 py-3">Produk</th>
                             <th class="px-4 py-3">Kategori</th>
                             <th class="px-4 py-3 text-right">Harga Satuan</th>
                             <th class="px-4 py-3 text-right">Stok</th>
@@ -200,10 +220,29 @@
                         @forelse($products as $product)
                             <tr class="text-zinc-700 dark:text-zinc-200">
                                 <td class="px-4 py-3">
-                                    <p class="font-bold text-zinc-900 dark:text-zinc-100">{{ $product->nama_produk }}</p>
-                                    @if ($product->deskripsi)
-                                        <p class="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 max-w-md">{{ $product->deskripsi }}</p>
-                                    @endif
+                                    <div class="flex items-center gap-3">
+                                        <div class="size-11 shrink-0 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center">
+                                            @if ($product->foto)
+                                                <img src="{{ $product->foto_url }}" alt="{{ $product->nama_produk }}" class="size-full object-cover">
+                                            @else
+                                                <span class="text-lg">
+                                                    @switch($product->kategori)
+                                                        @case('pupuk_kompos') 🌱 @break
+                                                        @case('kerajinan_plastik') 🧺 @break
+                                                        @case('maggot_pakan') 🐛 @break
+                                                        @case('ecobrick') 🧱 @break
+                                                        @default 📦
+                                                    @endswitch
+                                                </span>
+                                            @endif
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="font-bold text-zinc-900 dark:text-zinc-100 truncate">{{ $product->nama_produk }}</p>
+                                            @if ($product->deskripsi)
+                                                <p class="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 max-w-xs">{{ $product->deskripsi }}</p>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </td>
                                 <td class="px-4 py-3">
                                     <span class="inline-flex rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-semibold capitalize text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
@@ -214,14 +253,20 @@
                                     Rp {{ number_format($product->harga, 0, ',', '.') }}
                                 </td>
                                 <td class="px-4 py-3 text-right font-medium">
-                                    @if ($product->stok <= 5)
-                                        <span class="text-rose-600 font-bold" title="Stok menipis!">{{ $product->stok }} unit ⚠️</span>
+                                    @if ($product->stok <= 0)
+                                        <span class="text-rose-600 font-bold" title="Stok habis!">0 unit ⚠️</span>
+                                    @elseif ($product->stok <= 5)
+                                        <span class="text-amber-600 font-bold" title="Stok menipis!">{{ $product->stok }} unit ⚠️</span>
                                     @else
                                         <span>{{ $product->stok }} unit</span>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-center">
-                                    @if ($product->is_available)
+                                    @if ($product->stok <= 0)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-800 dark:bg-rose-950/60 dark:text-rose-300" title="Stok habis, produk otomatis disembunyikan dari etalase pembeli">
+                                            <span class="size-1.5 rounded-full bg-rose-500"></span> Habis (Stok 0)
+                                        </span>
+                                    @elseif ($product->is_available)
                                         <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
                                             <span class="size-1.5 rounded-full bg-emerald-500"></span> Aktif
                                         </span>
@@ -242,9 +287,10 @@
                                                 harga: {{ $product->harga }},
                                                 stok: {{ $product->stok }},
                                                 deskripsi: '{{ addslashes($product->deskripsi ?? '') }}',
+                                                foto_url: '{{ $product->foto_url ?? '' }}',
                                                 is_available: {{ $product->is_available ? 'true' : 'false' }},
                                                 update_url: '{{ route('dashboard.tps3r.products.update', $product) }}'
-                                            }; editModalOpen = true"
+                                            }; editPhotoPreview = null; if ($refs.editPhotoInput) { $refs.editPhotoInput.value = ''; } editModalOpen = true"
                                             class="inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700">
                                             ✏️ Edit
                                         </button>
@@ -288,7 +334,7 @@
                     </button>
                 </div>
 
-                <form :action="activeProduct.update_url" method="POST" class="mt-4 grid gap-4">
+                <form :action="activeProduct.update_url" method="POST" enctype="multipart/form-data" class="mt-4 grid gap-4">
                     @csrf
                     @method('PATCH')
 
@@ -324,6 +370,30 @@
                         Deskripsi
                         <textarea name="deskripsi" x-model="activeProduct.deskripsi" rows="3" class="rounded-xl border border-zinc-300 px-3.5 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"></textarea>
                     </label>
+
+                    <!-- Foto Produk saat edit -->
+                    <div class="grid gap-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                        <span>Foto Produk</span>
+                        <div class="flex items-center gap-3">
+                            <template x-if="editPhotoPreview">
+                                <div class="relative size-14 shrink-0 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 shadow-xs bg-zinc-100 dark:bg-zinc-800">
+                                    <img :src="editPhotoPreview" class="size-full object-cover">
+                                    <button type="button" @click="editPhotoPreview = null; $refs.editPhotoInput.value = ''" class="absolute top-0.5 right-0.5 rounded-full bg-rose-600 text-white size-4 flex items-center justify-center text-[10px]" title="Batalkan foto baru">✕</button>
+                                </div>
+                            </template>
+                            <template x-if="!editPhotoPreview && activeProduct.foto_url">
+                                <div class="size-14 shrink-0 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 shadow-xs bg-zinc-100 dark:bg-zinc-800">
+                                    <img :src="activeProduct.foto_url" class="size-full object-cover">
+                                </div>
+                            </template>
+
+                            <label class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 bg-zinc-50/60 p-2.5 text-center transition hover:border-amber-500 hover:bg-amber-50/50 dark:border-zinc-700 dark:bg-zinc-800/60">
+                                <svg class="size-4 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <span class="text-xs text-zinc-600 dark:text-zinc-300 font-medium" x-text="editPhotoPreview ? 'Foto baru dipilih (Klik untuk ganti)' : (activeProduct.foto_url ? 'Ganti foto produk...' : 'Unggah foto produk...')"></span>
+                                <input type="file" name="foto" x-ref="editPhotoInput" accept="image/png,image/jpeg,image/webp" class="sr-only" @change="const file = $event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (e) => { editPhotoPreview = e.target.result; }; reader.readAsDataURL(file); } else { editPhotoPreview = null; }">
+                            </label>
+                        </div>
+                    </div>
 
                     <input type="hidden" name="is_available" value="0">
                     <label class="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 cursor-pointer">

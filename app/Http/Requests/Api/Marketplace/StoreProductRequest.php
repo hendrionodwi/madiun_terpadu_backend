@@ -26,9 +26,11 @@ class StoreProductRequest extends FormRequest
             'nama_produk' => ['required', 'string', 'max:255'],
             'deskripsi' => ['nullable', 'string', 'max:2000'],
             'kategori' => ['required', 'string', 'in:pupuk_kompos,kerajinan_plastik,maggot_pakan,ecobrick,lainnya'],
-            'harga' => ['required', 'numeric', 'min:0'],
+            'harga' => ['required', 'numeric', 'min:0', 'max:999999999.99'],
             'stok' => ['required', 'integer', 'min:0'],
-            'foto' => ['nullable', 'string', 'max:255'],
+            'foto' => $this->hasFile('foto')
+                ? ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048']
+                : ['nullable', 'string', 'max:255'],
             'is_available' => ['nullable', 'boolean'],
         ];
     }
@@ -46,6 +48,9 @@ class StoreProductRequest extends FormRequest
             'kategori.in' => 'Kategori harus salah satu dari: pupuk_kompos, kerajinan_plastik, maggot_pakan, ecobrick, lainnya.',
             'harga.required' => 'Harga produk wajib diisi.',
             'stok.required' => 'Stok produk wajib diisi.',
+            'foto.image' => 'File foto produk harus berupa gambar.',
+            'foto.mimes' => 'Format foto harus berupa jpeg, png, jpg, atau webp.',
+            'foto.max' => 'Ukuran foto maksimal adalah 2MB.',
         ];
     }
 }

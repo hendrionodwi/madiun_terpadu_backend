@@ -92,6 +92,13 @@ class MarketplaceController extends Controller
         /** @var User $seller */
         $seller = $request->user();
 
+        $fotoPath = null;
+        if ($request->hasFile('foto')) {
+            $fotoPath = $request->file('foto')->store('products', 'public');
+        } elseif (isset($validated['foto']) && is_string($validated['foto'])) {
+            $fotoPath = $validated['foto'];
+        }
+
         $product = WasteProduct::create([
             'seller_id' => $seller->id,
             'nama_produk' => $validated['nama_produk'],
@@ -99,7 +106,7 @@ class MarketplaceController extends Controller
             'kategori' => $validated['kategori'],
             'harga' => (float) $validated['harga'],
             'stok' => (int) $validated['stok'],
-            'foto' => $validated['foto'] ?? null,
+            'foto' => $fotoPath,
             'is_available' => $validated['is_available'] ?? true,
         ]);
 

@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property float $harga
  * @property int $stok
  * @property string|null $foto
+ * @property-read string|null $foto_url
  * @property bool $is_available
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -38,6 +39,31 @@ class WasteProduct extends Model
 {
     /** @use HasFactory<WasteProductFactory> */
     use HasFactory;
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = [
+        'foto_url',
+    ];
+
+    /**
+     * Get the publicly accessible full URL for the product photo.
+     */
+    public function getFotoUrlAttribute(): ?string
+    {
+        if (! $this->foto) {
+            return null;
+        }
+
+        if (str_starts_with($this->foto, 'http://') || str_starts_with($this->foto, 'https://')) {
+            return $this->foto;
+        }
+
+        return asset('storage/'.ltrim($this->foto, '/'));
+    }
 
     /**
      * Get the attributes that should be cast.

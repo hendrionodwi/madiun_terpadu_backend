@@ -42,7 +42,7 @@ Gunakan `BLOCKED` jika pekerjaan tidak dapat dilanjutkan tanpa keputusan atau pe
 
 | File / Folder Path | Sedang Diedit Oleh | Status | Tujuan / Fitur |
 |---|---|---|---|
-| *Tidak ada file terkunci saat ini* | - | IDLE | `AG-20261021-003` selesai dan siap diverifikasi |
+| *Tidak ada file terkunci saat ini* | - | IDLE | `AG-20261029-001` selesai dan terverifikasi penuh |
 
 ---
 
@@ -95,10 +95,10 @@ Required tests:
 
 **Sync pointer saat ini**
 
-- Last completed handoff: `AG-20261021-003` — perapian layout aksi pengaduan Admin DLH.
-- Task status: `READY_FOR_REVIEW` oleh ChatGPT / Codex.
-- Next action owner: Gemini Antigravity dapat memverifikasi tampilan responsif halaman pengaduan bersama perubahan kontrak `AG-20261021-002`.
-- Pending contract request: Tidak ada dari `AG-20261021-003`; perubahan hanya menyentuh layout Blade.
+- Last completed handoff: `AG-20261029-001` — Unggah Foto Produk Daur Ulang, Lifecycle Cleanup, dan Penyempurnaan Etalase Marketplace TPS3R.
+- Task status: `DONE` oleh Gemini Antigravity.
+- Next action owner: ChatGPT / Codex dapat memanfaatkan atribut `foto_url` pada mobile Flutter `WasteProduct` model untuk menampilkan foto produk langsung via `Image.network(product.fotoUrl)`.
+- Pending contract request: Tidak ada perubahan breaking contract; field `foto_url` ditambahkan secara backward-compatible ke JSON payload `WasteProduct`.
 
 ---
 
@@ -415,3 +415,40 @@ File ini adalah media koordinasi asinkron. Agar sinkronisasi benar-benar berjala
 - `npm run build` → berhasil.
 - Blade cache berhasil divalidasi melalui rendering feature test; cache development kemudian dibersihkan.
 - `git diff --check` pada file terkait → passed.
+
+---
+
+### Handoff `AG-20261029-001` dari Gemini Antigravity ke ChatGPT / Codex
+
+**Tanggal selesai:** 2026-10-29  
+**Status:** `[DONE]`  
+**Goal:** Implementasi form unggah foto produk daur ulang TPS3R, live preview gambar (Alpine.js), penambalan celah lifecycle penyimpanan (storage cleanup saat edit/delete), thumbnail visual pada etalase toko, serta accessor `foto_url` untuk Mobile Flutter.
+
+**Contract impact:**
+1. Model `WasteProduct` kini menyertakan appended attribute `foto_url` pada JSON serialization. Properti ini menghasilkan URL absolut publik (misal: `http://127.0.0.1:8000/storage/products/xyz.jpg`) atau URL eksternal secara otomatis.
+2. Endpoint `POST /dashboard/tps3r/products` dan API `POST /api/v1/marketplace/products` menerima payload multipart/form-data dengan field `foto` (`image|mimes:jpeg,png,jpg,webp|max:2048`). Payload teks/string pada API/seeder tetap didukung secara backward-compatible.
+
+**Perubahan utama:**
+- **Validasi (`StoreProductRequest.php`):** Menambahkan validasi gambar dinamis (mimes: jpeg, png, jpg, webp, maks 2MB) jika ada file diunggah, serta batas aman harga `max:999999999.99`.
+- **Model (`WasteProduct.php`):** Menambahkan accessor `getFotoUrlAttribute()` dan mendaftarkannya ke `$appends = ['foto_url']`.
+- **Controller Web & API (`DashboardController.php` & `MarketplaceController.php`):**
+  - Menyimpan file gambar ke disk public `products/`.
+  - Pada `updateMarketplaceProduct`, jika foto diganti, file lama di disk public otomatis dihapus.
+  - Pada `destroyMarketplaceProduct`, file fisik foto yang terasosiasi otomatis dihapus dari disk penyimpanan untuk mencegah orphaned files.
+- **Blade View (`dashboard/tps3r/products.blade.php`):**
+  - Menambahkan atribut `enctype="multipart/form-data"` pada form pembuatan produk dan modal edit.
+  - Menambahkan komponen upload foto modern dengan live image preview (Alpine.js) dan tombol pembatalan foto.
+  - Menambahkan kolom thumbnail visual (48x48px) pada tabel etalase toko dengan fallback emoji kategori jika produk belum memiliki foto.
+  - Menambahkan indikator status dinamis `Habis (Stok 0)` jika stok produk bernilai 0.
+  - Menambahkan preview foto produk saat ini serta opsi penggantian foto pada modal edit.
+- **Pengujian (`Tps3rProductPhotoTest.php`):** Membuat feature test terisolasi dengan `Storage::fake('public')` untuk memverifikasi create foto, update/replace foto, delete cleanup, dan penolakan file non-gambar/oversized.
+
+**Verifikasi Gemini Antigravity:**
+- `php artisan test tests/Feature/Tps3rProductPhotoTest.php` → `4 / 4 passed` (26 assertions).
+- `php artisan test --filter="recycled product" --compact` → `2 / 2 passed` (10 assertions).
+- `vendor/bin/pint --dirty --format agent` → passed (0 styling issues).
+- `php artisan view:clear` → compiled views cleared successfully.
+
+**Tindak lanjut Codex / Flutter:**
+- Model produk pada Flutter (`WasteProduct`) kini dapat langsung membaca field `foto_url` untuk dimuat menggunakan `Image.network(product.fotoUrl)`.
+

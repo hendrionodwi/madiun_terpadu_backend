@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -477,6 +478,13 @@ class DashboardController extends Controller
         $seller = $request->user();
         $validated = $request->validated();
 
+        $fotoPath = null;
+        if ($request->hasFile('foto')) {
+            $fotoPath = $request->file('foto')->store('products', 'public');
+        } elseif (isset($validated['foto']) && is_string($validated['foto'])) {
+            $fotoPath = $validated['foto'];
+        }
+
         WasteProduct::create([
             'seller_id' => $seller->id,
             'nama_produk' => $validated['nama_produk'],
@@ -484,6 +492,7 @@ class DashboardController extends Controller
             'kategori' => $validated['kategori'],
             'harga' => (float) $validated['harga'],
             'stok' => (int) $validated['stok'],
+            'foto' => $fotoPath,
             'is_available' => $validated['is_available'] ?? true,
         ]);
 
@@ -656,19 +665,29 @@ class DashboardController extends Controller
             'nama_produk' => ['required', 'string', 'max:255'],
             'deskripsi' => ['nullable', 'string', 'max:2000'],
             'kategori' => ['required', 'string', 'in:pupuk_kompos,kerajinan_plastik,maggot_pakan,ecobrick,lainnya'],
-            'harga' => ['required', 'numeric', 'min:0'],
+            'harga' => ['required', 'numeric', 'min:0', 'max:999999999.99'],
             'stok' => ['required', 'integer', 'min:0'],
+            'foto' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'is_available' => ['nullable', 'boolean'],
         ]);
 
-        $wasteProduct->update([
+        $updateData = [
             'nama_produk' => $validated['nama_produk'],
             'deskripsi' => $validated['deskripsi'] ?? null,
             'kategori' => $validated['kategori'],
             'harga' => (float) $validated['harga'],
             'stok' => (int) $validated['stok'],
             'is_available' => (bool) ($validated['is_available'] ?? false),
-        ]);
+        ];
+
+        if ($request->hasFile('foto')) {
+            if ($wasteProduct->foto && ! str_starts_with($wasteProduct->foto, 'http')) {
+                Storage::disk('public')->delete($wasteProduct->foto);
+            }
+            $updateData['foto'] = $request->file('foto')->store('products', 'public');
+        }
+
+        $wasteProduct->update($updateData);
 
         return to_route('dashboard.tps3r.products')->with('status', 'Produk daur ulang berhasil diperbarui.');
     }
@@ -683,6 +702,9 @@ class DashboardController extends Controller
         abort_unless($wasteProduct->seller_id === $seller->id, 403);
 
         $namaProduk = $wasteProduct->nama_produk;
+        if ($wasteProduct->foto && ! str_starts_with($wasteProduct->foto, 'http')) {
+            Storage::disk('public')->delete($wasteProduct->foto);
+        }
         $wasteProduct->delete();
 
         return to_route('dashboard.tps3r.products')->with('status', "Produk \"{$namaProduk}\" berhasil dihapus dari katalog.");
