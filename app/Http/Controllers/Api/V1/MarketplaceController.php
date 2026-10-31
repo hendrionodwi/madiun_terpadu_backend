@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\OrderFulfillmentStatus;
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Marketplace\CheckoutRequest;
 use App\Http\Requests\Api\Marketplace\StoreProductRequest;
@@ -24,6 +25,107 @@ use Symfony\Component\HttpFoundation\Response;
 class MarketplaceController extends Controller
 {
     /**
+     * Get list of TPS3R stores (Store-First Marketplace Discovery).
+     */
+    public function indexStores(Request $request): JsonResponse
+    {
+        $query = User::query()
+            ->where('role', UserRole::PengelolaTps3r)
+            ->where('is_active', true)
+            ->whereHas('pengelolaTps3rProfile')
+            ->with(['pengelolaTps3rProfile'])
+            ->withCount([
+                'wasteProducts as total_products' => fn ($q) => $q->where('is_available', true)->where('stok', '>', 0),
+            ]);
+
+        if ($request->filled('search')) {
+            $search = (string) $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('pengelolaTps3rProfile', function ($sub) use ($search) {
+                        $sub->where('nama_tps3r', 'like', "%{$search}%")
+                            ->orWhere('kelurahan', 'like', "%{$search}%")
+                            ->orWhere('kecamatan', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $stores = $query->orderBy('name')->get();
+
+        $data = $stores->map(function (User $user) {
+            /** @var PengelolaTps3rProfile|null $profile */
+            $profile = $user->pengelolaTps3rProfile;
+
+            return [
+                'id' => $user->id,
+                'public_id' => $profile?->public_id,
+                'name' => $user->name,
+                'nama_tps3r' => $profile?->nama_tps3r ?? $user->name,
+                'kode_tps3r' => $profile?->kode_tps3r,
+                'alamat' => $profile?->alamat,
+                'kelurahan' => $profile?->kelurahan,
+                'kecamatan' => $profile?->kecamatan,
+                'phone_number' => $user->phone_number,
+                'latitude' => $profile?->latitude,
+                'longitude' => $profile?->longitude,
+                'is_midtrans_active' => $profile ? $profile->isMidtransConfigured() : false,
+                'total_products' => (int) ($user->total_products ?? 0),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Daftar fasilitas toko TPS3R berhasil diambil.',
+            'data' => $data,
+        ], Response::HTTP_OK);
+    }
+
+    /**
+     * Get store detail and its recycled products.
+     */
+    public function showStore(PengelolaTps3rProfile $store): JsonResponse
+    {
+        $store->load('user');
+        $seller = $store->user;
+
+        if ($seller->role !== UserRole::PengelolaTps3r || ! $seller->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Fasilitas TPS3R tidak ditemukan.',
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        $products = WasteProduct::query()
+            ->with('seller:id,name,role')
+            ->where('seller_id', $seller->id)
+            ->where('is_available', true)
+            ->where('stok', '>', 0)
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Detail toko TPS3R berhasil diambil.',
+            'data' => [
+                'id' => $seller->id,
+                'public_id' => $store->public_id,
+                'name' => $seller->name,
+                'nama_tps3r' => $store->nama_tps3r,
+                'kode_tps3r' => $store->kode_tps3r,
+                'alamat' => $store->alamat,
+                'kelurahan' => $store->kelurahan,
+                'kecamatan' => $store->kecamatan,
+                'phone_number' => $seller->phone_number,
+                'latitude' => $store->latitude,
+                'longitude' => $store->longitude,
+                'is_midtrans_active' => $store->isMidtransConfigured(),
+                'total_products' => $products->count(),
+                'products' => $products,
+            ],
+        ], Response::HTTP_OK);
+    }
+
+    /**
      * Get recycled product catalog (MKT-F-001).
      */
     public function indexProducts(Request $request): JsonResponse
@@ -32,6 +134,10 @@ class MarketplaceController extends Controller
 
         if ($request->filled('kategori')) {
             $query->where('kategori', (string) $request->kategori);
+        }
+
+        if ($request->filled('seller_id')) {
+            $query->where('seller_id', (int) $request->seller_id);
         }
 
         if ($request->filled('search')) {
@@ -65,16 +171,9 @@ class MarketplaceController extends Controller
     /**
      * Get product details (MKT-F-001).
      */
-    public function showProduct(int $id): JsonResponse
+    public function showProduct(WasteProduct $product): JsonResponse
     {
-        $product = WasteProduct::with('seller:id,name,email,role')->find($id);
-
-        if (! $product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Produk daur ulang tidak ditemukan.',
-            ], Response::HTTP_NOT_FOUND);
-        }
+        $product->load('seller:id,name,email,role');
 
         return response()->json([
             'success' => true,
@@ -170,6 +269,17 @@ class MarketplaceController extends Controller
                 ];
             }
 
+            $sellerIds = [];
+            foreach ($orderItemsToCreate as $itemData) {
+                $sellerIds[$itemData['product']->seller_id] = true;
+            }
+
+            if (count($sellerIds) > 1) {
+                throw ValidationException::withMessages([
+                    'items' => 'Produk dalam satu transaksi harus berasal dari fasilitas TPS3R yang sama.',
+                ]);
+            }
+
             $wargaProfile = null;
             $requiredPoints = 0;
             if ($validated['metode_pembayaran'] === 'poin_sampah') {
@@ -187,18 +297,7 @@ class MarketplaceController extends Controller
                 }
             }
 
-            $sellerIds = [];
-            foreach ($orderItemsToCreate as $itemData) {
-                $sellerIds[$itemData['product']->seller_id] = true;
-            }
-
             if ($validated['metode_pembayaran'] === 'midtrans') {
-                if (count($sellerIds) > 1) {
-                    throw ValidationException::withMessages([
-                        'items' => 'Untuk pembayaran via Midtrans, produk dalam satu transaksi harus berasal dari fasilitas TPS3R yang sama.',
-                    ]);
-                }
-
                 $sellerId = (int) array_key_first($sellerIds);
                 $seller = User::with('pengelolaTps3rProfile')->find($sellerId);
                 $tps3rProfile = $seller?->pengelolaTps3rProfile;
@@ -323,23 +422,16 @@ class MarketplaceController extends Controller
     /**
      * Show order detail.
      */
-    public function showOrder(Request $request, int $id): JsonResponse
+    public function showOrder(Request $request, Order $order): JsonResponse
     {
         /** @var User $currentUser */
         $currentUser = $request->user();
 
-        $order = Order::with([
+        $order->load([
             'items.product',
             'buyer:id,name,email,phone_number',
             'fulfillments.seller:id,name',
-        ])->find($id);
-
-        if (! $order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Pesanan tidak ditemukan.',
-            ], Response::HTTP_NOT_FOUND);
-        }
+        ]);
 
         if (! $currentUser->isAdminDlh() && $order->buyer_id !== $currentUser->id) {
             return response()->json([
@@ -358,19 +450,12 @@ class MarketplaceController extends Controller
     /**
      * Buyer cancels an order (only allowed if not yet shipped/completed).
      */
-    public function cancelOrder(Request $request, int $id): JsonResponse
+    public function cancelOrder(Request $request, Order $order): JsonResponse
     {
         /** @var User $currentUser */
         $currentUser = $request->user();
 
-        $order = Order::with(['items.product', 'fulfillments'])->find($id);
-
-        if (! $order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Pesanan tidak ditemukan.',
-            ], Response::HTTP_NOT_FOUND);
-        }
+        $order->load(['items.product', 'fulfillments']);
 
         if (! $currentUser->isAdminDlh() && $order->buyer_id !== $currentUser->id) {
             return response()->json([
@@ -444,19 +529,12 @@ class MarketplaceController extends Controller
     /**
      * Buyer confirms order received (delivery completed).
      */
-    public function confirmReceived(Request $request, int $id): JsonResponse
+    public function confirmReceived(Request $request, Order $order): JsonResponse
     {
         /** @var User $currentUser */
         $currentUser = $request->user();
 
-        $order = Order::with('fulfillments')->find($id);
-
-        if (! $order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Pesanan tidak ditemukan.',
-            ], Response::HTTP_NOT_FOUND);
-        }
+        $order->load('fulfillments');
 
         if (! $currentUser->isAdminDlh() && $order->buyer_id !== $currentUser->id) {
             return response()->json([

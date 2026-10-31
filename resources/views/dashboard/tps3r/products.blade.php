@@ -51,7 +51,7 @@
             <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Total Macam Produk</span>
-                    <span class="flex size-8 items-center justify-center rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 font-bold">📦</span>
+                    <span class="flex size-8 items-center justify-center rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"><flux:icon.cube class="size-5" /></span>
                 </div>
                 <div class="mt-3">
                     <h3 class="text-2xl font-black text-amber-700 dark:text-amber-400">
@@ -64,7 +64,7 @@
             <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Total Stok Fisik</span>
-                    <span class="flex size-8 items-center justify-center rounded-lg bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300 font-bold">📊</span>
+                    <span class="flex size-8 items-center justify-center rounded-lg bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300"><flux:icon.chart-bar class="size-5" /></span>
                 </div>
                 <div class="mt-3">
                     <h3 class="text-2xl font-black text-teal-700 dark:text-teal-400">
@@ -77,7 +77,7 @@
             <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Produk Aktif Tampil</span>
-                    <span class="flex size-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 font-bold">✅</span>
+                    <span class="flex size-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300"><flux:icon.check-circle class="size-5" /></span>
                 </div>
                 <div class="mt-3">
                     <h3 class="text-2xl font-black text-emerald-700 dark:text-emerald-400">
@@ -90,7 +90,7 @@
             <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Nilai Inventaris</span>
-                    <span class="flex size-8 items-center justify-center rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 font-bold">💰</span>
+                    <span class="flex size-8 items-center justify-center rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300"><flux:icon.banknotes class="size-5" /></span>
                 </div>
                 <div class="mt-3">
                     <h3 class="text-2xl font-black text-blue-700 dark:text-blue-400">
@@ -167,7 +167,7 @@
 
                         <label class="flex flex-1 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 bg-zinc-50/60 p-3 text-center transition hover:border-amber-500 hover:bg-amber-50/50 dark:border-zinc-700 dark:bg-zinc-800/60 dark:hover:border-amber-500">
                             <svg class="size-5 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            <span class="text-xs text-zinc-600 dark:text-zinc-300 font-medium" x-text="newPhotoPreview ? 'Ganti foto produk terpilih...' : 'Pilih Foto Produk (Format: JPG, JPEG, PNG, WEBP — Maks. 2MB)'"></span>
+                            <span class="text-xs text-zinc-600 dark:text-zinc-300 font-medium" x-text="newPhotoPreview ? 'Ganti foto produk terpilih...' : 'Pilih Foto Produk (Format: JPG, JPEG, PNG, WEBP — Maks. 5MB)'"></span>
                             <input type="file" name="foto" x-ref="newPhotoInput" accept="image/png,image/jpeg,image/webp" class="sr-only" @change="const file = $event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (e) => { newPhotoPreview = e.target.result; }; reader.readAsDataURL(file); } else { newPhotoPreview = null; }">
                         </label>
                     </div>
@@ -225,15 +225,7 @@
                                             @if ($product->foto)
                                                 <img src="{{ $product->foto_url }}" alt="{{ $product->nama_produk }}" class="size-full object-cover">
                                             @else
-                                                <span class="text-lg">
-                                                    @switch($product->kategori)
-                                                        @case('pupuk_kompos') 🌱 @break
-                                                        @case('kerajinan_plastik') 🧺 @break
-                                                        @case('maggot_pakan') 🐛 @break
-                                                        @case('ecobrick') 🧱 @break
-                                                        @default 📦
-                                                    @endswitch
-                                                </span>
+                                                <flux:icon.cube class="size-5 text-zinc-400" />
                                             @endif
                                         </div>
                                         <div class="min-w-0">
@@ -254,9 +246,9 @@
                                 </td>
                                 <td class="px-4 py-3 text-right font-medium">
                                     @if ($product->stok <= 0)
-                                        <span class="text-rose-600 font-bold" title="Stok habis!">0 unit ⚠️</span>
+                                        <span class="inline-flex items-center gap-1 font-bold text-rose-600" title="Stok habis"><flux:icon.exclamation-triangle class="size-3.5" /> 0 unit</span>
                                     @elseif ($product->stok <= 5)
-                                        <span class="text-amber-600 font-bold" title="Stok menipis!">{{ $product->stok }} unit ⚠️</span>
+                                        <span class="inline-flex items-center gap-1 font-bold text-amber-600" title="Stok menipis"><flux:icon.exclamation-triangle class="size-3.5" /> {{ $product->stok }} unit</span>
                                     @else
                                         <span>{{ $product->stok }} unit</span>
                                     @endif
@@ -292,7 +284,8 @@
                                                 update_url: '{{ route('dashboard.tps3r.products.update', $product) }}'
                                             }; editPhotoPreview = null; if ($refs.editPhotoInput) { $refs.editPhotoInput.value = ''; } editModalOpen = true"
                                             class="inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700">
-                                            ✏️ Edit
+                                            <flux:icon.pencil-square class="size-3.5" />
+                                            Edit
                                         </button>
 
                                         <!-- Form Hapus Produk -->
@@ -300,7 +293,8 @@
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300 dark:hover:bg-rose-950/60">
-                                                🗑️ Hapus
+                                                <flux:icon.trash class="size-3.5" />
+                                                Hapus
                                             </button>
                                         </form>
                                     </div>

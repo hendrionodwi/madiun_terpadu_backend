@@ -44,8 +44,10 @@ Route::prefix('v1')->group(function () {
     // Public / Protected Master Data & Catalog
     // ==========================================
     Route::get('/master-data', [MasterDataController::class, 'index']);
+    Route::get('/marketplace/stores', [MarketplaceController::class, 'indexStores']);
+    Route::get('/marketplace/stores/{store}', [MarketplaceController::class, 'showStore']);
     Route::get('/marketplace/products', [MarketplaceController::class, 'indexProducts']);
-    Route::get('/marketplace/products/{id}', [MarketplaceController::class, 'showProduct']);
+    Route::get('/marketplace/products/{product}', [MarketplaceController::class, 'showProduct']);
     Route::post('/marketplace/midtrans/notification', [MarketplaceController::class, 'handleMidtransNotification']);
     Route::post('/retributions/midtrans/notification', [RetributionController::class, 'handleMidtransNotification']);
     Route::get('/education/waste-sorting', [EducationController::class, 'index']);
@@ -120,9 +122,9 @@ Route::prefix('v1')->group(function () {
             // MKT-F-003: Checkout Keranjang Belanja
             Route::post('/checkout', [MarketplaceController::class, 'checkout']);
             Route::get('/orders', [MarketplaceController::class, 'indexOrders']);
-            Route::get('/orders/{id}', [MarketplaceController::class, 'showOrder']);
-            Route::patch('/orders/{id}/cancel', [MarketplaceController::class, 'cancelOrder']);
-            Route::patch('/orders/{id}/confirm-received', [MarketplaceController::class, 'confirmReceived']);
+            Route::get('/orders/{order}', [MarketplaceController::class, 'showOrder']);
+            Route::patch('/orders/{order}/cancel', [MarketplaceController::class, 'cancelOrder']);
+            Route::patch('/orders/{order}/confirm-received', [MarketplaceController::class, 'confirmReceived']);
             Route::get('/fulfillments', [OrderFulfillmentController::class, 'index'])
                 ->middleware('role:pengelola_tps3r');
             Route::get('/fulfillments/{orderFulfillment}', [OrderFulfillmentController::class, 'show'])
@@ -138,15 +140,15 @@ Route::prefix('v1')->group(function () {
             // PPL-F-001: Form Pengaduan Masyarakat
             Route::get('/', [ComplaintController::class, 'index'])
                 ->middleware('role:warga,petugas_lapangan,admin_dlh');
-            Route::get('/{id}', [ComplaintController::class, 'show'])
+            Route::get('/{complaint}', [ComplaintController::class, 'show'])
                 ->middleware('role:warga,petugas_lapangan,admin_dlh');
             Route::post('/', [ComplaintController::class, 'store'])
                 ->middleware('role:warga');
-            Route::get('/{id}/notifications', [ComplaintController::class, 'notifications'])
+            Route::get('/{complaint}/notifications', [ComplaintController::class, 'notifications'])
                 ->middleware('role:warga,petugas_lapangan,admin_dlh');
 
             // PPL-F-004: Verifikasi Lapangan oleh Petugas
-            Route::post('/{id}/verify', [ComplaintController::class, 'verify'])
+            Route::post('/{complaint}/verify', [ComplaintController::class, 'verify'])
                 ->middleware('role:petugas_lapangan,admin_dlh');
         });
 

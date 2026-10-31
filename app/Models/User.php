@@ -97,6 +97,16 @@ class User extends Authenticatable
     }
 
     /**
+     * Relation to Waste Products sold by this TPS3R.
+     *
+     * @return HasMany<WasteProduct, $this>
+     */
+    public function wasteProducts(): HasMany
+    {
+        return $this->hasMany(WasteProduct::class, 'seller_id');
+    }
+
+    /**
      * Relation to Pemrakarsa Profile.
      *
      * @return HasOne<PemrakarsaProfile, $this>

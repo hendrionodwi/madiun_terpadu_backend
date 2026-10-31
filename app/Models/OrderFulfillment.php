@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\OrderFulfillmentStatus;
 use Database\Factories\OrderFulfillmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
+ * @property string $public_id
  * @property int $order_id
  * @property int $seller_id
  * @property OrderFulfillmentStatus $status
@@ -38,7 +40,18 @@ use Illuminate\Support\Carbon;
 class OrderFulfillment extends Model
 {
     /** @use HasFactory<OrderFulfillmentFactory> */
-    use HasFactory;
+    use HasFactory, HasUlids;
+
+    /** @return list<string> */
+    public function uniqueIds(): array
+    {
+        return ['public_id'];
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'public_id';
+    }
 
     /** @return array<string, string> */
     protected function casts(): array

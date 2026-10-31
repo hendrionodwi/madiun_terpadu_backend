@@ -40,7 +40,7 @@ test('admin dlh can verify an environmental report through the API', function ()
     $report = EnvironmentalReport::factory()->create(['status' => 'menunggu_verifikasi']);
     Sanctum::actingAs($admin, ['role:admin_dlh']);
 
-    $this->patchJson("/api/v1/environmental-reports/{$report->id}/verification", ['status' => 'disetujui', 'catatan_verifikasi' => 'Dokumen telah lengkap.'])
+    $this->patchJson("/api/v1/environmental-reports/{$report->public_id}/verification", ['status' => 'disetujui', 'catatan_verifikasi' => 'Dokumen telah lengkap.'])
         ->assertOk()->assertJsonPath('data.status', 'disetujui');
     $this->assertDatabaseHas('environmental_reports', ['id' => $report->id, 'status' => 'disetujui']);
 });
@@ -55,7 +55,7 @@ test('admin can only assign an active field officer through the environmental re
     Sanctum::actingAs($admin, ['role:admin_dlh']);
 
     foreach ($invalidAssignees as $invalidAssignee) {
-        $this->patchJson("/api/v1/environmental-reports/{$report->id}/verification", [
+        $this->patchJson("/api/v1/environmental-reports/{$report->public_id}/verification", [
             'status' => 'perlu_cek_lapangan',
             'assigned_petugas_id' => $invalidAssignee->id,
         ])->assertUnprocessable()
@@ -78,7 +78,7 @@ test('reassigning a field inspection clears the previous officer findings', func
     ]);
     Sanctum::actingAs($admin, ['role:admin_dlh']);
 
-    $this->patchJson("/api/v1/environmental-reports/{$report->id}/verification", [
+    $this->patchJson("/api/v1/environmental-reports/{$report->public_id}/verification", [
         'status' => 'perlu_cek_lapangan',
         'assigned_petugas_id' => $newOfficer->id,
         'instruksi_lapangan' => 'Lakukan pemeriksaan ulang dari awal.',
@@ -138,13 +138,13 @@ test('petugas lapangan can view assigned environmental reports and submit field 
         ->assertJsonPath('data.0.assigned_petugas.id', $petugas->id);
 
     // View detail
-    $detailResponse = $this->getJson("/api/v1/environmental-reports/{$report->id}");
+    $detailResponse = $this->getJson("/api/v1/environmental-reports/{$report->public_id}");
     $detailResponse->assertOk()
         ->assertJsonPath('data.id', $report->id)
         ->assertJsonPath('data.instruksi_lapangan', 'Cek bak sedimentasi limbah cair dan filter cerobong.');
 
     // Submit field check finding
-    $fieldCheckResponse = $this->postJson("/api/v1/environmental-reports/{$report->id}/field-check", [
+    $fieldCheckResponse = $this->postJson("/api/v1/environmental-reports/{$report->public_id}/field-check", [
         'catatan_inspeksi' => 'Filter cerobong dalam kondisi baik, bak sedimentasi telah dibersihkan oleh pengelola.',
         'hasil_rekomendasi' => 'sesuai',
     ]);
@@ -170,7 +170,7 @@ test('officer cannot submit field check for report assigned to another officer',
 
     Sanctum::actingAs($officer2, ['role:petugas_lapangan']);
 
-    $response = $this->postJson("/api/v1/environmental-reports/{$report->id}/field-check", [
+    $response = $this->postJson("/api/v1/environmental-reports/{$report->public_id}/field-check", [
         'catatan_inspeksi' => 'Catatan ilegal',
         'hasil_rekomendasi' => 'sesuai',
     ]);
@@ -189,7 +189,7 @@ test('officer cannot overwrite field findings after admin finalizes the report',
     ]);
     Sanctum::actingAs($officer, ['role:petugas_lapangan']);
 
-    $this->postJson("/api/v1/environmental-reports/{$report->id}/field-check", [
+    $this->postJson("/api/v1/environmental-reports/{$report->public_id}/field-check", [
         'catatan_inspeksi' => 'Upaya mengubah hasil setelah finalisasi.',
         'hasil_rekomendasi' => 'tidak_sesuai',
     ])->assertUnprocessable()
@@ -223,5 +223,5 @@ test('officer cannot list or view environmental reports assigned to other office
         ->assertJsonPath('data.0.id', $report1->id);
 
     // Viewing report of officer2 should be 403 Forbidden
-    $this->getJson("/api/v1/environmental-reports/{$report2->id}")->assertForbidden();
+    $this->getJson("/api/v1/environmental-reports/{$report2->public_id}")->assertForbidden();
 });

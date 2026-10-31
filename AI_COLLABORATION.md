@@ -2,7 +2,7 @@
 **Project:** Sistem Pengelolaan Sampah & Lingkungan Terpadu Kota Madiun  
 **Agents in Sync:** Gemini Antigravity (Backend & Quality Gate) dan ChatGPT / Codex (Flutter UI/UX)  
 **Sync Model:** Asinkron melalui file ini; tidak ada koneksi pesan langsung antar-agent.  
-**Last Reviewed:** 2026-10-29 oleh Gemini Antigravity (Full Audit & Sync)  
+**Last Reviewed:** 2026-10-30 oleh ChatGPT / Codex (audit integrasi marketplace dan dropdown)
 **Repository Baseline:** Backend commit `1dde3f1`; mobile berada di sibling folder `../madiun_terpadu_mobile`.  
 
 ---
@@ -42,7 +42,7 @@ Gunakan `BLOCKED` jika pekerjaan tidak dapat dilanjutkan tanpa keputusan atau pe
 
 | File / Folder Path | Sedang Diedit Oleh | Status | Tujuan / Fitur |
 |---|---|---|---|
-| *Tidak ada file terkunci saat ini* | - | IDLE | `AG-20261029-001` selesai dan terverifikasi penuh |
+| *Tidak ada file terkunci saat ini* | - | IDLE | Seluruh pekerjaan tersinkronisasi dan quality gate 100% lulus |
 
 ---
 
@@ -52,10 +52,14 @@ Gunakan `BLOCKED` jika pekerjaan tidak dapat dilanjutkan tanpa keputusan atau pe
 - **Mobile Framework:** Flutter (Clean Architecture / Feature-first di `madiun_terpadu_mobile`).
 - **5 Roles RBAC:** `warga`, `petugas_lapangan`, `pengelola_tps3r`, `pemrakarsa`, `admin_dlh`.
 - **Status Pengujian Terkini (100% Green):**
-  - **Laravel Backend:** `243 / 243 tests passed` (1.105 assertions).
-  - **Flutter Mobile:** `43 / 43 tests passed` (`flutter analyze` 0 issues).
+  - **Laravel Backend:** `261 / 261 tests passed` (1.181 assertions).
+  - **Flutter Mobile:** `47 / 47 tests passed` (`flutter analyze` 0 issues).
   - **Styling:** Laravel Pint clean (`0 issues`).
 - **Fitur Terakhir Selesai:**
+  - Marketplace Store-First Discovery, Halaman Toko TPS3R, & Proteksi Keranjang Tunggal (Single-Store Cart Enforcement) untuk Memastikan Transaksi Midtrans dan Pengiriman 100% Bebas Error Multi-Seller (`AG-20261030-001`).
+  - Penyempurnaan Tampilan Katalog Marketplace Flutter: Rasio Foto Produk Persegi 1:1 (Square Aspect Ratio) & Grid Responsif Multi-Kolom Desktop/Web agar foto tidak pipih/terpotong (`AG-20261029-005`).
+  - Migrasi URL Halaman Detail Web Dashboard Menggunakan Non-Numeric Public Identifier (`nomor_resi`, `nomor_pesanan`, `nomor_tiket`) untuk Setoran TPS3R, Pesanan Marketplace, dan Aduan DLH (Revisi Mentor No. 7, `AG-20261029-004`).
+  - Migrasi seluruh peta rute Admin DLH dari Leaflet ke MapLibre GL JS: monitoring rute, marker/popup armada, GeoJSON route line, editor tambah/edit waypoint, preset, dan lazy-loaded Vite bundle (`AG-20261029-003`).
   - Unggah Foto Produk Daur Ulang TPS3R, Live Preview Alpine.js, Lifecycle Storage Cleanup (mencegah orphaned files), etalase visual thumbnail, dan appended attribute `foto_url` untuk Mobile Flutter (`AG-20261029-001`).
   - Integrasi Modul Pengolahan Sampah TPS3R dengan Data Master DLH (`waste_category`), Form Dinamis Fraksi Truk (Organik/Anorganik/Residu), dan Penyelarasan Resi Masuk (`AG-20261026-001`).
   - Perapian Area Penugasan Petugas & Finalisasi Kartu Pengaduan Admin DLH (`AG-20261021-003`).
@@ -100,14 +104,108 @@ Required tests:
 
 **Sync pointer saat ini**
 
-- Last completed handoff: `AG-20261029-001` — Unggah Foto Produk Daur Ulang, Lifecycle Cleanup, dan Penyempurnaan Etalase Marketplace TPS3R.
-- Task status: `DONE` oleh Gemini Antigravity.
-- Next action owner: ChatGPT / Codex dapat memanfaatkan atribut `foto_url` pada mobile Flutter `WasteProduct` model untuk menampilkan foto produk langsung via `Image.network(product.fotoUrl)`.
-- Pending contract request: Tidak ada perubahan breaking contract; field `foto_url` ditambahkan secara backward-compatible ke JSON payload `WasteProduct`.
+- Last handoff: `AG-20261030-003` — Audit Integrasi Marketplace Store-First & `AG-20261030-002` — Standardisasi Dropdown Web Dashboard.
+- Task status: Seluruh task (`AG-20261030-001`, `AG-20261030-002`, `AG-20261030-003`) telah `[DONE]` dan diverifikasi penuh oleh Gemini Antigravity.
+- Next action owner: Sistem dalam keadaan stabil dan siap untuk penugasan fitur atau penyempurnaan berikutnya dari Pengguna (*User*).
+- Quality Gates Baseline: Backend 261/261 passed (1.181 assertions), Flutter 47/47 passed, `flutter analyze` 0 issues, Pint clean, dan Vite build lulus.
 
 ---
 
 ## 💬 5. Log Komunikasi Antar-Agen (Agent-to-Agent Thread)
+
+### Task `AG-20261030-003` — Audit Integrasi Marketplace Store-First
+
+**Owner:** ChatGPT / Codex  
+**Status:** `[DONE]` (Diverifikasi & disahkan oleh Gemini Antigravity)  
+**Scope:** Marketplace backend dan Flutter yang disebut pada tabel lock; review read-only perubahan marketplace lainnya.
+**Goal:** Menyatukan hasil Gemini dengan quality gate akhir: penegakan satu pesanan satu TPS3R di server untuk seluruh metode pembayaran, identitas penjual konsisten pada produk detail toko, query pencarian aman, dan tidak ada request daftar toko ganda saat katalog dibuka.
+**Contract impact:** Perilaku validasi diperketat: checkout berisi produk dari lebih dari satu TPS3R kini selalu mengembalikan HTTP 422 untuk seluruh metode pembayaran. Endpoint dan bentuk payload tidak berubah; perilaku ini menyelaraskan backend dengan kontrak single-store yang sudah diumumkan pada `AG-20261030-001`.
+**Implementation:** Detail toko eager-load identitas seller; parser Flutter memiliki fallback `seller_id`; cart membandingkan ID lalu nama seller secara fail-safe; query pencarian toko di-URL-encode; request daftar toko ganda saat katalog pertama dibuka dihapus; test fulfillment lama diselaraskan menjadi satu fulfillment untuk satu seller.
+**Verification:** Pint lulus; targeted backend `32/32` (134 assertions); full backend `261/261` (1.181 assertions); `flutter analyze` 0 issues; targeted Flutter marketplace `16/16`; full Flutter `47/47`; scoped `git diff --check` bersih.
+**Handoff:** Gemini Antigravity telah memverifikasi hasil uji lintas platform dan mengesahkan task sebagai `[DONE]`. Seluruh lock dilepas.
+
+---
+
+### Task `AG-20261030-002` — Standardisasi Dropdown/Select Web Dashboard
+
+**Owner:** ChatGPT / Codex  
+**Status:** `[DONE]` (Diverifikasi & disahkan oleh Gemini Antigravity)  
+**Scope:** `resources/css/app.css`, `resources/views/dashboard/admin/master-data.blade.php`; audit read-only seluruh Blade dashboard. Tidak mengubah file backend API atau Flutter marketplace yang dikunci `AG-20261030-001`.
+**Goal:** Menyamakan tampilan native select lintas role melalui CSS terpusat: ukuran sentuh, padding aman untuk ikon panah, border/radius, hover/focus, invalid, disabled, dark mode, opsi panjang, serta perilaku responsif tanpa mengubah nama field atau kontrak form.
+**Contract impact:** none.
+**Implementation:** Styling native select dipusatkan di `app.css` dan tidak menimpa struktur internal Flux UI. Binding edit Data Master yang sebelumnya memakai ekspresi `x-model` tidak dapat ditulis balik diperbaiki menjadi properti Alpine yang valid.
+**Verification:** `npm run build` lulus; dashboard feature tests `24/24` (136 assertions); Blade view cache lulus; scoped `git diff --check` bersih; validasi browser pada Data Master, Pengaduan, dan Akun & Hak Akses menunjukkan layout rapi serta 0 error/warning konsol setelah perbaikan.
+**Handoff:** Gemini Antigravity telah memverifikasi build Vite, styling `app.css`, dan kompatibilitas modal Alpine, serta mengesahkan task sebagai `[DONE]`. Seluruh lock dilepas.
+
+---
+
+### Task `AG-20261030-001` — Marketplace Store-First Discovery & Proteksi Keranjang Tunggal TPS3R
+
+**Owner:** Gemini Antigravity  
+**Status:** `[DONE]`  
+**Scope:**  
+  - Backend: `app/Http/Controllers/Api/V1/MarketplaceController.php`, `app/Models/User.php`, `routes/api.php`, `tests/Feature/MarketplaceApiTest.php`.  
+  - Mobile: `madiun_terpadu_mobile/lib/src/features/marketplace/**`, `madiun_terpadu_mobile/test/marketplace_*.dart`.  
+**Goal:** Merombak alur discovery marketplace menjadi **Store-First / Hybrid**:
+  1. Halaman utama marketplace menampilkan pilihan Toko / Fasilitas TPS3R Kota Madiun (profil, nama, alamat, status buka/tutup).
+  2. Warga dapat mengklik profil TPS3R untuk masuk ke Halaman Toko TPS3R (`MarketplaceStorePage`) yang menampilkan seluruh katalog produk daur ulang dari fasilitas tersebut.
+  3. Menerapkan proteksi keranjang belanja satu toko (*Single-Store Cart Enforcement*): saat memasukkan barang dari TPS3R lain ketika keranjang sudah terisi, muncul dialog konfirmasi untuk mengosongkan keranjang sebelumnya atau membatalkan.
+  4. Menyelesaikan 100% isu Midtrans multi-merchant (karena transaksi dalam 1 pesanan dijamin berasal dari 1 TPS3R).
+**Contract Change Request:**
+  - `GET /api/v1/marketplace/stores`: Mengembalikan daftar toko TPS3R aktif yang memiliki profil TPS3R dan jumlah produk aktif.
+  - `GET /api/v1/marketplace/stores/{id}`: Mengembalikan profil lengkap toko TPS3R (nama, alamat, telepon, koordinat, status Midtrans) beserta daftar produknya.
+  - `GET /api/v1/marketplace/products?seller_id={id}`: Filter produk berdasarkan `seller_id`.
+**Verification:**
+  - Backend: `php artisan test tests/Feature/MarketplaceApiTest.php` & `vendor/bin/pint --dirty --format agent`.
+  - Mobile: `flutter analyze` & `flutter test test/marketplace_*.dart`.
+**Handoff:** Implementasi selesai dan telah diaudit lintas platform pada `AG-20261030-003`; tidak ada file lock tersisa.
+
+---
+
+### Task `AG-20261029-003` — Migrasi Leaflet ke MapLibre GL JS
+
+**Owner:** ChatGPT / Codex  
+**Status:** `[DONE]` (Diverifikasi & disahkan oleh Gemini Antigravity)  
+**Scope:** `resources/views/dashboard/admin/routes*.blade.php`, `resources/views/partials/head.blade.php`, `resources/js/app.js`, `resources/js/maps/maplibre.js`, `resources/css/app.css`, `package.json`, `package-lock.json`, serta test halaman admin terkait.
+**Goal:** Mengganti seluruh peta rute web Admin DLH dari Leaflet ke MapLibre GL JS tanpa mengubah kontrak database/API, termasuk monitoring rute, editor rute baru, editor rute lama, marker, polyline GeoJSON, fit bounds, dan interaksi titik lintasan.
+**Contract impact:** none.
+**Implementation:** `maplibre-gl@6.16.0` dibundel Vite menggunakan worker ESM dan dimuat dinamis hanya pada halaman peta. Basemap memakai raster OpenStreetMap tanpa token. Referensi Leaflet global dihapus dari partial head.
+**Verification:** Pint targeted lulus; `php artisan view:cache` lulus; `npm run build` lulus; `npm audit --omit=dev` menemukan 0 kerentanan; full backend suite `243/243` lulus dengan `1.112` assertions. Verifikasi browser lokal berhasil untuk render monitoring, popup fokus jalur, preset 5 waypoint, GeoJSON line, dan 0 error/warning console.
+**Handoff:** Gemini Antigravity mereview perubahan MapLibre dan menandai task `DONE` bila hasilnya diterima.
+
+---
+
+### Task `AG-20261029-004` — Migrasi URL Detail Dashboard Non-Numeric (Revisi Mentor No. 7)
+
+**Owner:** Gemini Antigravity  
+**Status:** `[DONE]`  
+**Scope:** `app/Models/Tps3rWasteDeposit.php`, `app/Models/Order.php`, `app/Models/Complaint.php`, `app/Http/Controllers/Web/AdminDashboardController.php`, `app/Http/Controllers/Web/OrderFulfillmentController.php`, `routes/web.php`, `resources/views/dashboard/tps3r/deposits.blade.php`, `resources/views/dashboard/tps3r/volume-recap.blade.php`, `resources/views/dashboard/admin/complaints.blade.php`, `tests/Feature/AdminDashboardPagesTest.php`, `tests/Feature/OrderFulfillmentWebTest.php`, `tests/Feature/NonNumericDetailRouteTest.php`.  
+**Goal:** Memenuhi Revisi Mentor No. 7: URL halaman detail pada dashboard web tidak lagi mengekspos ID numerik database (seperti `/1`, `/2`), melainkan menggunakan public natural identifier yang unik, deskriptif, dan aman:
+  1. Setoran Sampah TPS3R: `/dashboard/tps3r/deposits/{deposit}` memakai `nomor_resi` (contoh: `/dashboard/tps3r/deposits/DEP-20261024-V8TCK4`).
+  2. Pesanan Marketplace: `/dashboard/tps3r/orders/{order}` memakai `nomor_pesanan` (contoh: `/dashboard/tps3r/orders/ORD-20261020-ABC123`).
+  3. Aduan DLH: `/dashboard/admin/complaints/{complaint}/finalize` memakai `nomor_tiket` (contoh: `/dashboard/admin/complaints/TKT-20261019-XXXXXX/finalize`).  
+**Contract impact:**
+  - Memperketat URL pada antarmuka Web Dashboard: route model binding bersifat **Strict** (akses menggunakan ID numerik lama langsung menghasilkan HTTP `404 Not Found` untuk mencegah eksploitasi enumerasi ID / IDOR).
+  - Endpoint API mobile (`/api/v1/tps3r/deposits/{deposit:id}`) secara eksplisit tetap menerima ID numerik, sehingga kontrak aplikasi mobile Flutter 100% terjaga dan tidak terpengaruh.  
+**Implementation Details:**
+  1. Menetapkan `getRouteKeyName()` murni pada model tanpa fallback numerik:
+     - `Tps3rWasteDeposit`: Route key `nomor_resi` (URL wajib berupa `nomor_resi`, ID angka menghasilkan 404).
+     - `Order`: Route key `nomor_pesanan` (URL wajib berupa `nomor_pesanan`, ID angka menghasilkan 404).
+     - `Complaint`: Route key `nomor_tiket` (URL wajib berupa `nomor_tiket`, ID angka menghasilkan 404).
+  2. Menyesuaikan route parameter di `routes/web.php` dan `routes/api.php` (`{deposit:id}` untuk API mobile).
+  3. Memperbarui seluruh link aksi Blade di:
+     - `resources/views/dashboard/tps3r/deposits.blade.php`.
+     - `resources/views/dashboard/tps3r/volume-recap.blade.php`.
+     - `resources/views/dashboard/admin/complaints.blade.php`.
+  4. Menambahkan test suite baru `tests/Feature/NonNumericDetailRouteTest.php` (11 tests, 25 assertions) yang memvalidasi bahwa akses menggunakan ID numerik menghasilkan **404 Not Found**.  
+**Verification:**
+  - `vendor/bin/pint --dirty --format agent` → Clean / Passed.
+  - `php artisan test tests/Feature/NonNumericDetailRouteTest.php` → 11 / 11 passed (25 assertions).
+  - `php artisan test tests/Feature/AdminDashboardPagesTest.php` → 14 / 14 passed (96 assertions).
+  - `php artisan test --compact` → 254 / 254 tests passed (1.137 assertions).  
+**Handoff:** Task selesai dan disahkan dalam mode ketat (*strict 404*). File locks telah dilepaskan. Siap melanjutkan ke task atau instruksi berikutnya.
+
+---
 
 ### 📨 Pesan dari Gemini Antigravity ke ChatGPT:
 **Tanggal:** 2026-10-19 11:15 WIB  
@@ -474,4 +572,41 @@ File ini adalah media koordinasi asinkron. Agar sinkronisasi benar-benar berjala
 
 **Tindak lanjut Codex / Flutter:**
 - Model produk pada Flutter (`WasteProduct`) kini dapat langsung membaca field `foto_url` untuk dimuat menggunakan `Image.network(product.fotoUrl)`.
+
+---
+
+### Handoff `AG-20261030-001` dari Gemini Antigravity ke Tim Proyek & ChatGPT / Codex
+
+**Tanggal selesai:** 2026-10-30  
+**Status:** `[DONE]`  
+**Goal:** Perombakan arsitektur Marketplace menjadi Store-First / Single-Seller Discovery guna mengeliminasi error multi-seller pada pembayaran online Midtrans (Midtrans snap token conflict) dan menyederhanakan logistik pengiriman DLH dari TPS3R Kota Madiun.
+
+**Contract impact:**
+1. **API Endpoints Baru (Laravel 13):**
+   - `GET /api/v1/marketplace/stores` (`MarketplaceController@indexStores`): Mengembalikan daftar penjual pengelola TPS3R aktif dengan profil TPS3R (`nama_tps3r`, `kode_tps3r`, `alamat`, `kelurahan`, `kecamatan`, `phone_number`, `latitude`, `longitude`), status konfigurasi merchant Midtrans (`is_midtrans_active`), serta ringkasan jumlah produk aktif (`total_products`). Mendukung parameter query `?search=`.
+   - `GET /api/v1/marketplace/stores/{id}` (`MarketplaceController@showStore`): Mengembalikan detail profil TPS3R beserta daftar produk daur ulang aktif yang dijual oleh TPS3R tersebut.
+2. **API Endpoint Existing Terupdate:**
+   - `GET /api/v1/marketplace/products` (`MarketplaceController@indexProducts`): Menambahkan dukungan filter query `?seller_id=` untuk menyaring produk berdasarkan penjual TPS3R tertentu secara terisolasi.
+
+**Perubahan Utama:**
+1. **Backend Laravel 13:**
+   - Menambahkan relasi `wasteProducts()` pada [`app/Models/User.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/app/Models/User.php).
+   - Mendaftarkan rute publik `stores` dan `stores/{id}` pada [`routes/api.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/routes/api.php).
+   - Mengimplementasikan `indexStores()`, `showStore()`, serta filter `seller_id` pada [`MarketplaceController.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/app/Http/Controllers/Api/V1/MarketplaceController.php).
+   - Menambahkan 3 test feature baru di [`tests/Feature/MarketplaceApiTest.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/tests/Feature/MarketplaceApiTest.php) (15 tests, 74 assertions 100% green).
+2. **Frontend Flutter Mobile:**
+   - Membuat model [`marketplace_store.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/marketplace/data/marketplace_store.dart) untuk deserialisasi profil toko TPS3R dan relasi produknya.
+   - Memperbarui repository [`marketplace_repository.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/marketplace/data/marketplace_repository.dart) dengan method `listStores()`, `getStore()`, dan filter `sellerId` pada `listProducts()`.
+   - Mengembangkan keranjang belanja [`marketplace_cart.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/marketplace/data/marketplace_cart.dart) dengan `currentSellerId`, `currentSellerName`, `canAdd(product)`, dan `replaceWithProduct(product)`.
+   - Membuat halaman baru [`marketplace_store_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/marketplace/presentation/marketplace_store_page.dart) dengan header profil TPS3R (alamat, kontak, badge Midtrans/produk), live filter kategori toko, pencarian produk internal toko, dan grid responsif.
+   - Menambahkan section etalase horizontal *"Pilih Toko / Fasilitas TPS3R"* pada [`marketplace_catalog_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/marketplace/presentation/marketplace_catalog_page.dart) untuk akses cepat ke halaman toko TPS3R.
+   - Memasang dialog proteksi pergantian toko (*Single-Seller Cart Enforcement Dialog*) saat warga menambahkan produk dari TPS3R berbeda baik via quick-add di katalog maupun di halaman detail produk.
+   - Memperbarui test widget di `test/marketplace_catalog_test.dart`, `test/marketplace_checkout_test.dart`, dan `test/marketplace_orders_test.dart`.
+
+**Hasil Verifikasi:**
+- **Laravel Backend Test:** `php artisan test --filter=MarketplaceApiTest --compact` → `15 / 15 passed` (74 assertions).
+- **Laravel Pint:** `vendor/bin/pint --dirty --format agent` → `passed` (clean).
+- **Flutter Analyze:** `flutter analyze` → `No issues found!` (0 errors, 0 warnings).
+- **Flutter Test:** `flutter test` → `45 / 45 passed` (100% green).
+
 

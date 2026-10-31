@@ -19,6 +19,7 @@ class EnvironmentalReportResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'public_id' => $this->public_id,
             'pemrakarsa_id' => $this->pemrakarsa_id,
             'pemrakarsa' => $this->whenLoaded('pemrakarsa', fn () => [
                 'id' => $this->pemrakarsa->id,

@@ -12,7 +12,11 @@ beforeEach(function () {
 test('reset password link screen can be rendered', function () {
     $response = $this->get(route('password.request'));
 
-    $response->assertOk();
+    $response
+        ->assertOk()
+        ->assertSee('Kirim Tautan Pemulihan')
+        ->assertSee('Anda tidak perlu memasukkan kata sandi lama')
+        ->assertDontSee('Kata sandi saat ini');
 });
 
 test('reset password link can be requested', function () {
@@ -35,7 +39,10 @@ test('reset password screen can be rendered', function () {
     Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
         $response = $this->get(route('password.reset', $notification->token));
 
-        $response->assertOk();
+        $response
+            ->assertOk()
+            ->assertSee('Buat Kata Sandi Baru')
+            ->assertDontSee('Kata sandi saat ini');
 
         return true;
     });

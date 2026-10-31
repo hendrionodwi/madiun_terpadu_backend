@@ -113,7 +113,7 @@
                             <!-- Status Penugasan Cek Fisik Lapangan (SRS Butir 2) -->
                             @if ($report->assignedPetugas)
                                 <div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/50 text-xs text-purple-900 dark:text-purple-200">
-                                    <span class="text-base">👷‍♂️</span>
+                                    <flux:icon.user class="size-5 shrink-0" />
                                     <div class="flex-1">
                                         <div class="flex items-center gap-2 flex-wrap">
                                             <span class="font-bold">Pengawas Lapangan Ditugaskan Cek Lokasi:</span>
@@ -131,7 +131,8 @@
                                             <div class="mt-2.5 p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-200">
                                                 <div class="flex items-center justify-between mb-1">
                                                     <span class="font-bold flex items-center gap-1.5">
-                                                        <span>🔍</span> Temuan Hasil Cek Lapangan Petugas:
+                                                        <flux:icon.magnifying-glass class="size-4" />
+                                                        Temuan Hasil Cek Lapangan Petugas:
                                                     </span>
                                                     <span class="font-bold uppercase tracking-wider text-[10px] px-2 py-0.5 rounded-full {{ $report->hasil_inspeksi_lapangan === 'sesuai' ? 'bg-emerald-200 text-emerald-900 dark:bg-emerald-800 dark:text-emerald-100' : ($report->hasil_inspeksi_lapangan === 'tidak_sesuai' ? 'bg-rose-200 text-rose-900 dark:bg-rose-800 dark:text-rose-100' : 'bg-amber-200 text-amber-900 dark:bg-amber-800 dark:text-amber-100') }}">
                                                         {{ str_replace('_', ' ', $report->hasil_inspeksi_lapangan ?? 'Selesai Dicek') }}
@@ -152,10 +153,11 @@
 
                         <!-- Unduh Berkas Dokumen -->
                         <div class="md:col-span-1 flex flex-col justify-center items-center p-4 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/20 text-center">
-                            <span class="text-3xl mb-2">📑</span>
+                            <flux:icon.document-text class="mb-2 size-8 text-zinc-500" />
                             <span class="font-semibold text-zinc-800 dark:text-zinc-200 mb-1">Berkas Dokumen</span>
-                            <a href="{{ asset('storage/' . $report->file_path) }}" target="_blank" class="px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-semibold hover:opacity-90 transition">
-                                Unduh / Lihat Berkas ↗
+                            <a href="{{ asset('storage/' . $report->file_path) }}" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 font-semibold text-white transition hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900">
+                                Unduh / Lihat Berkas
+                                <flux:icon.arrow-top-right-on-square class="size-3.5" />
                             </a>
                         </div>
                     </div>
@@ -189,7 +191,7 @@
                                 <option value="">-- Tugaskan Pengawas Lapangan --</option>
                                 @foreach ($petugasList as $p)
                                     <option value="{{ $p->id }}" @selected($report->assigned_petugas_id === $p->id)>
-                                        👷‍♂️ {{ $p->name }}
+                                        {{ $p->name }}
                                     </option>
                                 @endforeach
                             </select>

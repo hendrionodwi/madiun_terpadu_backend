@@ -62,7 +62,7 @@ test('warga can pay retribution bill 100% using waste reward points', function (
 
     Sanctum::actingAs($warga, ['role:warga']);
 
-    $response = $this->postJson("/api/v1/retributions/bills/{$bill->id}/pay", [
+    $response = $this->postJson("/api/v1/retributions/bills/{$bill->nomor_tagihan}/pay", [
         'use_points' => true,
         'points_to_use' => 1000, // 1000 poin * Rp10 = Rp10.000 (lunas)
     ]);
@@ -103,7 +103,7 @@ test('warga can pay retribution bill hybrid with partial points and remaining vi
 
     Sanctum::actingAs($warga, ['role:warga']);
 
-    $response = $this->postJson("/api/v1/retributions/bills/{$bill->id}/pay", [
+    $response = $this->postJson("/api/v1/retributions/bills/{$bill->nomor_tagihan}/pay", [
         'use_points' => true,
         'points_to_use' => 400, // 400 poin * Rp10 = Rp4.000, sisa Rp6.000 via Midtrans
     ]);
@@ -145,7 +145,7 @@ test('signed midtrans webhook marks a pending retribution bill as paid without d
     ]);
 
     Sanctum::actingAs($warga, ['role:warga']);
-    $this->postJson("/api/v1/retributions/bills/{$bill->id}/pay", [
+    $this->postJson("/api/v1/retributions/bills/{$bill->nomor_tagihan}/pay", [
         'use_points' => true,
         'points_to_use' => 300,
     ])->assertOk();
@@ -235,7 +235,7 @@ test('expired hybrid payment returns reserved points exactly once', function () 
     ]);
     Sanctum::actingAs($warga, ['role:warga']);
 
-    $this->postJson("/api/v1/retributions/bills/{$bill->id}/pay", [
+    $this->postJson("/api/v1/retributions/bills/{$bill->nomor_tagihan}/pay", [
         'use_points' => true,
         'points_to_use' => 300,
     ])->assertOk();
@@ -261,7 +261,7 @@ test('expired hybrid payment returns reserved points exactly once', function () 
         ->and($warga->wargaProfile->fresh()->saldo_poin)->toBe(500);
     $this->assertDatabaseCount('point_ledgers', 2);
 
-    $this->postJson("/api/v1/retributions/bills/{$bill->id}/pay", [
+    $this->postJson("/api/v1/retributions/bills/{$bill->nomor_tagihan}/pay", [
         'use_points' => true,
         'points_to_use' => 200,
     ])->assertOk();
@@ -298,7 +298,7 @@ test('failed snap creation restores the reserved points and resets payment state
     ]);
     Sanctum::actingAs($warga, ['role:warga']);
 
-    $this->postJson("/api/v1/retributions/bills/{$bill->id}/pay", [
+    $this->postJson("/api/v1/retributions/bills/{$bill->nomor_tagihan}/pay", [
         'use_points' => true,
         'points_to_use' => 300,
     ])->assertInternalServerError()
@@ -320,8 +320,8 @@ test('a second payment request cannot reserve points again while the first is pe
     Sanctum::actingAs($warga, ['role:warga']);
     $payload = ['use_points' => true, 'points_to_use' => 300];
 
-    $this->postJson("/api/v1/retributions/bills/{$bill->id}/pay", $payload)->assertOk();
-    $this->postJson("/api/v1/retributions/bills/{$bill->id}/pay", $payload)
+    $this->postJson("/api/v1/retributions/bills/{$bill->nomor_tagihan}/pay", $payload)->assertOk();
+    $this->postJson("/api/v1/retributions/bills/{$bill->nomor_tagihan}/pay", $payload)
         ->assertUnprocessable()
         ->assertJsonValidationErrors('payment');
 

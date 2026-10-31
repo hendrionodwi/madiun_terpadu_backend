@@ -49,11 +49,13 @@ class OrderFulfillmentController extends Controller
         ], Response::HTTP_OK);
     }
 
-    public function show(Request $request, int $orderFulfillment): JsonResponse
+    public function show(Request $request, OrderFulfillment $orderFulfillment): JsonResponse
     {
         /** @var User $seller */
         $seller = $request->user();
-        $fulfillment = $this->sellerFulfillmentsQuery($seller)->findOrFail($orderFulfillment);
+        $fulfillment = $this->sellerFulfillmentsQuery($seller)
+            ->whereKey($orderFulfillment->getKey())
+            ->firstOrFail();
 
         return response()->json([
             'success' => true,
@@ -64,12 +66,14 @@ class OrderFulfillmentController extends Controller
 
     public function update(
         UpdateOrderFulfillmentRequest $request,
-        int $orderFulfillment,
+        OrderFulfillment $orderFulfillment,
         TransitionOrderFulfillmentStatus $transition,
     ): JsonResponse {
         /** @var User $seller */
         $seller = $request->user();
-        $fulfillment = $this->sellerFulfillmentsQuery($seller)->findOrFail($orderFulfillment);
+        $fulfillment = $this->sellerFulfillmentsQuery($seller)
+            ->whereKey($orderFulfillment->getKey())
+            ->firstOrFail();
         $validated = $request->validated();
 
         $fulfillment = $transition->handle(
@@ -106,6 +110,7 @@ class OrderFulfillmentController extends Controller
 
         return [
             'id' => $fulfillment->id,
+            'public_id' => $fulfillment->public_id,
             'order_id' => $order->id,
             'nomor_pesanan' => $order->nomor_pesanan,
             'status' => $fulfillment->status->value,

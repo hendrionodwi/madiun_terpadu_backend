@@ -42,7 +42,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // 4. Kelola Pengaduan Masyarakat & Peninjauan Hasil
         Route::get('dashboard/admin/complaints', [AdminDashboardController::class, 'complaints'])->name('dashboard.admin.complaints');
         Route::patch('dashboard/admin/complaints/{complaint}/assign', [AdminDashboardController::class, 'assignComplaint'])->name('dashboard.admin.complaints.assign');
-        Route::patch('dashboard/admin/complaints/{id}/finalize', [AdminDashboardController::class, 'finalizeComplaint'])->name('dashboard.admin.complaints.finalize');
+        Route::patch('dashboard/admin/complaints/{complaint}/finalize', [AdminDashboardController::class, 'finalizeComplaint'])->name('dashboard.admin.complaints.finalize');
 
         // 5. Verifikasi Laporan Dokumen Lingkungan Pemrakarsa
         Route::get('dashboard/admin/reports', [AdminDashboardController::class, 'reports'])->name('dashboard.admin.reports');

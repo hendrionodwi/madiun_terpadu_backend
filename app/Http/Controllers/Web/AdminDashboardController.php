@@ -577,10 +577,8 @@ class AdminDashboardController extends Controller
     /**
      * Finalisasi status pengaduan oleh Admin DLH.
      */
-    public function finalizeComplaint(Request $request, int $id): RedirectResponse
+    public function finalizeComplaint(Request $request, Complaint $complaint): RedirectResponse
     {
-        $complaint = Complaint::findOrFail($id);
-
         $validated = $request->validate([
             'status' => ['required', 'in:selesai,ditolak,ditindaklanjuti,dalam_proses'],
             'admin_note' => ['nullable', 'string', 'max:500'],

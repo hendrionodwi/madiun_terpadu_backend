@@ -127,16 +127,19 @@
                 Semua Tagihan ({{ $stats['total_bills'] }})
             </a>
             <a href="{{ route('dashboard.admin.retributions', array_merge(request()->except(['status', 'page']), ['status' => 'belum_dibayar'])) }}"
-               class="px-3.5 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap {{ $statusFilter === 'belum_dibayar' ? 'bg-amber-500 text-white shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800' }}">
-                ⏳ Menunggu Pembayaran ({{ $stats['belum_dibayar_count'] }})
+               class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-xs font-bold transition {{ $statusFilter === 'belum_dibayar' ? 'bg-amber-500 text-white shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800' }}">
+                <flux:icon.clock class="size-3.5" />
+                Menunggu Pembayaran ({{ $stats['belum_dibayar_count'] }})
             </a>
             <a href="{{ route('dashboard.admin.retributions', array_merge(request()->except(['status', 'page']), ['status' => 'overdue'])) }}"
-               class="px-3.5 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap {{ $statusFilter === 'overdue' ? 'bg-rose-600 text-white shadow-sm' : 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40' }}">
-                ⚠️ Menunggak / Terkunci ({{ $stats['overdue_count'] }})
+               class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-xs font-bold transition {{ $statusFilter === 'overdue' ? 'bg-rose-600 text-white shadow-sm' : 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40' }}">
+                <flux:icon.exclamation-triangle class="size-3.5" />
+                Menunggak / Terkunci ({{ $stats['overdue_count'] }})
             </a>
             <a href="{{ route('dashboard.admin.retributions', array_merge(request()->except(['status', 'page']), ['status' => 'lunas'])) }}"
-               class="px-3.5 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap {{ $statusFilter === 'lunas' ? 'bg-emerald-700 text-white shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800' }}">
-                ✓ Lunas ({{ $stats['lunas_count'] }})
+               class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-xs font-bold transition {{ $statusFilter === 'lunas' ? 'bg-emerald-700 text-white shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800' }}">
+                <flux:icon.check class="size-3.5" />
+                Lunas ({{ $stats['lunas_count'] }})
             </a>
         </div>
 
@@ -209,7 +212,7 @@
                                     <div class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $bill->warga->name }}</div>
                                     <div class="text-[11px] text-zinc-500">{{ $bill->warga->email }}</div>
                                     @if ($bill->warga->phone_number)
-                                        <div class="text-[11px] text-zinc-400">📞 {{ $bill->warga->phone_number }}</div>
+                                        <div class="inline-flex items-center gap-1 text-[11px] text-zinc-400"><flux:icon.phone class="size-3" /> {{ $bill->warga->phone_number }}</div>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3.5 font-bold text-zinc-900 dark:text-zinc-100">
@@ -241,7 +244,8 @@
                                     </div>
                                     @if ($bill->isOverdue())
                                         <span class="inline-flex items-center gap-1 text-[10px] text-rose-700 dark:text-rose-400 font-bold">
-                                            ⚠️ Akses Ditangguhkan
+                                            <flux:icon.exclamation-triangle class="size-3" />
+                                            Akses Ditangguhkan
                                         </span>
                                     @endif
                                 </td>

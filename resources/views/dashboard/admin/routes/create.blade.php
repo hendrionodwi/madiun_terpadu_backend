@@ -97,7 +97,7 @@
 
                         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <div>
-                                <label class="block font-semibold text-zinc-700 dark:text-zinc-300 mb-1">🏁 Depo Awal</label>
+                                <label class="mb-1 flex items-center gap-1.5 font-semibold text-zinc-700 dark:text-zinc-300"><flux:icon.flag class="size-4" /> Depo Awal</label>
                                 <input type="text" name="start_location" value="{{ old('start_location') }}" placeholder="Contoh: Depo Truk Kartoharjo Dr3" class="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
                             </div>
                             <div class="relative" x-data="{
@@ -122,7 +122,7 @@
                                 }
                             }" @click.outside="open = false">
                                 <label class="block font-semibold text-zinc-700 dark:text-zinc-300 mb-1 flex items-center justify-between">
-                                    <span>🏢 Tujuan Akhir</span>
+                                    <span class="inline-flex items-center gap-1.5"><flux:icon.building-office-2 class="size-4" /> Tujuan Akhir</span>
                                     <span class="text-[11px] font-normal text-emerald-600 dark:text-emerald-400">Pilih TPS3R / Ketik Pencarian</span>
                                 </label>
                                 <div class="relative">
@@ -262,13 +262,13 @@
                 </div>
             </div>
 
-            <!-- Peta Editor Lintasan Rute (OpenStreetMap Leaflet) -->
+            <!-- Peta Editor Lintasan Rute (MapLibre GL JS) -->
             <div class="civic-card flex h-full flex-col overflow-hidden p-4">
                 <div class="mb-3 flex shrink-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h2 class="text-base font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                             <svg class="size-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-                            Editor Jalur Lintasan Rute Baru (Leaflet OSM)
+                            Editor Jalur Lintasan Rute Baru (MapLibre OSM)
                         </h2>
                         <p class="text-xs text-zinc-500">Klik di peta untuk menambah titik belok jalur lintasan jalan. Klik marker untuk melihat info urutan titik.</p>
                     </div>
@@ -291,25 +291,24 @@
                     </div>
                 </div>
 
-                <!-- Leaflet Container dengan tinggi eksplisit agar tidak blank -->
-                <div id="adminRouteCreateMap" class="relative z-0 w-full rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-inner" style="min-height: 520px; height: 520px; width: 100%;"></div>
+                <div id="adminRouteCreateMap" class="madiun-maplibre h-[24rem] w-full sm:h-[32.5rem]"></div>
 
                 <div class="mt-3 flex items-center justify-between text-[11px] text-zinc-500 border-t border-zinc-100 dark:border-zinc-800 pt-2.5">
                     <div class="flex items-center gap-4">
                         <span class="inline-flex items-center gap-1.5 font-semibold text-emerald-800 dark:text-emerald-300">
-                            <span class="size-2.5 rounded-full bg-emerald-600 ring-2 ring-emerald-200"></span> 🏁 Titik Awal (Depo)
+                            <span class="size-2.5 rounded-full bg-emerald-600 ring-2 ring-emerald-200"></span> Titik Awal (Depo)
                         </span>
                         <span class="inline-flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
-                            <span class="size-2.5 rounded-full bg-emerald-400"></span> 📍 Titik Lintasan Armada
+                            <span class="size-2.5 rounded-full bg-emerald-400"></span> Titik Lintasan Armada
                         </span>
                     </div>
-                    <p class="hidden sm:block text-zinc-400">Peta interaktif OpenStreetMap • Koordinat otomatis tersimpan</p>
+                    <p class="hidden sm:block text-zinc-400">MapLibre GL JS • Koordinat otomatis tersimpan</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script OpenStreetMap Leaflet untuk Pembuatan Rute Baru -->
+    <!-- MapLibre GL JS untuk Pembuatan Rute Baru -->
     <script>
     (function () {
         let createMap = null;
@@ -342,41 +341,13 @@
             ]
         };
 
-        function ensureLeaflet(callback) {
-            if (typeof L !== 'undefined') {
+        function ensureMapLibre(callback) {
+            if (window.MadiunMapLibre) {
                 callback();
                 return;
             }
 
-            if (!document.getElementById('leaflet-local-css')) {
-                const link = document.createElement('link');
-                link.id = 'leaflet-local-css';
-                link.rel = 'stylesheet';
-                link.href = '{{ asset("vendor/leaflet/leaflet.css") }}';
-                document.head.appendChild(link);
-            }
-
-            let script = document.getElementById('leaflet-local-js');
-            if (!script) {
-                script = document.createElement('script');
-                script.id = 'leaflet-local-js';
-                script.src = '{{ asset("vendor/leaflet/leaflet.js") }}';
-                script.onload = () => callback();
-                script.onerror = () => {
-                    const cdn = document.createElement('script');
-                    cdn.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
-                    cdn.onload = () => callback();
-                    document.head.appendChild(cdn);
-                };
-                document.head.appendChild(script);
-            } else {
-                const timer = setInterval(() => {
-                    if (typeof L !== 'undefined') {
-                        clearInterval(timer);
-                        callback();
-                    }
-                }, 50);
-            }
+            window.addEventListener('madiun:maplibre-ready', callback, { once: true });
         }
 
         function updateFormInputs() {
@@ -404,11 +375,15 @@
         function redrawWaypoints() {
             if (!createMap) return;
 
-            // Bersihkan marker & polyline sebelumnya
-            waypointMarkers.forEach(m => createMap.removeLayer(m));
+            if (!createMap.isStyleLoaded()) {
+                updateFormInputs();
+                return;
+            }
+
+            waypointMarkers.forEach(marker => marker.remove());
             waypointMarkers = [];
             if (drawingPolyline) {
-                createMap.removeLayer(drawingPolyline);
+                window.MadiunMapLibre.removeLine(createMap, drawingPolyline.sourceId, drawingPolyline.layerId);
                 drawingPolyline = null;
             }
 
@@ -417,13 +392,21 @@
                 return;
             }
 
-            // Gambar Garis Polyline Jalur
-            drawingPolyline = L.polyline(routeWaypoints, {
-                color: '#059669',
-                weight: 5,
-                opacity: 0.9,
-                dashArray: '8, 6'
-            }).addTo(createMap);
+            if (routeWaypoints.length > 1) {
+                drawingPolyline = {
+                    sourceId: 'draft-route-source',
+                    layerId: 'draft-route-line',
+                };
+
+                window.MadiunMapLibre.upsertLine(createMap, {
+                    ...drawingPolyline,
+                    points: routeWaypoints,
+                    color: '#059669',
+                    width: 5,
+                    opacity: 0.9,
+                    dasharray: [2, 1.5],
+                });
+            }
 
             // Buat Marker untuk setiap titik jalur
             routeWaypoints.forEach((pt, index) => {
@@ -432,21 +415,18 @@
                 if (isNaN(lat) || isNaN(lng)) return;
 
                 const isStart = index === 0;
-                const marker = L.circleMarker([lat, lng], {
-                    radius: isStart ? 9 : 6,
-                    fillColor: isStart ? '#047857' : '#10b981',
-                    color: '#ffffff',
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 1
-                }).addTo(createMap);
-
-                marker.bindPopup(`
+                const marker = window.MadiunMapLibre.createMarker(createMap, {
+                    position: [lat, lng],
+                    color: isStart ? '#047857' : '#10b981',
+                    size: isStart ? 18 : 13,
+                    ariaLabel: isStart ? 'Titik awal rute' : `Titik jalur ${index + 1}`,
+                    popupHtml: `
                     <div style="font-size:12px; line-height:1.4;">
-                        <b>${isStart ? '🏁 Pos / Titik Awal' : `📍 Titik Jalur #${index + 1}`}</b><br>
+                        <b>${isStart ? 'Pos / Titik Awal' : `Titik Jalur #${index + 1}`}</b><br>
                         <small style="color:#64748b;">${lat.toFixed(6)}, ${lng.toFixed(6)}</small>
                     </div>
-                `);
+                    `,
+                });
 
                 waypointMarkers.push(marker);
             });
@@ -457,13 +437,17 @@
         function focusMapToRoute() {
             if (!createMap) return;
             try {
-                if (drawingPolyline && routeWaypoints.length > 1) {
-                    createMap.fitBounds(drawingPolyline.getBounds(), { padding: [40, 40], animate: false });
-                } else if (routeWaypoints.length === 1) {
-                    createMap.panTo(routeWaypoints[0]);
-                    createMap.setZoom(15);
+                if (routeWaypoints.length > 0) {
+                    window.MadiunMapLibre.fitToPoints(createMap, routeWaypoints, {
+                        padding: 48,
+                        maxZoom: 15,
+                        duration: 0,
+                    });
                 } else {
-                    createMap.setView([defaultLat, defaultLng], 14);
+                    createMap.jumpTo({
+                        center: window.MadiunMapLibre.toLngLat([defaultLat, defaultLng]),
+                        zoom: 14,
+                    });
                 }
             } catch (e) {
                 console.warn('fitBounds warning:', e);
@@ -493,8 +477,8 @@
             const mapContainer = document.getElementById('adminRouteCreateMap');
             if (!mapContainer) return;
 
-            if (typeof L === 'undefined') {
-                ensureLeaflet(initMap);
+            if (!window.MadiunMapLibre) {
+                ensureMapLibre(initMap);
                 return;
             }
 
@@ -506,35 +490,27 @@
             const initialCenter = routeWaypoints.length > 0 ? routeWaypoints[0] : [defaultLat, defaultLng];
 
             try {
-                createMap = L.map('adminRouteCreateMap', {
+                createMap = window.MadiunMapLibre.createMap({
+                    container: 'adminRouteCreateMap',
                     center: initialCenter,
                     zoom: 14,
-                    zoomControl: true
                 });
 
-                // Basemap Resmi OpenStreetMap (100% Terbuka & Tanpa Perlu API Key)
-                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                }).addTo(createMap);
+                createMap.on('load', function () {
+                    redrawWaypoints();
+                    focusMapToRoute();
+                });
 
-                setTimeout(() => {
-                    if (createMap) {
-                        createMap.invalidateSize();
-                        focusMapToRoute();
-                    }
-                }, 200);
-
-                // Klik di peta untuk menambah titik lintasan rute baru
-                createMap.on('click', function (e) {
-                    const newPoint = [parseFloat(e.latlng.lat.toFixed(6)), parseFloat(e.latlng.lng.toFixed(6))];
+                createMap.on('click', function (event) {
+                    const newPoint = [
+                        parseFloat(event.lngLat.lat.toFixed(6)),
+                        parseFloat(event.lngLat.lng.toFixed(6)),
+                    ];
                     routeWaypoints.push(newPoint);
                     redrawWaypoints();
                 });
-
-                redrawWaypoints();
             } catch (err) {
-                console.error('Error initializing Leaflet map:', err);
+                console.error('Error initializing MapLibre map:', err);
             } finally {
                 isInitializing = false;
             }
@@ -546,9 +522,9 @@
             districtSelect.addEventListener('change', function () {
                 const preset = districtPresets[this.value];
                 if (preset && preset.length > 0 && createMap) {
-                    createMap.flyTo(preset[0], 14);
+                    createMap.flyTo({ center: window.MadiunMapLibre.toLngLat(preset[0]), zoom: 14 });
                 } else if (createMap) {
-                    createMap.flyTo([-7.6298, 111.5239], 14);
+                    createMap.flyTo({ center: window.MadiunMapLibre.toLngLat([-7.6298, 111.5239]), zoom: 14 });
                 }
             });
         }
@@ -598,7 +574,7 @@
         function start() {
             if (mapInitialized && createMap) return;
             mapInitialized = true;
-            ensureLeaflet(initMap);
+            ensureMapLibre(initMap);
         }
 
         if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -618,7 +594,7 @@
         });
 
         window.addEventListener('resize', function () {
-            if (createMap) createMap.invalidateSize();
+            if (createMap) createMap.resize();
         });
     })();
     </script>

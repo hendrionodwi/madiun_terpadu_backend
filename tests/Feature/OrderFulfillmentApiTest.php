@@ -8,17 +8,16 @@ use App\Models\User;
 use App\Models\WasteProduct;
 use Laravel\Sanctum\Sanctum;
 
-test('checkout creates one fulfillment for each seller in a multi seller order', function () {
+test('single store checkout creates one fulfillment for its tps3r seller', function () {
     $buyer = User::factory()->warga()->create();
-    $firstSeller = User::factory()->pengelolaTps3r()->create();
-    $secondSeller = User::factory()->pengelolaTps3r()->create();
+    $seller = User::factory()->pengelolaTps3r()->create();
     $firstProduct = WasteProduct::factory()->create([
-        'seller_id' => $firstSeller->id,
+        'seller_id' => $seller->id,
         'harga' => 20000,
         'stok' => 5,
     ]);
     $secondProduct = WasteProduct::factory()->create([
-        'seller_id' => $secondSeller->id,
+        'seller_id' => $seller->id,
         'harga' => 15000,
         'stok' => 5,
     ]);
@@ -34,13 +33,9 @@ test('checkout creates one fulfillment for each seller in a multi seller order',
     ]);
 
     $response->assertCreated()
-        ->assertJsonCount(2, 'data.fulfillments');
+        ->assertJsonCount(1, 'data.fulfillments');
     $this->assertDatabaseHas('order_fulfillments', [
-        'seller_id' => $firstSeller->id,
-        'status' => OrderFulfillmentStatus::Menunggu->value,
-    ]);
-    $this->assertDatabaseHas('order_fulfillments', [
-        'seller_id' => $secondSeller->id,
+        'seller_id' => $seller->id,
         'status' => OrderFulfillmentStatus::Menunggu->value,
     ]);
 });
@@ -99,7 +94,7 @@ test('seller can advance their fulfillment and the parent order status is synchr
     ]);
     Sanctum::actingAs($seller, ['role:pengelola_tps3r']);
 
-    $response = $this->patchJson("/api/v1/marketplace/fulfillments/{$fulfillment->id}", [
+    $response = $this->patchJson("/api/v1/marketplace/fulfillments/{$fulfillment->public_id}", [
         'status' => OrderFulfillmentStatus::Diproses->value,
         'catatan_status' => 'Pesanan sedang dikemas.',
     ]);
@@ -127,7 +122,7 @@ test('parent order is completed after every seller fulfillment reaches a termina
     ]);
     Sanctum::actingAs($seller, ['role:pengelola_tps3r']);
 
-    $response = $this->patchJson("/api/v1/marketplace/fulfillments/{$fulfillment->id}", [
+    $response = $this->patchJson("/api/v1/marketplace/fulfillments/{$fulfillment->public_id}", [
         'status' => OrderFulfillmentStatus::Selesai->value,
     ]);
 
@@ -146,7 +141,7 @@ test('parent order is cancelled when every seller fulfillment is cancelled', fun
     ]);
     Sanctum::actingAs($seller, ['role:pengelola_tps3r']);
 
-    $response = $this->patchJson("/api/v1/marketplace/fulfillments/{$fulfillment->id}", [
+    $response = $this->patchJson("/api/v1/marketplace/fulfillments/{$fulfillment->public_id}", [
         'status' => OrderFulfillmentStatus::Dibatalkan->value,
     ]);
 
@@ -163,7 +158,7 @@ test('seller cannot skip an order fulfillment transition', function () {
     ]);
     Sanctum::actingAs($seller, ['role:pengelola_tps3r']);
 
-    $response = $this->patchJson("/api/v1/marketplace/fulfillments/{$fulfillment->id}", [
+    $response = $this->patchJson("/api/v1/marketplace/fulfillments/{$fulfillment->public_id}", [
         'status' => OrderFulfillmentStatus::Selesai->value,
     ]);
 
@@ -178,7 +173,7 @@ test('seller receives not found when accessing another seller fulfillment', func
     $fulfillment = OrderFulfillment::factory()->create(['seller_id' => $otherSeller->id]);
     Sanctum::actingAs($seller, ['role:pengelola_tps3r']);
 
-    $response = $this->getJson("/api/v1/marketplace/fulfillments/{$fulfillment->id}");
+    $response = $this->getJson("/api/v1/marketplace/fulfillments/{$fulfillment->public_id}");
 
     $response->assertNotFound();
 });

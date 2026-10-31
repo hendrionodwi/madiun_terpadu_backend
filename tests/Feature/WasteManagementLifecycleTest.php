@@ -174,7 +174,7 @@ test('tps3r can inspect waste deposit details including citizen weighings and ph
         'tps3r_waste_deposit_id' => $deposit->id,
     ]);
 
-    $response = $this->actingAs($pengelola)->getJson("/api/v1/tps3r/deposits/{$deposit->id}");
+    $response = $this->actingAs($pengelola)->getJson("/api/v1/tps3r/deposits/{$deposit->nomor_resi}");
 
     $response->assertOk()
         ->assertJson([

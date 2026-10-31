@@ -86,7 +86,7 @@
             <div x-show="selectedDepositId && deposits[selectedDepositId]" x-cloak class="md:col-span-3 p-3.5 rounded-xl bg-teal-50/90 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-900/60 text-xs">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div class="flex items-center gap-2 text-teal-950 dark:text-teal-200">
-                        <span class="text-base">🚚</span>
+                        <flux:icon.truck class="size-5 shrink-0" />
                         <div>
                             <span class="font-bold">Muatan Truk #<span x-text="deposits[selectedDepositId]?.nomor_resi"></span>:</span>
                             <span class="text-zinc-600 dark:text-zinc-300">Total berat terdata <strong x-text="Number(deposits[selectedDepositId]?.berat_kg || 0).toLocaleString('id-ID', {minimumFractionDigits: 1})"></strong> kg.</span>
@@ -96,18 +96,18 @@
 
                     <div class="flex items-center gap-1.5 flex-wrap">
                         <template x-if="deposits[selectedDepositId]?.berat_organik_pilah_kg > 0">
-                            <button type="button" @click="wasteType = 'organik'; inputWeight = deposits[selectedDepositId].berat_organik_pilah_kg" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition shadow-xs">
-                                🌱 Fraksi Organik (<span x-text="deposits[selectedDepositId].berat_organik_pilah_kg"></span> kg)
+                            <button type="button" @click="wasteType = 'organik'; inputWeight = deposits[selectedDepositId].berat_organik_pilah_kg" class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs transition hover:bg-emerald-700">
+                                <flux:icon.sparkles class="size-3.5" /> Fraksi Organik (<span x-text="deposits[selectedDepositId].berat_organik_pilah_kg"></span> kg)
                             </button>
                         </template>
                         <template x-if="deposits[selectedDepositId]?.berat_anorganik_pilah_kg > 0">
-                            <button type="button" @click="wasteType = 'anorganik_daur_ulang'; inputWeight = deposits[selectedDepositId].berat_anorganik_pilah_kg" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] transition shadow-xs">
-                                ♻️ Fraksi Anorganik (<span x-text="deposits[selectedDepositId].berat_anorganik_pilah_kg"></span> kg)
+                            <button type="button" @click="wasteType = 'anorganik_daur_ulang'; inputWeight = deposits[selectedDepositId].berat_anorganik_pilah_kg" class="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs transition hover:bg-blue-700">
+                                <flux:icon.arrow-path-rounded-square class="size-3.5" /> Fraksi Anorganik (<span x-text="deposits[selectedDepositId].berat_anorganik_pilah_kg"></span> kg)
                             </button>
                         </template>
                         <template x-if="deposits[selectedDepositId]?.berat_residu_pilah_kg > 0">
-                            <button type="button" @click="wasteType = 'residu'; inputWeight = deposits[selectedDepositId].berat_residu_pilah_kg" class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] transition shadow-xs">
-                                🗑️ Fraksi Residu (<span x-text="deposits[selectedDepositId].berat_residu_pilah_kg"></span> kg)
+                            <button type="button" @click="wasteType = 'residu'; inputWeight = deposits[selectedDepositId].berat_residu_pilah_kg" class="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs transition hover:bg-rose-700">
+                                <flux:icon.trash class="size-3.5" /> Fraksi Residu (<span x-text="deposits[selectedDepositId].berat_residu_pilah_kg"></span> kg)
                             </button>
                         </template>
                         <button type="button" @click="inputWeight = deposits[selectedDepositId]?.berat_kg || ''; wasteType = deposits[selectedDepositId]?.jenis_sampah || ''" class="px-2.5 py-1 rounded-lg border border-teal-300 dark:border-teal-700 bg-white dark:bg-zinc-800 hover:bg-teal-100 text-teal-900 dark:text-teal-200 font-semibold text-[11px] transition">
@@ -163,7 +163,7 @@
                                         {{ $record->process_method_label }}
                                     </p>
                                     <p class="text-xs text-zinc-500 font-medium mt-0.5">
-                                        🏷️ {{ $record->waste_type_label }}
+                                        <span class="inline-flex items-center gap-1"><flux:icon.tag class="size-3.5" /> {{ $record->waste_type_label }}</span>
                                     </p>
                                 </td>
                                 <td class="px-4 py-4 text-zinc-800 dark:text-zinc-200">

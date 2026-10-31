@@ -30,11 +30,13 @@
 
         <!-- Tab Navigasi -->
         <div class="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-700 pb-2 text-xs font-bold">
-            <a href="{{ route('dashboard.admin.entities', ['tab' => 'pemrakarsa']) }}" class="px-4 py-2 rounded-xl transition {{ $activeTab === 'pemrakarsa' ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200' }}">
-                🏢 Pemrakarsa Kegiatan / Usaha ({{ $pemrakarsaList->total() }})
+            <a href="{{ route('dashboard.admin.entities', ['tab' => 'pemrakarsa']) }}" class="inline-flex items-center gap-2 rounded-xl px-4 py-2 transition {{ $activeTab === 'pemrakarsa' ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200' }}">
+                <flux:icon.building-office-2 class="size-4" />
+                Pemrakarsa Kegiatan / Usaha ({{ $pemrakarsaList->total() }})
             </a>
-            <a href="{{ route('dashboard.admin.entities', ['tab' => 'tps3r']) }}" class="px-4 py-2 rounded-xl transition {{ $activeTab === 'tps3r' ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200' }}">
-                ♻️ Fasilitas TPS3R Kota ({{ $tps3rList->total() }})
+            <a href="{{ route('dashboard.admin.entities', ['tab' => 'tps3r']) }}" class="inline-flex items-center gap-2 rounded-xl px-4 py-2 transition {{ $activeTab === 'tps3r' ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200' }}">
+                <flux:icon.arrow-path-rounded-square class="size-4" />
+                Fasilitas TPS3R Kota ({{ $tps3rList->total() }})
             </a>
         </div>
 
@@ -86,8 +88,9 @@
                             </div>
                         </div>
                         <div class="pt-1">
-                            <a href="{{ route('dashboard.tps3r.payment-settings', ['tps3r_user_id' => $tps3r->user_id]) }}" class="inline-flex items-center justify-center w-full px-3 py-1.5 text-[11px] font-semibold text-zinc-700 dark:text-zinc-200 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-lg transition">
-                                💳 Lihat Setup Midtrans TPS3R
+                            <a href="{{ route('dashboard.tps3r.payment-settings', ['tps3r_user_id' => $tps3r->user_id]) }}" class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-zinc-100 px-3 py-1.5 text-[11px] font-semibold text-zinc-700 transition hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700">
+                                <flux:icon.credit-card class="size-3.5" />
+                                Lihat Setup Midtrans TPS3R
                             </a>
                         </div>
                     </div>

@@ -130,7 +130,7 @@
             <div class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Total Volume Masuk</span>
-                    <span class="flex size-8 items-center justify-center rounded-lg bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300 font-bold">⚖️</span>
+                    <span class="flex size-8 items-center justify-center rounded-lg bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300"><flux:icon.scale class="size-5" /></span>
                 </div>
                 <div class="mt-3">
                     <h3 class="text-2xl font-black text-teal-700 dark:text-teal-400">
@@ -146,7 +146,7 @@
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/20">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Sampah Organik</span>
-                    <span class="flex size-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 font-bold">🍃</span>
+                    <span class="flex size-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300"><flux:icon.sparkles class="size-5" /></span>
                 </div>
                 <div class="mt-3">
                     <h3 class="text-2xl font-black text-emerald-700 dark:text-emerald-400">
@@ -165,7 +165,7 @@
             <div class="rounded-2xl border border-blue-200 bg-blue-50/50 p-5 shadow-sm dark:border-blue-900/50 dark:bg-blue-950/20">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-semibold uppercase tracking-wider text-blue-800 dark:text-blue-300">Anorganik Daur Ulang</span>
-                    <span class="flex size-8 items-center justify-center rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 font-bold">♻️</span>
+                    <span class="flex size-8 items-center justify-center rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300"><flux:icon.arrow-path-rounded-square class="size-5" /></span>
                 </div>
                 <div class="mt-3">
                     <h3 class="text-2xl font-black text-blue-700 dark:text-blue-400">
@@ -184,7 +184,7 @@
             <div class="rounded-2xl border border-rose-200 bg-rose-50/50 p-5 shadow-sm dark:border-rose-900/50 dark:bg-rose-950/20">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-semibold uppercase tracking-wider text-rose-800 dark:text-rose-300">Residu (TPA)</span>
-                    <span class="flex size-8 items-center justify-center rounded-lg bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300 font-bold">🗑️</span>
+                    <span class="flex size-8 items-center justify-center rounded-lg bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300"><flux:icon.trash class="size-5" /></span>
                 </div>
                 <div class="mt-3">
                     <h3 class="text-2xl font-black text-rose-700 dark:text-rose-400">
@@ -251,8 +251,9 @@
                     </div>
                 </div>
 
-                <div class="mt-4 rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                    💡 <strong>Tingkat Reduksi Sampah:</strong> Sebanyak <strong>{{ round($organikPct + $anorganikPct, 1) }}%</strong> sampah berhasil dialihkan dari Tempat Pemrosesan Akhir (TPA) untuk diolah kembali di TPS3R.
+                <div class="mt-4 flex items-start gap-2 rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                    <flux:icon.light-bulb class="size-4 shrink-0" />
+                    <span><strong>Tingkat Reduksi Sampah:</strong> Sebanyak <strong>{{ round($organikPct + $anorganikPct, 1) }}%</strong> sampah berhasil dialihkan dari Tempat Pemrosesan Akhir (TPA) untuk diolah kembali di TPS3R.</span>
                 </div>
             </section>
 
@@ -465,7 +466,7 @@
                                     {{ $setoran->catatan ?? '-' }}
                                 </td>
                                 <td class="px-4 py-3 text-center whitespace-nowrap">
-                                    <a href="{{ route('dashboard.tps3r.deposits.show', $setoran->id) }}" class="inline-flex items-center gap-1.5 rounded-lg border border-teal-300 dark:border-teal-700 bg-teal-50 dark:bg-teal-950/50 px-2.5 py-1 text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-100 transition shadow-sm">
+                                    <a href="{{ route('dashboard.tps3r.deposits.show', $setoran) }}" class="inline-flex items-center gap-1.5 rounded-lg border border-teal-300 dark:border-teal-700 bg-teal-50 dark:bg-teal-950/50 px-2.5 py-1 text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-100 transition shadow-sm">
                                         <svg class="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                         <span>Detail Sampah</span>
                                     </a>
@@ -555,7 +556,7 @@
 
                     <template x-if="activeSetoran && (!activeSetoran.weighings || activeSetoran.weighings.length === 0)">
                         <div class="py-8 text-center text-zinc-500">
-                            <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-xl mb-3">🚛</div>
+                            <div class="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"><flux:icon.truck class="size-6" /></div>
                             <p class="font-semibold text-sm text-zinc-800 dark:text-zinc-200">Setoran Skala Komersial / Truk Langsung</p>
                             <p class="text-xs text-zinc-400 max-w-md mx-auto mt-1">Setoran ini masuk melalui ritasi teragregasi langsung dari armada kelurahan atau setoran mandiri tanpa rincian penimbangan individual per rumah tangga.</p>
                             <div class="mt-4 inline-block bg-teal-50 dark:bg-teal-950/50 border border-teal-200 dark:border-teal-800 rounded-xl px-4 py-2 text-xs text-teal-800 dark:text-teal-300 font-bold">

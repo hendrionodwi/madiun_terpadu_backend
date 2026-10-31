@@ -86,11 +86,15 @@
                             </span>
                             @if ($aduan->is_anonim)
                                 <span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-zinc-800 text-zinc-200 dark:bg-zinc-700 flex items-center gap-1" title="Pelapor memilih merahasiakan identitas dari publik dan petugas">
-                                    🔒 Anonim
+                                    <flux:icon.lock-closed class="size-3" />
+                                    Anonim
                                 </span>
                             @endif
                             <span class="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
-                                📂 {{ (isset($complaintCategories) ? $complaintCategories->firstWhere('code', $aduan->kategori_masalah)?->name : null) ?? ucwords(str_replace('_', ' ', $aduan->kategori_masalah ?? 'sampah_liar')) }}
+                                <span class="inline-flex items-center gap-1.5">
+                                    <flux:icon.folder-open class="size-3.5" />
+                                    {{ (isset($complaintCategories) ? $complaintCategories->firstWhere('code', $aduan->kategori_masalah)?->name : null) ?? ucwords(str_replace('_', ' ', $aduan->kategori_masalah ?? 'sampah_liar')) }}
+                                </span>
                             </span>
                             <span class="text-xs text-zinc-400">•</span>
                             <span class="text-xs font-semibold text-zinc-600 dark:text-zinc-300">
@@ -118,7 +122,7 @@
                             <h3 class="text-base font-bold text-zinc-900 dark:text-zinc-100">{{ $aduan->judul }}</h3>
                             <p class="text-zinc-600 dark:text-zinc-300 leading-relaxed">{{ $aduan->deskripsi }}</p>
                             <div class="flex items-center gap-3 text-zinc-500 mt-2">
-                                <span>📍 {{ $aduan->lokasi }}</span>
+                                <span class="inline-flex items-center gap-1.5"><flux:icon.map-pin class="size-3.5" /> {{ $aduan->lokasi }}</span>
                                 @if ($aduan->kecamatan)
                                     <span>• Kec. {{ $aduan->kecamatan }}</span>
                                 @endif
@@ -135,8 +139,9 @@
                                     <img src="{{ $aduan->foto_url ?? asset('storage/' . $aduan->foto) }}" alt="Foto Aduan" class="w-full h-36 object-cover hover:scale-105 transition">
                                 </div>
                             @else
-                                <div class="rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 p-4 text-center text-zinc-400">
-                                    <span>📷 Tidak ada lampiran foto</span>
+                                <div class="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-zinc-300 p-4 text-center text-zinc-400 dark:border-zinc-700">
+                                    <flux:icon.photo class="size-5" />
+                                    <span>Tidak ada lampiran foto</span>
                                 </div>
                             @endif
                         </div>
@@ -145,7 +150,7 @@
                     <!-- Status Penugasan Petugas Lapangan (SRS Butir 2) -->
                     @if ($aduan->assignedPetugas)
                         <div class="flex items-center gap-2.5 p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 text-xs text-blue-900 dark:text-blue-200">
-                            <span class="text-lg">👷‍♂️</span>
+                            <flux:icon.user class="size-5 shrink-0" />
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <span class="font-bold">Petugas Ditugaskan ke Lokasi:</span>
@@ -167,7 +172,8 @@
                     @if ($aduan->verifications->isNotEmpty())
                         <div class="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/20 dark:border-emerald-900/40 text-xs">
                             <h4 class="font-bold text-emerald-900 dark:text-emerald-300 mb-2 flex items-center gap-1.5">
-                                <span>🔍</span> Hasil Verifikasi & Tindak Lanjut Lapangan (PPL-F-004):
+                                <flux:icon.magnifying-glass class="size-4" />
+                                Hasil Verifikasi & Tindak Lanjut Lapangan (PPL-F-004):
                             </h4>
                             @foreach ($aduan->verifications as $verif)
                                 <div class="space-y-1.5 text-zinc-700 dark:text-zinc-300">
@@ -207,19 +213,20 @@
                                         </div>
                                     </div>
                                     <button type="button" onclick="document.getElementById('edit-forms-{{ $aduan->id }}').classList.toggle('hidden')" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-zinc-900 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-50 dark:hover:bg-zinc-800 font-semibold transition shrink-0 shadow-xs">
-                                        ✏️ Perbarui Catatan / Buka Kembali
+                                        <flux:icon.pencil-square class="size-4" />
+                                        Perbarui Catatan / Buka Kembali
                                     </button>
                                 </div>
 
                                 <div id="edit-forms-{{ $aduan->id }}" class="hidden mt-4 pt-4 border-t border-emerald-200/60 dark:border-emerald-800/60">
                                     <div class="grid grid-cols-1 gap-3 2xl:grid-cols-2">
                                         <!-- Form Disposisi Petugas (SRS Butir 2) -->
-                                        <form method="POST" action="{{ route('dashboard.admin.complaints.assign', $aduan->id) }}" class="min-w-0 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
+                                        <form method="POST" action="{{ route('dashboard.admin.complaints.assign', $aduan) }}" class="min-w-0 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
                                             @csrf
                                             @method('PATCH')
 
                                             <div class="flex items-start gap-3">
-                                                <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-base dark:bg-blue-900/60" aria-hidden="true">👷‍♂️</span>
+                                                <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-200" aria-hidden="true"><flux:icon.user class="size-5" /></span>
                                                 <div class="min-w-0">
                                                     <h4 class="font-bold text-blue-950 dark:text-blue-100">Penugasan Lapangan</h4>
                                                     <p class="mt-0.5 text-[11px] leading-4 text-blue-700/80 dark:text-blue-300/80">Pilih petugas dan berikan instruksi kerja yang jelas.</p>
@@ -233,7 +240,7 @@
                                                         <option value="">Pilih petugas</option>
                                                         @foreach ($petugasList as $p)
                                                             <option value="{{ $p->id }}" @selected($aduan->assigned_petugas_id === $p->id)>
-                                                                👷‍♂️ {{ $p->name }} ({{ $p->petugasLapanganProfile->nama_wilayah_tugas ?? $p->petugasLapanganProfile->id_wilayah_rute ?? 'Armada Kota' }})
+                                                                {{ $p->name }} ({{ $p->petugasLapanganProfile->nama_wilayah_tugas ?? $p->petugasLapanganProfile->id_wilayah_rute ?? 'Armada Kota' }})
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -247,14 +254,14 @@
 
                                             <div class="mt-3 flex justify-end">
                                                 <button type="submit" class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto dark:focus:ring-offset-zinc-900">
-                                                    <span aria-hidden="true">↗</span>
+                                                    <flux:icon.arrow-right class="size-3.5" />
                                                     {{ $aduan->assigned_petugas_id ? 'Perbarui Penugasan' : 'Tugaskan Petugas' }}
                                                 </button>
                                             </div>
                                         </form>
 
                                         <!-- Form Finalisasi Status Akhir (SRS Butir 3) -->
-                                        <form method="POST" action="{{ route('dashboard.admin.complaints.finalize', $aduan->id) }}" class="min-w-0 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+                                        <form method="POST" action="{{ route('dashboard.admin.complaints.finalize', $aduan) }}" class="min-w-0 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
                                             @csrf
                                             @method('PATCH')
 
@@ -308,19 +315,20 @@
                                         </div>
                                     </div>
                                     <button type="button" onclick="document.getElementById('edit-forms-{{ $aduan->id }}').classList.toggle('hidden')" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-300 dark:border-red-700 bg-white dark:bg-zinc-900 text-red-800 dark:text-red-200 hover:bg-red-50 dark:hover:bg-zinc-800 font-semibold transition shrink-0 shadow-xs">
-                                        ✏️ Kelola Ulang Tiket
+                                        <flux:icon.pencil-square class="size-4" />
+                                        Kelola Ulang Tiket
                                     </button>
                                 </div>
 
                                 <div id="edit-forms-{{ $aduan->id }}" class="hidden mt-4 pt-4 border-t border-red-200/60 dark:border-red-800/60">
                                     <div class="grid grid-cols-1 gap-3 2xl:grid-cols-2">
                                         <!-- Form Disposisi Petugas (SRS Butir 2) -->
-                                        <form method="POST" action="{{ route('dashboard.admin.complaints.assign', $aduan->id) }}" class="min-w-0 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
+                                        <form method="POST" action="{{ route('dashboard.admin.complaints.assign', $aduan) }}" class="min-w-0 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
                                             @csrf
                                             @method('PATCH')
 
                                             <div class="flex items-start gap-3">
-                                                <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-base dark:bg-blue-900/60" aria-hidden="true">👷‍♂️</span>
+                                                <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-200" aria-hidden="true"><flux:icon.user class="size-5" /></span>
                                                 <div class="min-w-0">
                                                     <h4 class="font-bold text-blue-950 dark:text-blue-100">Penugasan Lapangan</h4>
                                                     <p class="mt-0.5 text-[11px] leading-4 text-blue-700/80 dark:text-blue-300/80">Pilih petugas dan berikan instruksi kerja yang jelas.</p>
@@ -334,7 +342,7 @@
                                                         <option value="">Pilih petugas</option>
                                                         @foreach ($petugasList as $p)
                                                             <option value="{{ $p->id }}" @selected($aduan->assigned_petugas_id === $p->id)>
-                                                                👷‍♂️ {{ $p->name }} ({{ $p->petugasLapanganProfile->nama_wilayah_tugas ?? $p->petugasLapanganProfile->id_wilayah_rute ?? 'Armada Kota' }})
+                                                                {{ $p->name }} ({{ $p->petugasLapanganProfile->nama_wilayah_tugas ?? $p->petugasLapanganProfile->id_wilayah_rute ?? 'Armada Kota' }})
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -348,14 +356,14 @@
 
                                             <div class="mt-3 flex justify-end">
                                                 <button type="submit" class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto dark:focus:ring-offset-zinc-900">
-                                                    <span aria-hidden="true">↗</span>
+                                                    <flux:icon.arrow-right class="size-3.5" />
                                                     {{ $aduan->assigned_petugas_id ? 'Perbarui Penugasan' : 'Tugaskan Petugas' }}
                                                 </button>
                                             </div>
                                         </form>
 
                                         <!-- Form Finalisasi Status Akhir (SRS Butir 3) -->
-                                        <form method="POST" action="{{ route('dashboard.admin.complaints.finalize', $aduan->id) }}" class="min-w-0 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+                                        <form method="POST" action="{{ route('dashboard.admin.complaints.finalize', $aduan) }}" class="min-w-0 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
                                             @csrf
                                             @method('PATCH')
 
@@ -396,12 +404,12 @@
                         @else
                             <div class="grid grid-cols-1 gap-3 2xl:grid-cols-2">
                                 <!-- Form Disposisi Petugas (SRS Butir 2) -->
-                                <form method="POST" action="{{ route('dashboard.admin.complaints.assign', $aduan->id) }}" class="min-w-0 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
+                                <form method="POST" action="{{ route('dashboard.admin.complaints.assign', $aduan) }}" class="min-w-0 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
                                     @csrf
                                     @method('PATCH')
 
                                     <div class="flex items-start gap-3">
-                                        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-base dark:bg-blue-900/60" aria-hidden="true">👷‍♂️</span>
+                                        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-200" aria-hidden="true"><flux:icon.user class="size-5" /></span>
                                         <div class="min-w-0">
                                             <h4 class="font-bold text-blue-950 dark:text-blue-100">Penugasan Lapangan</h4>
                                             <p class="mt-0.5 text-[11px] leading-4 text-blue-700/80 dark:text-blue-300/80">Pilih petugas dan berikan instruksi kerja yang jelas.</p>
@@ -415,7 +423,7 @@
                                                 <option value="">Pilih petugas</option>
                                                 @foreach ($petugasList as $p)
                                                     <option value="{{ $p->id }}" @selected($aduan->assigned_petugas_id === $p->id)>
-                                                        👷‍♂️ {{ $p->name }} ({{ $p->petugasLapanganProfile->nama_wilayah_tugas ?? $p->petugasLapanganProfile->id_wilayah_rute ?? 'Armada Kota' }})
+                                                        {{ $p->name }} ({{ $p->petugasLapanganProfile->nama_wilayah_tugas ?? $p->petugasLapanganProfile->id_wilayah_rute ?? 'Armada Kota' }})
                                                     </option>
                                                 @endforeach
                                             </select>
@@ -429,14 +437,14 @@
 
                                     <div class="mt-3 flex justify-end">
                                         <button type="submit" class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto dark:focus:ring-offset-zinc-900">
-                                            <span aria-hidden="true">↗</span>
+                                            <flux:icon.arrow-right class="size-3.5" />
                                             {{ $aduan->assigned_petugas_id ? 'Perbarui Penugasan' : 'Tugaskan Petugas' }}
                                         </button>
                                     </div>
                                 </form>
 
                                 <!-- Form Finalisasi Status Akhir (SRS Butir 3) -->
-                                <form method="POST" action="{{ route('dashboard.admin.complaints.finalize', $aduan->id) }}" class="min-w-0 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+                                <form method="POST" action="{{ route('dashboard.admin.complaints.finalize', $aduan) }}" class="min-w-0 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
                                     @csrf
                                     @method('PATCH')
 

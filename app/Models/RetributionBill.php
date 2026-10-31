@@ -60,6 +60,11 @@ class RetributionBill extends Model
         'catatan',
     ];
 
+    public function getRouteKeyName(): string
+    {
+        return 'nomor_tagihan';
+    }
+
     protected function casts(): array
     {
         return [

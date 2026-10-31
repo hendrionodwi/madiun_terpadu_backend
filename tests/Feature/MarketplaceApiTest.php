@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Order;
+use App\Models\PengelolaTps3rProfile;
 use App\Models\User;
 use App\Models\WargaProfile;
 use App\Models\WasteProduct;
@@ -53,8 +54,9 @@ test('pengelola tps3r can add product to catalog (MKT-F-001)', function () {
 
 test('buyer can checkout cart and product stock is deducted (MKT-F-003)', function () {
     $buyer = User::factory()->warga()->create();
-    $product1 = WasteProduct::factory()->create(['harga' => 20000, 'stok' => 10]);
-    $product2 = WasteProduct::factory()->create(['harga' => 15000, 'stok' => 5]);
+    $seller = User::factory()->pengelolaTps3r()->create();
+    $product1 = WasteProduct::factory()->create(['seller_id' => $seller->id, 'harga' => 20000, 'stok' => 10]);
+    $product2 = WasteProduct::factory()->create(['seller_id' => $seller->id, 'harga' => 15000, 'stok' => 5]);
 
     Sanctum::actingAs($buyer, ['role:warga']);
 
@@ -83,6 +85,38 @@ test('buyer can checkout cart and product stock is deducted (MKT-F-003)', functi
     expect($product1->fresh()->stok)->toBe(8);
     expect($product2->fresh()->stok)->toBe(4);
 });
+
+test('checkout rejects products from different tps3r stores for every payment method', function (string $paymentMethod) {
+    $buyer = User::factory()->warga()->create();
+    $sellerA = User::factory()->pengelolaTps3r()->create();
+    $sellerB = User::factory()->pengelolaTps3r()->create();
+    $productA = WasteProduct::factory()->create(['seller_id' => $sellerA->id, 'stok' => 5]);
+    $productB = WasteProduct::factory()->create(['seller_id' => $sellerB->id, 'stok' => 5]);
+
+    if ($paymentMethod === 'poin_sampah') {
+        WargaProfile::factory()->create([
+            'user_id' => $buyer->id,
+            'saldo_poin' => 500000,
+        ]);
+    }
+
+    Sanctum::actingAs($buyer, ['role:warga']);
+
+    $response = $this->postJson('/api/v1/marketplace/checkout', [
+        'items' => [
+            ['product_id' => $productA->id, 'jumlah' => 1],
+            ['product_id' => $productB->id, 'jumlah' => 1],
+        ],
+        'metode_pembayaran' => $paymentMethod,
+        'alamat_pengiriman' => 'Jl. Pahlawan No. 45 Kota Madiun',
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertInvalid(['items' => 'harus berasal dari fasilitas TPS3R yang sama']);
+    $this->assertDatabaseCount('orders', 0);
+    expect($productA->fresh()->stok)->toBe(5)
+        ->and($productB->fresh()->stok)->toBe(5);
+})->with(['transfer_bank', 'poin_sampah', 'cod']);
 
 test('buyer can pay using garbage points (poin_sampah) and balance is deducted (MKT-F-003)', function () {
     $buyer = User::factory()->warga()->create();
@@ -235,11 +269,12 @@ test('buyer can cancel their order and stock is restored, points refunded', func
 
     $checkoutResponse->assertCreated();
     $orderId = $checkoutResponse->json('data.id');
+    $orderNumber = $checkoutResponse->json('data.nomor_pesanan');
 
     expect($product->fresh()->stok)->toBe(8);
     expect($profile->fresh()->saldo_poin)->toBe(10000);
 
-    $cancelResponse = $this->patchJson("/api/v1/marketplace/orders/{$orderId}/cancel", [
+    $cancelResponse = $this->patchJson("/api/v1/marketplace/orders/{$orderNumber}/cancel", [
         'alasan' => 'Ingin menambah jumlah pesanan',
     ]);
 
@@ -285,9 +320,10 @@ test('buyer cannot cancel order if already shipped or completed', function () {
     ]);
 
     $orderId = $checkoutResponse->json('data.id');
+    $orderNumber = $checkoutResponse->json('data.nomor_pesanan');
     Order::where('id', $orderId)->update(['status' => 'siap_dikirim']);
 
-    $cancelResponse = $this->patchJson("/api/v1/marketplace/orders/{$orderId}/cancel");
+    $cancelResponse = $this->patchJson("/api/v1/marketplace/orders/{$orderNumber}/cancel");
 
     $cancelResponse->assertStatus(422)
         ->assertJson([
@@ -308,9 +344,10 @@ test('buyer can confirm order received and order status becomes selesai', functi
     ]);
 
     $orderId = $checkoutResponse->json('data.id');
+    $orderNumber = $checkoutResponse->json('data.nomor_pesanan');
     Order::where('id', $orderId)->update(['status' => 'siap_dikirim']);
 
-    $confirmResponse = $this->patchJson("/api/v1/marketplace/orders/{$orderId}/confirm-received");
+    $confirmResponse = $this->patchJson("/api/v1/marketplace/orders/{$orderNumber}/confirm-received");
 
     $confirmResponse->assertOk()
         ->assertJson([
@@ -329,4 +366,108 @@ test('buyer can confirm order received and order status becomes selesai', functi
         'order_id' => $orderId,
         'status' => 'selesai',
     ]);
+});
+
+test('users can browse list of tps3r stores with available product counts', function () {
+    $seller = User::factory()->pengelolaTps3r()->create(['name' => 'TPS3R Kartoharjo Jaya']);
+    PengelolaTps3rProfile::factory()->create([
+        'user_id' => $seller->id,
+        'nama_tps3r' => 'TPS3R Kartoharjo Mandiri',
+        'kelurahan' => 'Kartoharjo',
+        'kecamatan' => 'Kartoharjo',
+    ]);
+
+    WasteProduct::factory()->count(2)->create([
+        'seller_id' => $seller->id,
+        'is_available' => true,
+        'stok' => 5,
+    ]);
+
+    $response = $this->getJson('/api/v1/marketplace/stores');
+
+    $response->assertOk()
+        ->assertJsonStructure([
+            'success',
+            'message',
+            'data' => [
+                '*' => [
+                    'id',
+                    'public_id',
+                    'name',
+                    'nama_tps3r',
+                    'kelurahan',
+                    'kecamatan',
+                    'total_products',
+                ],
+            ],
+        ]);
+
+    $stores = collect($response->json('data'));
+    $matched = $stores->firstWhere('id', $seller->id);
+    expect($matched)->not->toBeNull()
+        ->and($matched['nama_tps3r'])->toBe('TPS3R Kartoharjo Mandiri')
+        ->and($matched['total_products'])->toBe(2);
+});
+
+test('users can view tps3r store detail and its active products', function () {
+    $seller = User::factory()->pengelolaTps3r()->create(['name' => 'TPS3R Winongo Berseri']);
+    $profile = PengelolaTps3rProfile::factory()->create([
+        'user_id' => $seller->id,
+        'nama_tps3r' => 'TPS3R Winongo Asri',
+    ]);
+
+    $product = WasteProduct::factory()->create([
+        'seller_id' => $seller->id,
+        'nama_produk' => 'Kompos Organik Winongo',
+        'is_available' => true,
+        'stok' => 10,
+    ]);
+
+    $response = $this->getJson("/api/v1/marketplace/stores/{$profile->public_id}");
+
+    $response->assertOk()
+        ->assertJson([
+            'success' => true,
+            'data' => [
+                'id' => $seller->id,
+                'nama_tps3r' => 'TPS3R Winongo Asri',
+                'total_products' => 1,
+                'products' => [
+                    [
+                        'id' => $product->id,
+                        'nama_produk' => 'Kompos Organik Winongo',
+                        'seller' => [
+                            'id' => $seller->id,
+                            'name' => 'TPS3R Winongo Berseri',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+});
+
+test('users can filter product catalog by seller_id', function () {
+    $sellerA = User::factory()->pengelolaTps3r()->create();
+    $sellerB = User::factory()->pengelolaTps3r()->create();
+
+    $productA = WasteProduct::factory()->create([
+        'seller_id' => $sellerA->id,
+        'nama_produk' => 'Produk Toko A',
+        'is_available' => true,
+        'stok' => 5,
+    ]);
+
+    $productB = WasteProduct::factory()->create([
+        'seller_id' => $sellerB->id,
+        'nama_produk' => 'Produk Toko B',
+        'is_available' => true,
+        'stok' => 5,
+    ]);
+
+    $response = $this->getJson("/api/v1/marketplace/products?seller_id={$sellerA->id}");
+
+    $response->assertOk();
+    $names = collect($response->json('data'))->pluck('nama_produk')->all();
+    expect($names)->toContain('Produk Toko A')
+        ->and($names)->not->toContain('Produk Toko B');
 });

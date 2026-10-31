@@ -61,7 +61,7 @@
         @if (session('status'))
             <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
                 <div class="flex items-center gap-2">
-                    <span>✅</span>
+                    <flux:icon.check-circle class="size-5 shrink-0" />
                     <span>{{ session('status') }}</span>
                 </div>
             </div>
@@ -122,11 +122,13 @@
                 <div class="mt-2">
                     @if ($profile?->midtrans_is_production)
                         <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                            🚀 Production (Live / Uang Asli)
+                            <flux:icon.rocket-launch class="size-3.5" />
+                            Production (Live / Uang Asli)
                         </span>
                     @else
                         <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                            🧪 Sandbox (Simulasi / Uji Coba)
+                            <flux:icon.beaker class="size-3.5" />
+                            Sandbox (Simulasi / Uji Coba)
                         </span>
                     @endif
                 </div>
@@ -143,7 +145,8 @@
         <div x-cloak x-show="testResult !== null" class="rounded-xl p-4 text-sm transition"
              :class="testResult?.success ? 'border border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200' : 'border border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200'">
             <div class="flex items-start gap-2">
-                <span x-text="testResult?.success ? '🎉' : '⚠️'"></span>
+                <flux:icon.check-circle x-show="testResult?.success" class="size-5 shrink-0" />
+                <flux:icon.exclamation-triangle x-show="!testResult?.success" class="size-5 shrink-0" />
                 <div>
                     <p class="font-bold" x-text="testResult?.success ? 'Hasil Tes Koneksi: BERHASIL' : 'Hasil Tes Koneksi: GAGAL'"></p>
                     <p class="mt-1 text-xs" x-text="testResult?.message"></p>
@@ -171,10 +174,10 @@
                         Mode Environment
                         <select id="input_is_production" name="midtrans_is_production" {{ $isAdmin ? 'disabled' : '' }} class="rounded-lg border-zinc-300 text-sm dark:border-zinc-700 dark:bg-zinc-800">
                             <option value="0" {{ old('midtrans_is_production', $profile?->midtrans_is_production ? '1' : '0') === '0' ? 'selected' : '' }}>
-                                🧪 Sandbox (Mode Uji Coba / Testing)
+                                Sandbox (Mode Uji Coba / Testing)
                             </option>
                             <option value="1" {{ old('midtrans_is_production', $profile?->midtrans_is_production ? '1' : '0') === '1' ? 'selected' : '' }}>
-                                🚀 Production (Mode Live / Uang Nyata)
+                                Production (Mode Live / Uang Nyata)
                             </option>
                         </select>
                         <span class="text-[11px] font-normal text-zinc-400">Pilih Sandbox saat masa uji coba/magang, pilih Production jika akun Midtrans telah diverifikasi legalitasnya.</span>
@@ -249,8 +252,8 @@
                                 :disabled="testingConnection"
                                 class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-teal-700 bg-white px-3.5 py-2.5 text-xs font-semibold text-teal-700 shadow-sm transition hover:bg-teal-50 dark:border-teal-400 dark:bg-zinc-800 dark:text-teal-300 dark:hover:bg-zinc-700"
                             >
-                                <span x-show="!testingConnection">🧪 Uji Koneksi</span>
-                                <span x-show="testingConnection">Menguji...</span>
+                                <span x-show="!testingConnection" class="inline-flex items-center gap-1.5"><flux:icon.beaker class="size-4" /> Uji Koneksi</span>
+                                <span x-show="testingConnection" class="inline-flex items-center gap-1.5"><flux:icon.loading class="size-4" /> Menguji...</span>
                             </button>
                         </div>
                     @endif
@@ -261,7 +264,8 @@
             <section class="flex flex-col gap-5 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 lg:col-span-7">
                 <div>
                     <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
-                        📖 Tutorial Resmi
+                        <flux:icon.book-open class="size-3.5" />
+                        Tutorial Resmi
                     </span>
                     <h2 class="mt-2 text-lg font-bold text-zinc-900 dark:text-zinc-100">Panduan Menghubungkan Akun Midtrans TPS3R</h2>
                     <p class="text-xs text-zinc-500">Ikuti 5 langkah sederhana berikut untuk mendaftarkan dan mengaktifkan akun Midtrans Anda secara mandiri.</p>
@@ -281,10 +285,12 @@
                                 </p>
                                 <div class="mt-2 flex flex-wrap gap-2">
                                     <a href="https://sandbox.midtrans.com" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 font-semibold text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200">
-                                        🔗 Buka Midtrans Sandbox (Uji Coba) &rarr;
+                                        <flux:icon.arrow-top-right-on-square class="size-3.5" />
+                                        Buka Midtrans Sandbox (Uji Coba)
                                     </a>
                                     <a href="https://dashboard.midtrans.com" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
-                                        🔗 Buka Midtrans Production (Live) &rarr;
+                                        <flux:icon.arrow-top-right-on-square class="size-3.5" />
+                                        Buka Midtrans Production (Live)
                                     </a>
                                 </div>
                             </div>
@@ -342,8 +348,8 @@
                                         @click="copyWebhook"
                                         class="inline-flex shrink-0 items-center gap-1 rounded-lg bg-zinc-800 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600"
                                     >
-                                        <span x-show="!copiedWebhook">📋 Salin URL</span>
-                                        <span x-show="copiedWebhook" class="text-emerald-300">✓ Tersalin!</span>
+                                        <span x-show="!copiedWebhook" class="inline-flex items-center gap-1"><flux:icon.clipboard class="size-3.5" /> Salin URL</span>
+                                        <span x-show="copiedWebhook" class="inline-flex items-center gap-1 text-emerald-300"><flux:icon.check class="size-3.5" /> Tersalin</span>
                                     </button>
                                 </div>
                             </div>
@@ -366,7 +372,8 @@
                                         rel="noopener noreferrer"
                                         class="inline-flex items-center gap-1 text-xs font-bold text-teal-700 hover:underline dark:text-teal-400"
                                     >
-                                        🌐 Buka Midtrans Payment Simulator &rarr;
+                                        <flux:icon.globe-alt class="size-3.5" />
+                                        Buka Midtrans Payment Simulator
                                     </a>
                                 </div>
                             </div>

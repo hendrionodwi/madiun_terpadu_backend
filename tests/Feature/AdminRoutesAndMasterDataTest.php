@@ -105,7 +105,9 @@ test('admin dlh can view edit route page with waypoints and map controls', funct
     $response->assertOk()
         ->assertSee('Edit Penugasan Rute:')
         ->assertSee('RUTE-MAP-EDIT')
-        ->assertSee('adminRouteEditMap');
+        ->assertSee('adminRouteEditMap')
+        ->assertSee('MapLibre GL JS')
+        ->assertDontSee('Leaflet');
 });
 
 test('admin dlh can update route with waypoints and sync operational schedules', function () {
@@ -181,6 +183,8 @@ test('admin dlh can view create route page with map editor controls', function (
     $response->assertOk()
         ->assertSee('Tambah Penugasan Rute Baru')
         ->assertSee('adminRouteCreateMap')
+        ->assertSee('MapLibre GL JS')
+        ->assertDontSee('Leaflet')
         ->assertSee('Budi Petugas');
 });
 

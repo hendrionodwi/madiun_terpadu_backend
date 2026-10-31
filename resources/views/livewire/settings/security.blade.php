@@ -1,52 +1,19 @@
 <section class="w-full">
     @include('partials.settings-heading')
 
-    <flux:heading level="2" class="sr-only">{{ __('Security settings') }}</flux:heading>
+    <flux:heading level="2" class="sr-only">{{ __('Keamanan dan autentikasi dua faktor') }}</flux:heading>
 
-    <x-settings.layout :heading="__('Update password')" :subheading="__('Ensure your account is using a long, random password to stay secure')">
-        <form method="POST" wire:submit="updatePassword" class="mt-6 space-y-6">
-            <flux:input
-                wire:model="current_password"
-                :label="__('Current password')"
-                type="password"
-                required
-                autocomplete="current-password"
-                viewable
-            />
-            <flux:input
-                wire:model="password"
-                :label="__('New password')"
-                type="password"
-                required
-                autocomplete="new-password"
-                passwordrules="{{ \Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString() }}"
-                viewable
-            />
-            <flux:input
-                wire:model="password_confirmation"
-                :label="__('Confirm password')"
-                type="password"
-                required
-                autocomplete="new-password"
-                passwordrules="{{ \Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString() }}"
-                viewable
-            />
-
-            <div class="flex items-center gap-4">
-                <flux:button variant="primary" type="submit" data-test="update-password-button">{{ __('Save') }}</flux:button>
-            </div>
-        </form>
-
+    <x-settings.layout
+        :heading="__('Keamanan & 2FA')"
+        :subheading="__('Tambahkan lapisan verifikasi saat masuk ke akun')"
+    >
         @if ($canManageTwoFactor)
-            <section class="mt-12">
-                <flux:heading>{{ __('Two-factor authentication') }}</flux:heading>
-                <flux:subheading>{{ __('Manage your two-factor authentication settings') }}</flux:subheading>
-
+            <section>
                 <div class="flex flex-col w-full mx-auto space-y-6 text-sm" wire:cloak>
                     @if ($twoFactorEnabled)
                         <div class="space-y-4">
                             <flux:text>
-                                {{ __('You will be prompted for a secure, random pin during login, which you can retrieve from the TOTP-supported application on your phone.') }}
+                                {{ __('2FA aktif. Setiap kali masuk, Anda akan diminta memasukkan kode keamanan dari aplikasi autentikator di ponsel.') }}
                             </flux:text>
 
                             <div class="flex justify-start">
@@ -54,7 +21,7 @@
                                     variant="danger"
                                     wire:click="disable"
                                 >
-                                    {{ __('Disable 2FA') }}
+                                    {{ __('Nonaktifkan 2FA') }}
                                 </flux:button>
                             </div>
 
@@ -63,19 +30,26 @@
                     @else
                         <div class="space-y-4">
                             <flux:text variant="subtle">
-                                {{ __('When you enable two-factor authentication, you will be prompted for a secure pin during login. This pin can be retrieved from a TOTP-supported application on your phone.') }}
+                                {{ __('Aktifkan 2FA agar proses masuk memerlukan kata sandi dan kode keamanan dari aplikasi autentikator di ponsel.') }}
                             </flux:text>
 
                             <flux:button
                                 variant="primary"
                                 wire:click="enable"
                             >
-                                {{ __('Enable 2FA') }}
+                                {{ __('Aktifkan 2FA') }}
                             </flux:button>
                         </div>
                     @endif
                 </div>
             </section>
+        @else
+            <flux:callout
+                icon="information-circle"
+                color="zinc"
+                :heading="__('2FA belum tersedia')"
+                :text="__('Fitur autentikasi dua faktor belum diaktifkan pada konfigurasi sistem.')"
+            />
         @endif
 
         @if ($canManageTwoFactor)
@@ -122,7 +96,7 @@
                                     name="code"
                                     wire:model="code"
                                     length="6"
-                                    label="OTP Code"
+                                    label="Kode OTP"
                                     label:sr-only
                                     class="mx-auto"
                                 />
@@ -134,7 +108,7 @@
                                     class="flex-1"
                                     wire:click="resetVerification"
                                 >
-                                    {{ __('Back') }}
+                                    {{ __('Kembali') }}
                                 </flux:button>
 
                                 <flux:button
@@ -143,7 +117,7 @@
                                     wire:click="confirmTwoFactor"
                                     x-bind:disabled="$wire.code.length < 6"
                                 >
-                                    {{ __('Confirm') }}
+                                    {{ __('Konfirmasi') }}
                                 </flux:button>
                             </div>
                         </div>
@@ -186,7 +160,7 @@
                             <div class="relative flex items-center justify-center w-full">
                                 <div class="absolute inset-0 w-full h-px top-1/2 bg-stone-200 dark:bg-stone-600"></div>
                                 <span class="relative px-2 text-sm bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-400">
-                                    {{ __('or, enter the code manually') }}
+                                    {{ __('atau masukkan kunci secara manual') }}
                                 </span>
                             </div>
 

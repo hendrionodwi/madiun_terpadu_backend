@@ -242,6 +242,21 @@ test('authenticated users can list operational routes and schedules', function (
         ]);
 });
 
+test('route index returns an empty list instead of generated demo routes', function () {
+    $warga = User::factory()->warga()->create();
+    Sanctum::actingAs($warga, ['role:warga']);
+
+    $this->getJson('/api/v1/tracking/routes')
+        ->assertOk()
+        ->assertExactJson([
+            'success' => true,
+            'message' => 'Daftar rute penjemputan berhasil diambil.',
+            'data' => [],
+        ]);
+
+    $this->assertDatabaseCount('route_assignments', 0);
+});
+
 test('petugas can filter routes to only their assigned routes via my_routes or petugas_id', function () {
     $petugasA = User::factory()->petugasLapangan()->create();
     $petugasB = User::factory()->petugasLapangan()->create();
@@ -278,6 +293,12 @@ test('petugas lapangan can renew route session and reset pickup points back to t
     $petugas = User::factory()->petugasLapangan()->create();
     Sanctum::actingAs($petugas, ['role:petugas_lapangan']);
 
+    RouteAssignment::factory()->create([
+        'petugas_id' => $petugas->id,
+        'route_code' => 'RUTE-KART-01',
+        'is_active' => true,
+    ]);
+
     $schedules = PickupSchedule::factory()->count(3)->create([
         'petugas_id' => $petugas->id,
         'id_wilayah_rute' => 'RUTE-KART-01',
@@ -295,4 +316,39 @@ test('petugas lapangan can renew route session and reset pickup points back to t
     $schedules->each(function ($sched) {
         expect($sched->fresh()->status)->toBe('terjadwal');
     });
+});
+
+test('renewing an empty route does not generate pickup schedules', function () {
+    $petugas = User::factory()->petugasLapangan()->create();
+    RouteAssignment::factory()->create([
+        'petugas_id' => $petugas->id,
+        'route_code' => 'RUTE-KOSONG-01',
+        'is_active' => true,
+    ]);
+    Sanctum::actingAs($petugas, ['role:petugas_lapangan']);
+
+    $this->postJson('/api/v1/tracking/routes/RUTE-KOSONG-01/renew-session')
+        ->assertOk()
+        ->assertJson([
+            'success' => true,
+            'data' => [],
+        ]);
+
+    $this->assertDatabaseCount('pickup_schedules', 0);
+});
+
+test('petugas cannot renew a route assigned to another petugas', function () {
+    $assignedPetugas = User::factory()->petugasLapangan()->create();
+    $otherPetugas = User::factory()->petugasLapangan()->create();
+    RouteAssignment::factory()->create([
+        'petugas_id' => $assignedPetugas->id,
+        'route_code' => 'RUTE-TERBATAS-01',
+        'is_active' => true,
+    ]);
+    Sanctum::actingAs($otherPetugas, ['role:petugas_lapangan']);
+
+    $this->postJson('/api/v1/tracking/routes/RUTE-TERBATAS-01/renew-session')
+        ->assertForbidden();
+
+    $this->assertDatabaseCount('pickup_schedules', 0);
 });

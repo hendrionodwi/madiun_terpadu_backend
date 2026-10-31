@@ -10,7 +10,7 @@
 
         <!-- Info Note -->
         <div class="rounded-xl border border-emerald-200/80 bg-emerald-50/70 p-3 text-xs text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-200 flex items-start gap-2.5">
-            <span class="text-base leading-none">💡</span>
+            <flux:icon.light-bulb class="size-5 shrink-0" />
             <div>
                 <strong class="font-semibold">Informasi Role:</strong> Formulir ini khusus untuk pendaftaran masyarakat/warga. Untuk akun resmi Petugas Lapangan, Pengelola TPS3R, atau Pemrakarsa, akun didaftarkan melalui Dinas Lingkungan Hidup.
             </div>

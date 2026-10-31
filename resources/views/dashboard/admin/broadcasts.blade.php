@@ -59,8 +59,9 @@
                         <textarea name="content" rows="4" placeholder="Tuliskan isi pengumuman, himbauan pemilahan, atau penyesuaian jadwal operasional..." required class="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"></textarea>
                     </div>
 
-                    <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition shadow-sm">
-                        📢 Publikasikan Siaran Sekarang
+                    <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 font-bold text-white shadow-sm transition hover:bg-emerald-700">
+                        <flux:icon.megaphone class="size-4" />
+                        Publikasikan Siaran Sekarang
                     </button>
                 </form>
             </div>

@@ -18,9 +18,5 @@
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 @fluxAppearance
 
-<!-- Leaflet OpenStreetMap Assets (Local Bundled for 100% Reliability) -->
-<link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}" data-navigate-track />
-<script src="{{ asset('vendor/leaflet/leaflet.js') }}" data-navigate-track></script>
-
 
 

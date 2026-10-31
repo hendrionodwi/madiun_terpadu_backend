@@ -667,8 +667,12 @@ class DashboardController extends Controller
             'kategori' => ['required', 'string', 'in:pupuk_kompos,kerajinan_plastik,maggot_pakan,ecobrick,lainnya'],
             'harga' => ['required', 'numeric', 'min:0', 'max:999999999.99'],
             'stok' => ['required', 'integer', 'min:0'],
-            'foto' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'foto' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
             'is_available' => ['nullable', 'boolean'],
+        ], [
+            'foto.image' => 'File foto produk harus berupa gambar.',
+            'foto.mimes' => 'Format foto harus berupa jpeg, png, jpg, atau webp.',
+            'foto.max' => 'Ukuran foto maksimal adalah 5MB.',
         ]);
 
         $updateData = [

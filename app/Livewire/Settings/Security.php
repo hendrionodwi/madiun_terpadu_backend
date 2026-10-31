@@ -2,11 +2,7 @@
 
 namespace App\Livewire\Settings;
 
-use App\Concerns\PasswordValidationRules;
 use Exception;
-use Flux\Flux;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
 use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
@@ -18,17 +14,9 @@ use Livewire\Attributes\Title;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 
-#[Title('Security settings')]
+#[Title('Keamanan & 2FA')]
 class Security extends Component
 {
-    use PasswordValidationRules;
-
-    public string $current_password = '';
-
-    public string $password = '';
-
-    public string $password_confirmation = '';
-
     #[Locked]
     public bool $canManageTwoFactor;
 
@@ -67,31 +55,6 @@ class Security extends Component
             $this->requiresConfirmation = Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm');
         }
 
-    }
-
-    /**
-     * Update the password for the currently authenticated user.
-     */
-    public function updatePassword(): void
-    {
-        try {
-            $validated = $this->validate([
-                'current_password' => $this->currentPasswordRules(),
-                'password' => $this->passwordRules(),
-            ]);
-        } catch (ValidationException $e) {
-            $this->reset('current_password', 'password', 'password_confirmation');
-
-            throw $e;
-        }
-
-        Auth::user()->update([
-            'password' => $validated['password'],
-        ]);
-
-        $this->reset('current_password', 'password', 'password_confirmation');
-
-        Flux::toast(variant: 'success', text: __('Password updated.'));
     }
 
     /**
@@ -207,24 +170,24 @@ class Security extends Component
     {
         if ($this->twoFactorEnabled) {
             return [
-                'title' => __('Two-factor authentication enabled'),
-                'description' => __('Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.'),
-                'buttonText' => __('Close'),
+                'title' => __('Autentikasi dua faktor aktif'),
+                'description' => __('2FA telah aktif. Simpan kode pemulihan Anda di tempat yang aman.'),
+                'buttonText' => __('Tutup'),
             ];
         }
 
         if ($this->showVerificationStep) {
             return [
-                'title' => __('Verify authentication code'),
-                'description' => __('Enter the 6-digit code from your authenticator app.'),
-                'buttonText' => __('Continue'),
+                'title' => __('Verifikasi kode autentikasi'),
+                'description' => __('Masukkan kode 6 digit dari aplikasi autentikator Anda.'),
+                'buttonText' => __('Lanjutkan'),
             ];
         }
 
         return [
-            'title' => __('Enable two-factor authentication'),
-            'description' => __('To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app.'),
-            'buttonText' => __('Continue'),
+            'title' => __('Aktifkan autentikasi dua faktor'),
+            'description' => __('Pindai kode QR atau masukkan kunci penyiapan ke aplikasi autentikator untuk melanjutkan.'),
+            'buttonText' => __('Lanjutkan'),
         ];
     }
 }

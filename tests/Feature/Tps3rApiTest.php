@@ -118,11 +118,12 @@ test('petugas lapangan submits deposit with status menunggu_konfirmasi and penge
         ]);
 
     $depositId = $response->json('data.id');
+    $depositNumber = $response->json('data.nomor_resi');
 
     // Pengelola TPS3R verifies the deposit
     Sanctum::actingAs($pengelola, ['role:pengelola_tps3r']);
 
-    $verifyResponse = $this->patchJson("/api/v1/tps3r/deposits/{$depositId}/verify", [
+    $verifyResponse = $this->patchJson("/api/v1/tps3r/deposits/{$depositNumber}/verify", [
         'status' => 'diterima',
         'berat_konfirmasi_kg' => 248.5,
         'catatan_verifikasi' => 'Timbangan pos gerbang 248.5 kg, kondisi baik',

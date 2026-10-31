@@ -137,7 +137,8 @@
                                         href="tel:{{ $order->buyer->phone_number }}"
                                         class="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                                     >
-                                        📞 Telepon
+                                        <flux:icon.phone class="size-4" />
+                                        Telepon
                                     </a>
                                     @php
                                         $cleanPhone = preg_replace('/[^0-9]/', '', $order->buyer->phone_number);
@@ -152,7 +153,8 @@
                                         rel="noopener noreferrer"
                                         class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
                                     >
-                                        💬 WhatsApp
+                                        <flux:icon.chat-bubble-left-right class="size-4" />
+                                        WhatsApp
                                     </a>
                                 </div>
                             @endif
@@ -171,12 +173,14 @@
                             <dd class="mt-1">
                                 @if ($order->metode_pembayaran === 'poin_sampah')
                                     <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                                        🪙 Saldo Poin Sampah
+                                        <flux:icon.wallet class="size-3.5" />
+                                        Saldo Poin Sampah
                                     </span>
                                 @elseif ($order->metode_pembayaran === 'midtrans')
                                     <div class="space-y-1">
                                         <span class="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">
-                                            💳 Midtrans (Transfer Bank / QRIS)
+                                            <flux:icon.credit-card class="size-3.5" />
+                                            Midtrans (Transfer Bank / QRIS)
                                         </span>
                                         <div class="text-xs">
                                             @if ($order->status === 'dibayar')
@@ -185,14 +189,15 @@
                                                 </span>
                                             @else
                                                 <span class="text-amber-600 dark:text-amber-400">
-                                                    ⏳ Menunggu Pembayaran
+                                                    <span class="inline-flex items-center gap-1"><flux:icon.clock class="size-3.5" /> Menunggu Pembayaran</span>
                                                 </span>
                                             @endif
                                         </div>
                                     </div>
                                 @else
                                     <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
-                                        💵 COD / Bayar Tunai
+                                        <flux:icon.banknotes class="size-3.5" />
+                                        COD / Bayar Tunai
                                     </span>
                                 @endif
                             </dd>

@@ -122,7 +122,7 @@
                             <tr>
                                 <td class="px-3 py-3 whitespace-nowrap">
                                     <div class="font-medium text-zinc-900 dark:text-zinc-100">{{ $deposit->tanggal_setor->format('d M Y') }}</div>
-                                    <a href="{{ route('dashboard.tps3r.deposits.show', $deposit->id) }}" class="font-mono text-xs text-teal-700 dark:text-teal-400 font-semibold hover:underline inline-flex items-center gap-1" title="Lihat Halaman Detail Setoran">
+                                    <a href="{{ route('dashboard.tps3r.deposits.show', $deposit) }}" class="font-mono text-xs text-teal-700 dark:text-teal-400 font-semibold hover:underline inline-flex items-center gap-1" title="Lihat Halaman Detail Setoran">
                                         <span>{{ $deposit->nomor_resi }}</span>
                                         <svg class="size-3 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                                     </a>
@@ -154,12 +154,12 @@
                                 </td>
                                 <td class="px-3 py-3 text-center whitespace-nowrap">
                                     @if($deposit->weighings->isNotEmpty())
-                                        <a href="{{ route('dashboard.tps3r.deposits.show', $deposit->id) }}" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 transition">
+                                        <a href="{{ route('dashboard.tps3r.deposits.show', $deposit) }}" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 transition">
                                             <svg class="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                             <span>{{ $deposit->weighings->count() }} Timbangan</span>
                                         </a>
                                     @else
-                                        <a href="{{ route('dashboard.tps3r.deposits.show', $deposit->id) }}" class="text-xs text-zinc-400 hover:underline">Direct Truk</a>
+                                        <a href="{{ route('dashboard.tps3r.deposits.show', $deposit) }}" class="text-xs text-zinc-400 hover:underline">Direct Truk</a>
                                     @endif
                                 </td>
                                 <td class="px-3 py-3 text-center whitespace-nowrap">
@@ -180,7 +180,7 @@
                                 <td class="px-3 py-3 text-center whitespace-nowrap">
                                     @if($deposit->status === 'menunggu_konfirmasi')
                                         <div class="flex items-center justify-center gap-1.5">
-                                            <a href="{{ route('dashboard.tps3r.deposits.show', $deposit->id) }}" class="rounded-lg bg-teal-700 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-teal-800">
+                                            <a href="{{ route('dashboard.tps3r.deposits.show', $deposit) }}" class="rounded-lg bg-teal-700 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-teal-800">
                                                 Verifikasi & Detail
                                             </a>
                                         </div>
@@ -189,7 +189,7 @@
                                             <span class="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                                                 ✓ Terverifikasi
                                             </span>
-                                            <a href="{{ route('dashboard.tps3r.deposits.show', $deposit->id) }}" class="text-[11px] font-semibold text-teal-700 dark:text-teal-400 hover:underline">
+                                            <a href="{{ route('dashboard.tps3r.deposits.show', $deposit) }}" class="text-[11px] font-semibold text-teal-700 dark:text-teal-400 hover:underline">
                                                 Detail →
                                             </a>
                                         </div>
@@ -198,7 +198,7 @@
                                             <span class="text-xs font-medium text-red-600 dark:text-red-400">
                                                 ✕ Ditolak
                                             </span>
-                                            <a href="{{ route('dashboard.tps3r.deposits.show', $deposit->id) }}" class="text-[11px] font-semibold text-teal-700 dark:text-teal-400 hover:underline">
+                                            <a href="{{ route('dashboard.tps3r.deposits.show', $deposit) }}" class="text-[11px] font-semibold text-teal-700 dark:text-teal-400 hover:underline">
                                                 Detail →
                                             </a>
                                         </div>

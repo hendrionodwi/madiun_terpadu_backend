@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\EnvironmentalReportFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
+ * @property string $public_id
  * @property int $pemrakarsa_id
  * @property string $judul_laporan
  * @property string $periode_semester
@@ -48,7 +50,18 @@ use Illuminate\Support\Carbon;
 class EnvironmentalReport extends Model
 {
     /** @use HasFactory<EnvironmentalReportFactory> */
-    use HasFactory;
+    use HasFactory, HasUlids;
+
+    /** @return list<string> */
+    public function uniqueIds(): array
+    {
+        return ['public_id'];
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'public_id';
+    }
 
     /**
      * Get the attributes that should be cast.

@@ -14,14 +14,16 @@ class OrderFulfillmentController extends Controller
 {
     public function update(
         UpdateOrderFulfillmentRequest $request,
-        int $orderFulfillment,
+        OrderFulfillment $orderFulfillment,
         TransitionOrderFulfillmentStatus $transition,
     ): RedirectResponse {
         /** @var User $seller */
         $seller = $request->user();
         $fulfillment = OrderFulfillment::query()
+            ->with('order')
             ->whereBelongsTo($seller, 'seller')
-            ->findOrFail($orderFulfillment);
+            ->whereKey($orderFulfillment->getKey())
+            ->firstOrFail();
         $validated = $request->validated();
 
         $transition->handle(
@@ -30,7 +32,7 @@ class OrderFulfillmentController extends Controller
             $validated['catatan_status'] ?? null,
         );
 
-        return to_route('dashboard.tps3r.orders.show', $fulfillment->order_id)
+        return to_route('dashboard.tps3r.orders.show', $fulfillment->order)
             ->with('status', 'Status pemrosesan pesanan berhasil diperbarui.');
     }
 }

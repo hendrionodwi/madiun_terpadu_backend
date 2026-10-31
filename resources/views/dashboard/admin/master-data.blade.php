@@ -1,7 +1,18 @@
 <x-layouts::app :title="__('Kelola Data Master - Admin DLH')">
     <div x-data="{
         editModalOpen: false,
-        activeItem: null,
+        activeItem: {
+            id: null,
+            group: '',
+            code: '',
+            sort_order: 0,
+            name: '',
+            pillar: '',
+            numeric_value: null,
+            unit: '',
+            is_active: true,
+            description: '',
+        },
         selectedGroup: 'waste_category',
         openEditItem(item) {
             this.activeItem = { ...item };
@@ -114,7 +125,7 @@
                         </a>
                     @endforeach
                     <a href="{{ route('dashboard.admin.retributions') }}" class="px-3 py-1.5 rounded-lg font-semibold transition shrink-0 ml-auto border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-300 flex items-center gap-1.5" title="Konfigurasi tarif retribusi dikelola pada form khusus">
-                        <span>⚙️ Kelola Retribusi</span>
+                        <span class="inline-flex items-center gap-1.5"><flux:icon.cog-6-tooth class="size-3.5" /> Kelola Retribusi</span>
                         <svg class="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                     </a>
                 </div>
@@ -221,13 +232,13 @@
                     </button>
                 </div>
 
-                <form :action="activeItem ? ('{{ url('dashboard/admin/master-data') }}/' + activeItem.id) : ''" method="POST" class="p-5 overflow-y-auto space-y-3 text-xs">
+                <form :action="activeItem.id ? ('{{ url('dashboard/admin/master-data') }}/' + activeItem.id) : ''" method="POST" class="p-5 overflow-y-auto space-y-3 text-xs">
                     @csrf
                     @method('PATCH')
 
                     <div>
                         <label class="block font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Grup Master *</label>
-                        <select name="group" x-model="activeItem ? activeItem.group : ''" required class="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
+                        <select name="group" x-model="activeItem.group" required class="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
                             <option value="waste_category">Kategori Sampah (waste_category)</option>
                             <option value="districts">Wilayah Kecamatan (districts)</option>
                             <option value="point_conversion">Konversi Nilai Poin (point_conversion)</option>

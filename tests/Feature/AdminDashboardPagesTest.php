@@ -15,7 +15,12 @@ test('admin dlh can access all 10 dedicated admin pages', function () {
 
     $this->actingAs($admin)->get(route('dashboard.admin'))->assertOk();
     $this->actingAs($admin)->get(route('dashboard.admin.users'))->assertOk()->assertSee('Manajemen Pengguna');
-    $this->actingAs($admin)->get(route('dashboard.admin.routes'))->assertOk()->assertSee('Penugasan Wilayah');
+    $this->actingAs($admin)->get(route('dashboard.admin.routes'))
+        ->assertOk()
+        ->assertSee('Penugasan Wilayah')
+        ->assertSee('MapLibre GL JS')
+        ->assertDontSee('Leaflet')
+        ->assertDontSee('vendor/leaflet');
     $this->actingAs($admin)->get(route('dashboard.admin.complaints'))->assertOk()->assertSee('Kelola Pengaduan Masyarakat');
     $this->actingAs($admin)->get(route('dashboard.admin.reports'))->assertOk()->assertSee('Verifikasi Dokumen Lingkungan');
     $this->actingAs($admin)->get(route('dashboard.admin.entities'))->assertOk()->assertSee('Fasilitas TPS3R Kota');
@@ -62,7 +67,7 @@ test('admin dlh can finalize complaint status', function () {
     $admin = User::factory()->adminDlh()->create();
     $complaint = Complaint::factory()->create(['status' => 'dalam_proses']);
 
-    $response = $this->actingAs($admin)->patch(route('dashboard.admin.complaints.finalize', $complaint->id), [
+    $response = $this->actingAs($admin)->patch(route('dashboard.admin.complaints.finalize', $complaint), [
         'status' => 'selesai',
         'admin_note' => 'Sampah telah diangkut tuntas.',
     ]);
@@ -336,7 +341,7 @@ test('admin dlh can monitor each seller fulfillment without counting unpaid orde
         ->assertSee($sellerB->name)
         ->assertSee('Kompos Organik Super Madiun')
         ->assertSee('Tas Daur Ulang Taman');
-    expect(substr_count($tps3rOrders->getContent(), $order->nomor_pesanan))->toBe(2);
+    expect(substr_count($tps3rOrders->getContent(), $order->nomor_pesanan))->toBe(4);
 
     $orderDetail = $this->actingAs($admin)->get(route('dashboard.tps3r.orders.show', $order));
     $orderDetail->assertOk()

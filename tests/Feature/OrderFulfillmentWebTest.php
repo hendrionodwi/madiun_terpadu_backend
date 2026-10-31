@@ -41,7 +41,7 @@ test('seller can update fulfillment status from the web dashboard', function () 
             'catatan_status' => 'Produk sedang disiapkan petugas TPS3R.',
         ]);
 
-    $response->assertRedirect(route('dashboard.tps3r.orders.show', $fulfillment->order_id))
+    $response->assertRedirect(route('dashboard.tps3r.orders.show', $fulfillment->order))
         ->assertSessionHas('status');
     $this->assertDatabaseHas('order_fulfillments', [
         'id' => $fulfillment->id,

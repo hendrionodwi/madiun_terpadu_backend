@@ -16,7 +16,7 @@
                         <span class="text-xs text-emerald-200">Sistem Lingkungan Terpadu Kota Madiun</span>
                     </div>
                     <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">
-                        Selamat Datang, {{ $user->name }} 👋
+                        Selamat Datang, {{ $user->name }}
                     </h1>
                     <p class="text-sm text-emerald-100/90 mt-1 max-w-2xl">
                         Mari bersama wujudkan Kota Madiun bersih, terpilah, dan berkelanjutan menuju zero waste city.
@@ -53,7 +53,7 @@
                 <div class="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-5 shadow-sm dark:border-amber-900/40 dark:from-zinc-900 dark:to-amber-950/20 hover:-translate-y-1 hover:shadow-md transition-all duration-200">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300">Saldo Poin Reward</span>
-                        <span class="flex size-9 items-center justify-center rounded-lg bg-amber-100 text-lg dark:bg-amber-900/60">🪙</span>
+                        <span class="flex size-9 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300"><flux:icon.wallet class="size-5" /></span>
                     </div>
                     <div class="mt-3">
                         <h3 class="text-2xl font-black text-amber-600 dark:text-amber-400">
@@ -69,7 +69,7 @@
                 <div class="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-5 shadow-sm dark:border-emerald-900/40 dark:from-zinc-900 dark:to-emerald-950/20 hover:-translate-y-1 hover:shadow-md transition-all duration-200">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Sampah Disetor</span>
-                        <span class="flex size-9 items-center justify-center rounded-lg bg-emerald-100 text-lg dark:bg-emerald-900/60">⚖️</span>
+                        <span class="flex size-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300"><flux:icon.scale class="size-5" /></span>
                     </div>
                     <div class="mt-3">
                         <h3 class="text-2xl font-black text-emerald-700 dark:text-emerald-400">
@@ -85,7 +85,7 @@
                 <div class="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-5 shadow-sm dark:border-blue-900/40 dark:from-zinc-900 dark:to-blue-950/20 hover:-translate-y-1 hover:shadow-md transition-all duration-200">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-semibold uppercase tracking-wider text-blue-800 dark:text-blue-300">Laporan Pengaduan</span>
-                        <span class="flex size-9 items-center justify-center rounded-lg bg-blue-100 text-lg dark:bg-blue-900/60">📣</span>
+                        <span class="flex size-9 items-center justify-center rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300"><flux:icon.megaphone class="size-5" /></span>
                     </div>
                     <div class="mt-3">
                         <h3 class="text-2xl font-black text-blue-600 dark:text-blue-400">
@@ -101,7 +101,9 @@
                 <div class="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 hover:-translate-y-1 hover:shadow-md transition-all duration-200">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Wilayah Domisili</span>
-                        <span class="flex size-9 items-center justify-center rounded-lg bg-zinc-100 text-lg dark:bg-zinc-800">📍</span>
+                        <span class="flex size-9 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                            <flux:icon.map-pin class="size-5" />
+                        </span>
                     </div>
                     <div class="mt-3">
                         <h3 class="text-lg font-bold text-zinc-900 dark:text-zinc-100 truncate">
@@ -232,11 +234,11 @@
                                         <span>{{ $jadwal->nama_wilayah_rute ?? $jadwal->id_wilayah_rute }}</span>
                                         <span class="text-emerald-700 dark:text-emerald-400 capitalize">{{ $jadwal->status }}</span>
                                     </div>
-                                    <p class="text-zinc-500 mt-1">
-                                        📅 {{ \Illuminate\Support\Carbon::parse($jadwal->tanggal_penjemputan)->translatedFormat('l, d F Y') }}
+                                    <p class="mt-1 flex items-center gap-1.5 text-zinc-500">
+                                        <flux:icon.calendar-days class="size-3.5" /> {{ \Illuminate\Support\Carbon::parse($jadwal->tanggal_penjemputan)->translatedFormat('l, d F Y') }}
                                     </p>
-                                    <p class="text-zinc-500">
-                                        ⏰ {{ substr($jadwal->waktu_mulai, 0, 5) }} - {{ substr($jadwal->waktu_selesai, 0, 5) }} WIB
+                                    <p class="flex items-center gap-1.5 text-zinc-500">
+                                        <flux:icon.clock class="size-3.5" /> {{ substr($jadwal->waktu_mulai, 0, 5) }} - {{ substr($jadwal->waktu_selesai, 0, 5) }} WIB
                                     </p>
                                 </div>
                             @empty
@@ -256,7 +258,7 @@
                             @forelse ($produkKatalog as $prod)
                                 <div class="rounded-xl border border-zinc-100 bg-zinc-50 p-3 text-xs dark:border-zinc-800 dark:bg-zinc-800/50 flex flex-col justify-between">
                                     <div>
-                                        <span class="text-base mb-1 block">🌱</span>
+                                        <flux:icon.cube class="mb-1 size-5 text-emerald-700 dark:text-emerald-300" />
                                         <h4 class="font-bold text-zinc-900 dark:text-zinc-100 line-clamp-1">{{ $prod->nama_produk }}</h4>
                                         <p class="text-[11px] text-zinc-500">Stok: {{ $prod->stok }}</p>
                                     </div>
@@ -272,7 +274,7 @@
 
                     <!-- Flutter Mobile Companion Banner -->
                     <div class="rounded-2xl bg-gradient-to-br from-emerald-800 to-teal-900 p-6 text-white shadow-md relative overflow-hidden">
-                        <span class="text-2xl mb-2 block">📱</span>
+                        <flux:icon.device-phone-mobile class="mb-2 size-7 text-emerald-100" />
                         <h3 class="font-extrabold text-base">Aplikasi Mobile Madiun Terpadu</h3>
                         <p class="text-xs text-emerald-100/90 mt-1 leading-relaxed">
                             Gunakan aplikasi Flutter mobile untuk scan barcode setoran timbangan dan tracking armada sampah secara langsung dari ponsel Anda.
@@ -338,8 +340,8 @@
                                     <span>{{ $jadwal->nama_wilayah_rute ?? $jadwal->id_wilayah_rute }}</span>
                                     <span class="capitalize px-2 py-0.5 rounded text-[11px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">{{ $jadwal->status }}</span>
                                 </div>
-                                <p class="text-zinc-500 mt-1">📅 {{ \Illuminate\Support\Carbon::parse($jadwal->tanggal_penjemputan)->translatedFormat('l, d F Y') }}</p>
-                                <p class="text-zinc-500">⏰ Pukul {{ substr($jadwal->waktu_mulai, 0, 5) }} - {{ substr($jadwal->waktu_selesai, 0, 5) }} WIB</p>
+                                <p class="mt-1 flex items-center gap-1.5 text-zinc-500"><flux:icon.calendar-days class="size-3.5" /> {{ \Illuminate\Support\Carbon::parse($jadwal->tanggal_penjemputan)->translatedFormat('l, d F Y') }}</p>
+                                <p class="flex items-center gap-1.5 text-zinc-500"><flux:icon.clock class="size-3.5" /> Pukul {{ substr($jadwal->waktu_mulai, 0, 5) }} - {{ substr($jadwal->waktu_selesai, 0, 5) }} WIB</p>
                             </div>
                         @empty
                             <p class="text-xs text-zinc-400 py-4 text-center">Belum ada jadwal tugas yang ditugaskan.</p>
@@ -377,21 +379,21 @@
             <!-- ========================================== -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-                    <span class="text-3xl mb-3 block">🌿</span>
+                    <flux:icon.sparkles class="mb-3 size-8 text-civic-700 dark:text-civic-300" />
                     <h3 class="text-base font-bold text-zinc-900 dark:text-zinc-100">Pengelolaan Terpadu</h3>
                     <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
                         Kota Madiun mewujudkan integrasi tata kelola persampahan dari hulu ke hilir dengan kolaborasi 5 peran penting.
                     </p>
                 </div>
                 <div class="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-                    <span class="text-3xl mb-3 block">♻️</span>
+                    <flux:icon.arrow-path-rounded-square class="mb-3 size-8 text-civic-700 dark:text-civic-300" />
                     <h3 class="text-base font-bold text-zinc-900 dark:text-zinc-100">Fasilitas TPS3R</h3>
                     <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
                         Tempat Pengolahan Sampah Reuse-Reduce-Recycle siap menampung sampah terpilah untuk diolah menjadi pupuk dan kerajinan bernilai guna.
                     </p>
                 </div>
                 <div class="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-                    <span class="text-3xl mb-3 block">📱</span>
+                    <flux:icon.device-phone-mobile class="mb-3 size-8 text-civic-700 dark:text-civic-300" />
                     <h3 class="text-base font-bold text-zinc-900 dark:text-zinc-100">Aplikasi Mobile Flutter</h3>
                     <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
                         Didukung aplikasi mobile native untuk kemudahan penjemputan sampah, pencatatan timbangan, dan pelaporan masyarakat.

@@ -75,100 +75,6 @@ class TrackingController extends Controller
 
         $routes = $query->get();
 
-        if ($routes->isEmpty() && RouteAssignment::count() === 0) {
-            $defaultPetugas = User::where('role', UserRole::PetugasLapangan)->first();
-            $dummyRoutes = collect([
-                [
-                    'id' => 1,
-                    'route_code' => 'RUTE-KART-01',
-                    'route_name' => 'Rute Kartoharjo Pusat - Oro-Oro Ombo',
-                    'district' => 'Kartoharjo',
-                    'subdistrict' => 'Oro-Oro Ombo',
-                    'start_location' => 'Depo Truk Kartoharjo (Jl. Diponegoro)',
-                    'end_facility' => 'TPS3R Oro-Oro Ombo',
-                    'latitude' => -7.6180,
-                    'longitude' => 111.5300,
-                    'waypoints' => [
-                        [-7.6180, 111.5300],
-                        [-7.6210, 111.5280],
-                        [-7.6240, 111.5260],
-                        [-7.6270, 111.5240],
-                        [-7.6298, 111.5239],
-                    ],
-                    'schedule_day' => 'Setiap Hari',
-                    'start_time' => '07:00',
-                    'end_time' => '11:00',
-                    'petugas_id' => $defaultPetugas?->id,
-                    'petugas' => $defaultPetugas ? [
-                        'id' => $defaultPetugas->id,
-                        'name' => $defaultPetugas->name,
-                        'phone_number' => $defaultPetugas->phone_number,
-                    ] : null,
-                ],
-                [
-                    'id' => 2,
-                    'route_code' => 'RUTE-TAMAN-01',
-                    'route_name' => 'Rute Taman Indah - Pandean',
-                    'district' => 'Taman',
-                    'subdistrict' => 'Pandean',
-                    'start_location' => 'Depo Armada Taman (Jl. Salak)',
-                    'end_facility' => 'TPS3R Manisrejo',
-                    'latitude' => -7.6380,
-                    'longitude' => 111.5250,
-                    'waypoints' => [
-                        [-7.6380, 111.5250],
-                        [-7.6350, 111.5240],
-                        [-7.6320, 111.5240],
-                        [-7.6298, 111.5239],
-                    ],
-                    'schedule_day' => 'Setiap Hari',
-                    'start_time' => '08:00',
-                    'end_time' => '12:00',
-                    'petugas_id' => $defaultPetugas?->id,
-                    'petugas' => $defaultPetugas ? [
-                        'id' => $defaultPetugas->id,
-                        'name' => $defaultPetugas->name,
-                        'phone_number' => $defaultPetugas->phone_number,
-                    ] : null,
-                ],
-                [
-                    'id' => 3,
-                    'route_code' => 'RUTE-MANGU-01',
-                    'route_name' => 'Rute Manguharjo Barat - Nambangan',
-                    'district' => 'Manguharjo',
-                    'subdistrict' => 'Nambangan Lor',
-                    'start_location' => 'Depo Manguharjo (Jl. Hayam Wuruk)',
-                    'end_facility' => 'TPS3R Winongo',
-                    'latitude' => -7.6250,
-                    'longitude' => 111.5120,
-                    'waypoints' => [
-                        [-7.6250, 111.5120],
-                        [-7.6260, 111.5160],
-                        [-7.6275, 111.5190],
-                        [-7.6298, 111.5239],
-                    ],
-                    'schedule_day' => 'Setiap Hari',
-                    'start_time' => '07:30',
-                    'end_time' => '11:30',
-                    'petugas_id' => $defaultPetugas?->id,
-                    'petugas' => $defaultPetugas ? [
-                        'id' => $defaultPetugas->id,
-                        'name' => $defaultPetugas->name,
-                        'phone_number' => $defaultPetugas->phone_number,
-                    ] : null,
-                ],
-            ]);
-
-            if ($request->filled('petugas_id')) {
-                $targetId = (int) $request->petugas_id;
-                $routes = $dummyRoutes->filter(fn ($r) => ($r['petugas_id'] ?? null) === $targetId)->values();
-            } elseif ($request->boolean('my_routes') && $currentUser) {
-                $routes = $dummyRoutes->filter(fn ($r) => ($r['petugas_id'] ?? null) === $currentUser->id)->values();
-            } else {
-                $routes = $dummyRoutes;
-            }
-        }
-
         return response()->json([
             'success' => true,
             'message' => 'Daftar rute penjemputan berhasil diambil.',
@@ -403,8 +309,18 @@ class TrackingController extends Controller
         $today = now()->toDateString();
         $targetPetugasId = $currentUser->isPetugasLapangan() ? $currentUser->id : null;
 
-        $route = RouteAssignment::where('route_code', $routeCode)->first();
-        $routeName = $route?->route_name ?? $routeCode;
+        $route = RouteAssignment::query()
+            ->where('route_code', $routeCode)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        if ($currentUser->isPetugasLapangan()) {
+            abort_unless(
+                $route->petugas_id === $currentUser->id,
+                Response::HTTP_FORBIDDEN,
+                'Petugas hanya dapat memperbarui sesi rute yang ditugaskan kepadanya.'
+            );
+        }
 
         $query = PickupSchedule::query()
             ->where('id_wilayah_rute', $routeCode)
@@ -416,178 +332,20 @@ class TrackingController extends Controller
 
         $existing = $query->get();
 
-        if ($existing->isEmpty()) {
-            $wargaList = User::where('role', UserRole::Warga)->get();
-            $wargaA = $wargaList->first();
-            $wargaB = $wargaList->skip(1)->first() ?? $wargaA;
-            $petugasId = $targetPetugasId ?? $route?->petugas_id ?? $currentUser->id;
+        foreach ($existing as $schedule) {
+            WasteWeighing::where('pickup_schedule_id', $schedule->id)
+                ->update(['pickup_schedule_id' => null]);
 
-            $district = strtolower((string) ($route?->district ?? 'kartoharjo'));
-            if (str_contains($district, 'taman')) {
-                $templatePickups = [
-                    [
-                        'jenis_sampah' => 'anorganik_plastik',
-                        'alamat_penjemputan' => 'Jl. Salak No. 12, Pandean, Taman',
-                        'latitude' => -7.6350,
-                        'longitude' => 111.5320,
-                        'waktu_mulai' => '07:00',
-                        'waktu_selesai' => '08:30',
-                        'status' => 'terjadwal',
-                        'keterangan' => '3 kantong plastik pilahan & botol PET',
-                        'warga_id' => $wargaA?->id,
-                    ],
-                    [
-                        'jenis_sampah' => 'organik',
-                        'alamat_penjemputan' => 'Jl. Serayu Baru No. 24, Pandean, Taman',
-                        'latitude' => -7.6380,
-                        'longitude' => 111.5300,
-                        'waktu_mulai' => '08:30',
-                        'waktu_selesai' => '09:45',
-                        'status' => 'terjadwal',
-                        'keterangan' => 'Sisa organik dapur rumah tangga siap kompos',
-                        'warga_id' => $wargaB?->id,
-                    ],
-                    [
-                        'jenis_sampah' => 'anorganik_kertas',
-                        'alamat_penjemputan' => 'Jl. Taman Praja No. 5, Mojorejo, Taman',
-                        'latitude' => -7.6410,
-                        'longitude' => 111.5280,
-                        'waktu_mulai' => '10:00',
-                        'waktu_selesai' => '11:15',
-                        'status' => 'terjadwal',
-                        'keterangan' => 'Kardus tebal dan tumpukan kertas arsip bekas',
-                        'warga_id' => $wargaA?->id,
-                    ],
-                    [
-                        'jenis_sampah' => 'anorganik_logam',
-                        'alamat_penjemputan' => 'Jl. Manisrejo No. 8, Manisrejo, Taman',
-                        'latitude' => -7.6440,
-                        'longitude' => 111.5260,
-                        'waktu_mulai' => '11:15',
-                        'waktu_selesai' => '12:30',
-                        'status' => 'terjadwal',
-                        'keterangan' => 'Kaleng bekas kemasan & logam ringan',
-                        'warga_id' => $wargaB?->id,
-                    ],
-                ];
-            } elseif (str_contains($district, 'mangu')) {
-                $templatePickups = [
-                    [
-                        'jenis_sampah' => 'anorganik_plastik',
-                        'alamat_penjemputan' => 'Jl. Hayam Wuruk No. 15, Manguharjo',
-                        'latitude' => -7.6275,
-                        'longitude' => 111.5150,
-                        'waktu_mulai' => '07:00',
-                        'waktu_selesai' => '08:30',
-                        'status' => 'terjadwal',
-                        'keterangan' => '3 kantong plastik pilahan & botol PET',
-                        'warga_id' => $wargaA?->id,
-                    ],
-                    [
-                        'jenis_sampah' => 'organik',
-                        'alamat_penjemputan' => 'Jl. Gajah Mada No. 20, Winongo, Manguharjo',
-                        'latitude' => -7.6250,
-                        'longitude' => 111.5130,
-                        'waktu_mulai' => '08:30',
-                        'waktu_selesai' => '09:45',
-                        'status' => 'terjadwal',
-                        'keterangan' => 'Sisa organik dapur rumah tangga siap kompos',
-                        'warga_id' => $wargaB?->id,
-                    ],
-                    [
-                        'jenis_sampah' => 'anorganik_kertas',
-                        'alamat_penjemputan' => 'Jl. Ring Road Barat No. 8, Sogaten, Manguharjo',
-                        'latitude' => -7.6220,
-                        'longitude' => 111.5110,
-                        'waktu_mulai' => '10:00',
-                        'waktu_selesai' => '11:15',
-                        'status' => 'terjadwal',
-                        'keterangan' => 'Kardus tebal dan tumpukan kertas arsip bekas',
-                        'warga_id' => $wargaA?->id,
-                    ],
-                    [
-                        'jenis_sampah' => 'anorganik_logam',
-                        'alamat_penjemputan' => 'Jl. Pandan No. 12, Pangongangan, Manguharjo',
-                        'latitude' => -7.6200,
-                        'longitude' => 111.5180,
-                        'waktu_mulai' => '11:15',
-                        'waktu_selesai' => '12:30',
-                        'status' => 'terjadwal',
-                        'keterangan' => 'Kaleng bekas kemasan & logam ringan',
-                        'warga_id' => $wargaB?->id,
-                    ],
-                ];
-            } else {
-                $templatePickups = [
-                    [
-                        'jenis_sampah' => 'anorganik_plastik',
-                        'alamat_penjemputan' => 'Jl. Diponegoro No. 18, Oro-Oro Ombo, Kartoharjo',
-                        'latitude' => -7.6195,
-                        'longitude' => 111.5285,
-                        'waktu_mulai' => '07:00',
-                        'waktu_selesai' => '08:30',
-                        'status' => 'terjadwal',
-                        'keterangan' => '3 kantong plastik pilahan & botol PET',
-                        'warga_id' => $wargaA?->id,
-                    ],
-                    [
-                        'jenis_sampah' => 'organik',
-                        'alamat_penjemputan' => 'Jl. Serayu No. 42, Kartoharjo',
-                        'latitude' => -7.6225,
-                        'longitude' => 111.5265,
-                        'waktu_mulai' => '08:30',
-                        'waktu_selesai' => '09:45',
-                        'status' => 'terjadwal',
-                        'keterangan' => 'Sisa organik dapur rumah tangga siap kompos',
-                        'warga_id' => $wargaB?->id,
-                    ],
-                    [
-                        'jenis_sampah' => 'anorganik_kertas',
-                        'alamat_penjemputan' => 'Jl. Musi No. 9, Kanigoro, Kartoharjo',
-                        'latitude' => -7.6255,
-                        'longitude' => 111.5245,
-                        'waktu_mulai' => '10:00',
-                        'waktu_selesai' => '11:15',
-                        'status' => 'terjadwal',
-                        'keterangan' => 'Kardus tebal dan tumpukan kertas arsip bekas',
-                        'warga_id' => $wargaA?->id,
-                    ],
-                    [
-                        'jenis_sampah' => 'anorganik_logam',
-                        'alamat_penjemputan' => 'Jl. Kelapa Manis No. 7, Rejomulyo, Kartoharjo',
-                        'latitude' => -7.6280,
-                        'longitude' => 111.5310,
-                        'waktu_mulai' => '11:15',
-                        'waktu_selesai' => '12:30',
-                        'status' => 'terjadwal',
-                        'keterangan' => 'Kaleng bekas kemasan & logam ringan',
-                        'warga_id' => $wargaB?->id,
-                    ],
-                ];
-            }
-
-            foreach ($templatePickups as $item) {
-                PickupSchedule::create(array_merge($item, [
-                    'petugas_id' => $petugasId,
-                    'id_wilayah_rute' => $routeCode,
-                    'nama_wilayah_rute' => $routeName,
-                    'tanggal_penjemputan' => $today,
-                ]));
-            }
-        } else {
-            foreach ($existing as $schedule) {
-                WasteWeighing::where('pickup_schedule_id', $schedule->id)
-                    ->update(['pickup_schedule_id' => null]);
-
-                $schedule->update(['status' => 'terjadwal']);
-            }
+            $schedule->update(['status' => 'terjadwal']);
         }
 
         $refreshed = (clone $query)->with(['petugas:id,name', 'warga:id,name'])->get();
 
         return response()->json([
             'success' => true,
-            'message' => "Sesi penjemputan baru untuk rute {$routeCode} berhasil dimulai. Titik penjemputan warga telah aktif kembali.",
+            'message' => $existing->isEmpty()
+                ? "Tidak ada jadwal penjemputan rute {$routeCode} untuk diperbarui hari ini."
+                : "Sesi penjemputan rute {$routeCode} berhasil diperbarui. Titik penjemputan warga telah aktif kembali.",
             'data' => $refreshed,
         ], Response::HTTP_OK);
     }

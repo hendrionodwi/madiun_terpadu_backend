@@ -77,7 +77,7 @@ test('officer can submit field verification result (PPL-F-004)', function () {
         'catatan_petugas' => 'Lokasi telah dikunjungi dan tumpukan sampah liar telah diangkut ke dump truck.',
     ];
 
-    $response = $this->postJson("/api/v1/complaints/{$complaint->id}/verify", $payload);
+    $response = $this->postJson("/api/v1/complaints/{$complaint->nomor_tiket}/verify", $payload);
 
     $response->assertCreated()
         ->assertJson([
@@ -114,12 +114,12 @@ test('officer cannot view or verify complaints assigned to other officers', func
         ->assertJsonCount(0, 'data');
 
     // Officer B should NOT be able to view details of Petugas A's complaint
-    $showResponse = $this->getJson("/api/v1/complaints/{$complaintA->id}");
+    $showResponse = $this->getJson("/api/v1/complaints/{$complaintA->nomor_tiket}");
     $showResponse->assertStatus(403)
         ->assertJsonPath('message', 'Akses ditolak. Pengaduan ini tidak ditugaskan kepada Anda.');
 
     // Officer B should NOT be able to verify Petugas A's complaint
-    $verifyResponse = $this->postJson("/api/v1/complaints/{$complaintA->id}/verify", [
+    $verifyResponse = $this->postJson("/api/v1/complaints/{$complaintA->nomor_tiket}/verify", [
         'status_verifikasi' => 'selesai_dibersihkan',
         'catatan_petugas' => 'Petugas B mencoba memverifikasi tugas Petugas A',
     ]);
@@ -134,7 +134,7 @@ test('officer cannot view or verify complaints assigned to other officers', func
         ->assertJsonCount(1, 'data')
         ->assertJsonPath('data.0.id', $complaintA->id);
 
-    $showResponseA = $this->getJson("/api/v1/complaints/{$complaintA->id}");
+    $showResponseA = $this->getJson("/api/v1/complaints/{$complaintA->nomor_tiket}");
     $showResponseA->assertOk()
         ->assertJsonPath('data.id', $complaintA->id);
 });
@@ -145,7 +145,7 @@ test('citizen cannot verify complaint (forbidden role)', function () {
 
     Sanctum::actingAs($warga, ['role:warga']);
 
-    $response = $this->postJson("/api/v1/complaints/{$complaint->id}/verify", [
+    $response = $this->postJson("/api/v1/complaints/{$complaint->nomor_tiket}/verify", [
         'status_verifikasi' => 'selesai_dibersihkan',
         'catatan_petugas' => 'Catatan warga',
     ]);
@@ -164,8 +164,8 @@ test('unrelated roles cannot access citizen complaint endpoints', function () {
         Sanctum::actingAs($user, ['role:'.$user->role->value]);
 
         $this->getJson('/api/v1/complaints')->assertForbidden();
-        $this->getJson("/api/v1/complaints/{$complaint->id}")->assertForbidden();
-        $this->getJson("/api/v1/complaints/{$complaint->id}/notifications")->assertForbidden();
+        $this->getJson("/api/v1/complaints/{$complaint->nomor_tiket}")->assertForbidden();
+        $this->getJson("/api/v1/complaints/{$complaint->nomor_tiket}/notifications")->assertForbidden();
         $this->postJson('/api/v1/complaints', [])->assertForbidden();
     }
 });
@@ -197,7 +197,7 @@ test('officer can filter complaints assigned to them and view admin instructions
         ->assertJsonPath('data.0.assigned_petugas.id', $petugas->id);
 
     // Detail show
-    $detailResponse = $this->getJson("/api/v1/complaints/{$assignedComplaint->id}");
+    $detailResponse = $this->getJson("/api/v1/complaints/{$assignedComplaint->nomor_tiket}");
     $detailResponse->assertOk()
         ->assertJsonPath('data.instruksi_admin', 'Periksa langsung tumpukan sampah di taman.')
         ->assertJsonPath('data.assigned_petugas.name', $petugas->name);
@@ -242,7 +242,7 @@ test('field officer cannot see the identity of an anonymous reporter', function 
         ->assertJsonPath('data.0.display_pelapor_name', 'Warga Anonim (Identitas Dirahasiakan)');
     expect($listResponse->json('data.0'))->not->toHaveKeys(['pelapor_id', 'pelapor']);
 
-    $detailResponse = $this->getJson("/api/v1/complaints/{$anonymousComplaint->id}");
+    $detailResponse = $this->getJson("/api/v1/complaints/{$anonymousComplaint->nomor_tiket}");
     $detailResponse->assertOk()
         ->assertJsonPath('data.display_pelapor_name', 'Warga Anonim (Identitas Dirahasiakan)');
     expect($detailResponse->json('data'))->not->toHaveKeys(['pelapor_id', 'pelapor']);
@@ -260,10 +260,10 @@ test('citizen can fetch complaint status tracking notifications (PPL-F-002 & PPL
         'foto' => 'saluran_tersumbat.jpg',
     ]);
 
-    $complaintId = $complaintResponse->json('data.id');
+    $complaintNumber = $complaintResponse->json('data.nomor_tiket');
 
     // Fetch notifications
-    $notifResponse = $this->getJson("/api/v1/complaints/{$complaintId}/notifications");
+    $notifResponse = $this->getJson("/api/v1/complaints/{$complaintNumber}/notifications");
     $notifResponse->assertOk()
         ->assertJsonPath('success', true)
         ->assertJsonCount(1, 'data')

@@ -29,7 +29,7 @@ class StoreProductRequest extends FormRequest
             'harga' => ['required', 'numeric', 'min:0', 'max:999999999.99'],
             'stok' => ['required', 'integer', 'min:0'],
             'foto' => $this->hasFile('foto')
-                ? ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048']
+                ? ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120']
                 : ['nullable', 'string', 'max:255'],
             'is_available' => ['nullable', 'boolean'],
         ];
@@ -50,7 +50,7 @@ class StoreProductRequest extends FormRequest
             'stok.required' => 'Stok produk wajib diisi.',
             'foto.image' => 'File foto produk harus berupa gambar.',
             'foto.mimes' => 'Format foto harus berupa jpeg, png, jpg, atau webp.',
-            'foto.max' => 'Ukuran foto maksimal adalah 2MB.',
+            'foto.max' => 'Ukuran foto maksimal adalah 5MB.',
         ];
     }
 }

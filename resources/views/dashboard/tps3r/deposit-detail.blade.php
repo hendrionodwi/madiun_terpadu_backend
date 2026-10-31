@@ -180,7 +180,7 @@
                 <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <span class="flex size-7 items-center justify-center rounded-lg bg-emerald-100 text-sm font-bold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">🍃</span>
+                            <span class="flex size-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300"><flux:icon.sparkles class="size-4" /></span>
                             <span class="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Organik</span>
                         </div>
                         <span class="text-xs font-extrabold text-emerald-700 dark:text-emerald-300">{{ $composition['organik']['percentage'] }}%</span>
@@ -199,7 +199,7 @@
                 <div class="rounded-xl border border-sky-200 bg-sky-50/60 p-4 dark:border-sky-900/40 dark:bg-sky-950/20">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <span class="flex size-7 items-center justify-center rounded-lg bg-sky-100 text-sm font-bold text-sky-800 dark:bg-sky-900/60 dark:text-sky-300">♻️</span>
+                            <span class="flex size-7 items-center justify-center rounded-lg bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-300"><flux:icon.arrow-path-rounded-square class="size-4" /></span>
                             <span class="text-xs font-bold uppercase tracking-wider text-sky-800 dark:text-sky-300">Anorganik Daur Ulang</span>
                         </div>
                         <span class="text-xs font-extrabold text-sky-700 dark:text-sky-300">{{ $composition['anorganik_daur_ulang']['percentage'] }}%</span>
@@ -218,7 +218,7 @@
                 <div class="rounded-xl border border-rose-200 bg-rose-50/60 p-4 dark:border-rose-900/40 dark:bg-rose-950/20">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <span class="flex size-7 items-center justify-center rounded-lg bg-rose-100 text-sm font-bold text-rose-800 dark:bg-rose-900/60 dark:text-rose-300">🗑️</span>
+                            <span class="flex size-7 items-center justify-center rounded-lg bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300"><flux:icon.trash class="size-4" /></span>
                             <span class="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300">Residu (TPA)</span>
                         </div>
                         <span class="text-xs font-extrabold text-rose-700 dark:text-rose-300">{{ $composition['residu']['percentage'] }}%</span>
@@ -268,7 +268,7 @@
                 </label>
 
                 <label class="grid gap-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                    🍃 Organik Terpilah (kg)
+                    <span class="inline-flex items-center gap-1.5"><flux:icon.sparkles class="size-4" /> Organik Terpilah (kg)</span>
                     <input type="number" step="0.1" min="0" name="berat_organik_pilah_kg"
                         value="{{ old('berat_organik_pilah_kg', $deposit->berat_organik_pilah_kg ?? ($composition['organik']['weight'] > 0 ? $composition['organik']['weight'] : null)) }}"
                         placeholder="Contoh: 35.5"
@@ -276,7 +276,7 @@
                 </label>
 
                 <label class="grid gap-1.5 text-xs font-semibold text-sky-800 dark:text-sky-300">
-                    ♻️ Anorganik Daur Ulang Terpilah (kg)
+                    <span class="inline-flex items-center gap-1.5"><flux:icon.arrow-path-rounded-square class="size-4" /> Anorganik Daur Ulang Terpilah (kg)</span>
                     <input type="number" step="0.1" min="0" name="berat_anorganik_pilah_kg"
                         value="{{ old('berat_anorganik_pilah_kg', $deposit->berat_anorganik_pilah_kg ?? ($composition['anorganik_daur_ulang']['weight'] > 0 ? $composition['anorganik_daur_ulang']['weight'] : null)) }}"
                         placeholder="Contoh: 25.0"
@@ -284,7 +284,7 @@
                 </label>
 
                 <label class="grid gap-1.5 text-xs font-semibold text-rose-800 dark:text-rose-300">
-                    🗑️ Residu TPA Terpilah (kg)
+                    <span class="inline-flex items-center gap-1.5"><flux:icon.trash class="size-4" /> Residu TPA Terpilah (kg)</span>
                     <input type="number" step="0.1" min="0" name="berat_residu_pilah_kg"
                         value="{{ old('berat_residu_pilah_kg', $deposit->berat_residu_pilah_kg ?? ($composition['residu']['weight'] > 0 ? $composition['residu']['weight'] : null)) }}"
                         placeholder="Contoh: 10.0"

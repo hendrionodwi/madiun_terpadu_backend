@@ -161,4 +161,12 @@ class Complaint extends Model
     {
         return $this->hasMany(ComplaintVerification::class, 'complaint_id');
     }
+
+    /**
+     * Get the route key for the model.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'nomor_tiket';
+    }
 }

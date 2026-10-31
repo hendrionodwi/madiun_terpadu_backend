@@ -2,8 +2,12 @@
     <div class="flex flex-col gap-6">
         <x-auth-header 
             :title="__('Lupa Kata Sandi?')" 
-            :description="__('Masukkan alamat email yang terdaftar untuk menerima tautan pemulihan kata sandi')" 
+            :description="__('Masukkan alamat email yang terdaftar untuk menerima tautan pemulihan kata sandi')"
         />
+
+        <div class="rounded-2xl border border-emerald-100 bg-emerald-50/80 px-4 py-3 text-sm leading-6 text-emerald-950 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-100">
+            {{ __('Gunakan alur ini jika Anda belum bisa masuk. Anda tidak perlu memasukkan kata sandi lama; tautan aman akan dikirim ke email terdaftar.') }}
+        </div>
 
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />

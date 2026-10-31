@@ -86,4 +86,12 @@ class Order extends Model
     {
         return $this->hasMany(OrderFulfillment::class);
     }
+
+    /**
+     * Get the route key for the model.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'nomor_pesanan';
+    }
 }

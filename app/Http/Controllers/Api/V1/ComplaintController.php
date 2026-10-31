@@ -89,23 +89,16 @@ class ComplaintController extends Controller
     /**
      * Show complaint details and verification history.
      */
-    public function show(Request $request, int $id): JsonResponse
+    public function show(Request $request, Complaint $complaint): JsonResponse
     {
         /** @var User $currentUser */
         $currentUser = $request->user();
 
-        $complaint = Complaint::with([
+        $complaint->load([
             'pelapor:id,name,email,phone_number',
             'assignedPetugas:id,name,email,phone_number',
             'verifications.petugas:id,name,phone_number',
-        ])->find($id);
-
-        if (! $complaint) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Data pengaduan tidak ditemukan.',
-            ], Response::HTTP_NOT_FOUND);
-        }
+        ]);
 
         if ($currentUser->isWarga() && $complaint->pelapor_id !== $currentUser->id) {
             return response()->json([
@@ -190,20 +183,11 @@ class ComplaintController extends Controller
     /**
      * Input field verification result by officer (PPL-F-004).
      */
-    public function verify(VerifyComplaintRequest $request, int $id): JsonResponse
+    public function verify(VerifyComplaintRequest $request, Complaint $complaint): JsonResponse
     {
         $validated = $request->validated();
         /** @var User $petugas */
         $petugas = $request->user();
-
-        $complaint = Complaint::find($id);
-
-        if (! $complaint) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Data pengaduan yang akan diverifikasi tidak ditemukan.',
-            ], Response::HTTP_NOT_FOUND);
-        }
 
         if ($petugas->isPetugasLapangan() && $complaint->assigned_petugas_id !== $petugas->id) {
             return response()->json([
@@ -259,18 +243,10 @@ class ComplaintController extends Controller
     /**
      * Get complaint status tracking notifications for citizen (PPL-F-006).
      */
-    public function notifications(Request $request, int $id): JsonResponse
+    public function notifications(Request $request, Complaint $complaint): JsonResponse
     {
         /** @var User $currentUser */
         $currentUser = $request->user();
-
-        $complaint = Complaint::find($id);
-        if (! $complaint) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Data pengaduan tidak ditemukan.',
-            ], Response::HTTP_NOT_FOUND);
-        }
 
         if ($currentUser->isWarga() && $complaint->pelapor_id !== $currentUser->id) {
             return response()->json([
@@ -286,7 +262,7 @@ class ComplaintController extends Controller
             ], Response::HTTP_FORBIDDEN);
         }
 
-        $logs = ComplaintStatusLog::where('complaint_id', $id)
+        $logs = ComplaintStatusLog::where('complaint_id', $complaint->id)
             ->latest()
             ->get();
 

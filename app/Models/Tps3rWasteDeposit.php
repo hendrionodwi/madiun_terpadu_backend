@@ -84,6 +84,14 @@ class Tps3rWasteDeposit extends Model
     }
 
     /**
+     * Get the route key for the model.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'nomor_resi';
+    }
+
+    /**
      * Relation to Pengelola User.
      *
      * @return BelongsTo<User, $this>

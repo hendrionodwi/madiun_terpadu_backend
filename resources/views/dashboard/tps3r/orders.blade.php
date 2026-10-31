@@ -84,8 +84,9 @@
                                 <td class="px-3 py-3.5">
                                     <div class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $order->buyer->name }}</div>
                                     @if ($order->buyer->phone_number)
-                                        <div class="text-xs text-zinc-500 flex items-center gap-1 mt-0.5">
-                                            <span>📞 {{ $order->buyer->phone_number }}</span>
+                                        <div class="mt-0.5 flex items-center gap-1 text-xs text-zinc-500">
+                                            <flux:icon.phone class="size-3.5" />
+                                            <span>{{ $order->buyer->phone_number }}</span>
                                         </div>
                                     @endif
                                 </td>
@@ -97,12 +98,14 @@
                                 <td class="px-3 py-3.5">
                                     @if ($order->metode_pembayaran === 'poin_sampah')
                                         <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                                            🪙 Poin Sampah
+                                            <flux:icon.wallet class="size-3.5" />
+                                            Poin Sampah
                                         </span>
                                     @elseif ($order->metode_pembayaran === 'midtrans')
                                         <div class="space-y-1">
                                             <span class="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">
-                                                💳 Midtrans
+                                                <flux:icon.credit-card class="size-3.5" />
+                                                Midtrans
                                             </span>
                                             @if (in_array($order->status, \App\Models\Order::REVENUE_STATUSES, true))
                                                 <span class="block text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
@@ -110,13 +113,14 @@
                                                 </span>
                                             @else
                                                 <span class="block text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                                                    ⏳ Menunggu Bayar
+                                                    <span class="inline-flex items-center gap-1"><flux:icon.clock class="size-3.5" /> Menunggu Bayar</span>
                                                 </span>
                                             @endif
                                         </div>
                                     @else
                                         <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
-                                            💵 COD / Tunai
+                                            <flux:icon.banknotes class="size-3.5" />
+                                            COD / Tunai
                                         </span>
                                     @endif
                                 </td>
@@ -160,7 +164,7 @@
                             <tr>
                                 <td colspan="{{ $isAdmin ? 8 : 7 }}" class="px-3 py-12 text-center text-zinc-500 dark:text-zinc-400">
                                     <div class="mx-auto flex max-w-sm flex-col items-center gap-2">
-                                        <span class="text-3xl">📦</span>
+                                        <flux:icon.cube class="size-8 text-zinc-400" />
                                         <p class="font-medium text-zinc-700 dark:text-zinc-200">Tidak ada pesanan ditemukan</p>
                                         <p class="text-xs text-zinc-500">Belum ada pesanan dengan kriteria filter yang dipilih.</p>
                                     </div>

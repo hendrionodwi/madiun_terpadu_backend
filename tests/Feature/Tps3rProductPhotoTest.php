@@ -104,12 +104,12 @@ test('deleting a product also deletes its photo from storage', function () {
     Storage::disk('public')->assertMissing($photoPath);
 });
 
-test('product photo upload rejects non-image files or files exceeding 2MB', function () {
+test('product photo upload rejects non-image files or files exceeding 5MB', function () {
     $pengelola = User::factory()->pengelolaTps3r()->create();
     $pdfFile = UploadedFile::fake()->create('dokumen.pdf', 500, 'application/pdf');
 
     $response = $this->actingAs($pengelola)->post(route('dashboard.tps3r.store-product'), [
-        'nama_produk' => 'Produk Coba',
+        'nama_produk' => 'Produk Coba Non Image',
         'kategori' => 'lainnya',
         'harga' => 10000,
         'stok' => 5,
@@ -117,4 +117,37 @@ test('product photo upload rejects non-image files or files exceeding 2MB', func
     ]);
 
     $response->assertSessionHasErrors(['foto']);
+
+    $oversizedPhoto = UploadedFile::fake()->image('oversized.jpg')->size(5121);
+    $oversizedResponse = $this->actingAs($pengelola)->post(route('dashboard.tps3r.store-product'), [
+        'nama_produk' => 'Produk Coba File Terlalu Besar',
+        'kategori' => 'lainnya',
+        'harga' => 10000,
+        'stok' => 5,
+        'foto' => $oversizedPhoto,
+    ]);
+
+    $oversizedResponse->assertSessionHasErrors(['foto']);
+});
+
+test('product photo upload accepts photos up to 5MB', function () {
+    $pengelola = User::factory()->pengelolaTps3r()->create();
+    $largePhoto = UploadedFile::fake()->image('large-product.jpg', 1200, 1200)->size(4500);
+
+    $response = $this->actingAs($pengelola)->post(route('dashboard.tps3r.store-product'), [
+        'nama_produk' => 'Pupuk Kompos Premium 5MB',
+        'kategori' => 'pupuk_kompos',
+        'harga' => 25000,
+        'stok' => 10,
+        'foto' => $largePhoto,
+    ]);
+
+    $response->assertRedirect(route('dashboard.tps3r.products'))
+        ->assertSessionHas('status');
+
+    $product = WasteProduct::where('nama_produk', 'Pupuk Kompos Premium 5MB')->first();
+    expect($product)->not->toBeNull()
+        ->and($product->foto)->not->toBeNull();
+
+    Storage::disk('public')->assertExists($product->foto);
 });

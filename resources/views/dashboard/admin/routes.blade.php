@@ -26,13 +26,13 @@
             </div>
         @endif
 
-        <!-- Peta Monitoring Sebaran Rute & Armada (OpenStreetMap / Leaflet) Lebar Penuh -->
+        <!-- Peta Monitoring Sebaran Rute & Armada (MapLibre GL JS) -->
         <div class="civic-card flex flex-col overflow-hidden p-4">
             <div class="mb-3 flex shrink-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h2 class="text-base font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                         <svg class="size-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-                        Peta Navigasi Jalur & Sebaran Armada Kota Madiun (OSM)
+                        Peta Navigasi Jalur & Sebaran Armada Kota Madiun (MapLibre OSM)
                     </h2>
                     <p class="text-xs text-zinc-500">Peta interaktif pemantauan seluruh rute tetap dan pergerakan armada penjemputan sampah. Klik tombol <b>'Jalur'</b> pada tabel di bawah untuk melihat detail rute tertentu.</p>
                 </div>
@@ -51,8 +51,7 @@
                     </span>
                 </div>
             </div>
-            <!-- Leaflet Container Lebar Penuh -->
-            <div id="adminRouteMap" class="relative z-0 w-full rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-inner" style="min-height: 520px; height: 520px; width: 100%;"></div>
+            <div id="adminRouteMap" class="madiun-maplibre h-[24rem] w-full sm:h-[32.5rem]"></div>
         </div>
 
         <div class="grid gap-6">
@@ -92,9 +91,9 @@
                                             </div>
                                             <p class="font-semibold text-zinc-900 dark:text-zinc-100 mt-0.5">{{ $route->route_name }}</p>
                                             <div class="flex items-center gap-1.5 text-[10px] text-zinc-500 mt-1 flex-wrap">
-                                                <span class="inline-flex items-center gap-1 font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">🏁 {{ $route->start_location ?? 'Depo DLH' }}</span>
+                                                <span class="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"><flux:icon.flag class="size-3" /> {{ $route->start_location ?? 'Depo DLH' }}</span>
                                                 <span class="text-zinc-400 font-bold">➔</span>
-                                                <span class="inline-flex items-center gap-1 font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">🏢 {{ $route->end_facility ?? 'TPS3R Kota' }}</span>
+                                                <span class="inline-flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 font-medium text-blue-700 dark:bg-blue-950/60 dark:text-blue-400"><flux:icon.building-office-2 class="size-3" /> {{ $route->end_facility ?? 'TPS3R Kota' }}</span>
                                             </div>
                                             @if ($route->notes)
                                                 <p class="text-[11px] text-zinc-400 italic mt-0.5">{{ $route->notes }}</p>
@@ -196,9 +195,9 @@
                                     </div>
                                 </div>
                                 <div class="mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-700/60 flex items-center justify-between text-[10px] text-zinc-400">
-                                    <span>🏁 {{ $session->start_location ?? 'Depo' }}</span>
+                                    <span class="inline-flex items-center gap-1"><flux:icon.flag class="size-3" /> {{ $session->start_location ?? 'Depo' }}</span>
                                     <span>➔</span>
-                                    <span>🏢 {{ $session->end_facility ?? 'TPS3R' }}</span>
+                                    <span class="inline-flex items-center gap-1"><flux:icon.building-office-2 class="size-3" /> {{ $session->end_facility ?? 'TPS3R' }}</span>
                                 </div>
                             </div>
                         @empty
@@ -234,7 +233,7 @@
         </div>
     </div>
 
-    <!-- Script OpenStreetMap Leaflet untuk Monitoring Rute & Armada Kota Madiun -->
+    <!-- MapLibre GL JS untuk Monitoring Rute & Armada Kota Madiun -->
     <script>
     (function () {
         let adminMap = null;
@@ -244,41 +243,22 @@
         const routesData = @json($routes->items());
         const schedulesData = @json($schedules);
 
-        function ensureLeaflet(callback) {
-            if (typeof L !== 'undefined') {
+        function ensureMapLibre(callback) {
+            if (window.MadiunMapLibre) {
                 callback();
                 return;
             }
 
-            if (!document.getElementById('leaflet-local-css')) {
-                const link = document.createElement('link');
-                link.id = 'leaflet-local-css';
-                link.rel = 'stylesheet';
-                link.href = '{{ asset("vendor/leaflet/leaflet.css") }}';
-                document.head.appendChild(link);
-            }
+            window.addEventListener('madiun:maplibre-ready', callback, { once: true });
+        }
 
-            let script = document.getElementById('leaflet-local-js');
-            if (!script) {
-                script = document.createElement('script');
-                script.id = 'leaflet-local-js';
-                script.src = '{{ asset("vendor/leaflet/leaflet.js") }}';
-                script.onload = () => callback();
-                script.onerror = () => {
-                    const cdn = document.createElement('script');
-                    cdn.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
-                    cdn.onload = () => callback();
-                    document.head.appendChild(cdn);
-                };
-                document.head.appendChild(script);
-            } else {
-                const timer = setInterval(() => {
-                    if (typeof L !== 'undefined') {
-                        clearInterval(timer);
-                        callback();
-                    }
-                }, 50);
-            }
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
         }
 
         let isInitializing = false;
@@ -304,8 +284,8 @@
             const mapContainer = document.getElementById('adminRouteMap');
             if (!mapContainer) return;
 
-            if (typeof L === 'undefined') {
-                ensureLeaflet(initMap);
+            if (!window.MadiunMapLibre) {
+                ensureMapLibre(initMap);
                 return;
             }
 
@@ -315,22 +295,11 @@
             cleanupExistingMap();
 
             try {
-                // Inisialisasi Map Leaflet standar di pusat Kota Madiun
-                adminMap = L.map('adminRouteMap', {
+                adminMap = window.MadiunMapLibre.createMap({
+                    container: 'adminRouteMap',
                     center: [-7.6298, 111.5239],
                     zoom: 13,
-                    zoomControl: true
                 });
-
-                // Basemap Resmi OpenStreetMap (100% Terbuka & Tanpa Perlu API Key)
-                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                }).addTo(adminMap);
-
-                setTimeout(() => {
-                    if (adminMap) adminMap.invalidateSize();
-                }, 200);
             } catch (err) {
                 console.error('Error initializing adminRouteMap:', err);
                 isInitializing = false;
@@ -338,8 +307,9 @@
             }
             isInitializing = false;
 
+            adminMap.on('load', function () {
             savedRouteLayers = {};
-            let allBounds = [];
+            const allPoints = [];
 
             // Plot Rute Tetap yang sudah tersimpan di database beserta status sesi perjalanan hari ini
             routesData.forEach(function (r) {
@@ -366,87 +336,101 @@
                         .filter(pt => !isNaN(pt[0]) && !isNaN(pt[1]));
 
                     if (validPoints.length > 1) {
-                        const poly = L.polyline(validPoints, {
-                            color: polyColor,
-                            weight: 5,
-                            opacity: 0.85
-                        }).addTo(adminMap);
-
-                        poly.bindPopup(`
+                        const sourceId = `route-source-${r.id}`;
+                        const layerId = `route-line-${r.id}`;
+                        const routePopup = `
                             <div style="font-size:12px; line-height:1.4;">
-                                <strong style="color:#047857;">${r.route_code}</strong><br>
-                                <strong>${r.route_name}</strong><br>
-                                <span style="color:#64748b;">Wilayah: ${r.district}</span><br>
-                                <span style="color:#0f172a;">Petugas: ${r.petugas ? r.petugas.name : '-'}</span><br>
+                                <strong style="color:#047857;">${escapeHtml(r.route_code)}</strong><br>
+                                <strong>${escapeHtml(r.route_name)}</strong><br>
+                                <span style="color:#64748b;">Wilayah: ${escapeHtml(r.district)}</span><br>
+                                <span>Petugas: ${escapeHtml(r.petugas ? r.petugas.name : '-')}</span><br>
                                 <span style="font-weight:700; color:${polyColor};">Status Sesi Hari Ini: ${sessionStatus.toUpperCase()}</span>
                             </div>
-                        `);
-                        savedRouteLayers[r.id] = poly;
-                        allBounds.push(poly.getBounds());
+                        `;
+
+                        window.MadiunMapLibre.upsertLine(adminMap, {
+                            sourceId,
+                            layerId,
+                            points: validPoints,
+                            color: polyColor,
+                            width: 5,
+                            opacity: 0.85,
+                        });
+
+                        adminMap.on('click', layerId, function (event) {
+                            new window.MadiunMapLibre.Popup({ maxWidth: '320px' })
+                                .setLngLat(event.lngLat)
+                                .setHTML(routePopup)
+                                .addTo(adminMap);
+                        });
+                        adminMap.on('mouseenter', layerId, () => { adminMap.getCanvas().style.cursor = 'pointer'; });
+                        adminMap.on('mouseleave', layerId, () => { adminMap.getCanvas().style.cursor = ''; });
+
+                        savedRouteLayers[r.id] = {
+                            points: validPoints,
+                            popupHtml: routePopup,
+                            popupPoint: validPoints[Math.floor(validPoints.length / 2)],
+                        };
+                        allPoints.push(...validPoints);
 
                         // Titik Awal: Depo DLH
                         const startPt = validPoints[0];
-                        const startMarker = L.circleMarker(startPt, {
-                            radius: 8,
-                            fillColor: startColor,
-                            color: '#ffffff',
-                            weight: 2,
-                            opacity: 1,
-                            fillOpacity: 0.95
-                        }).addTo(adminMap);
-                        startMarker.bindPopup(`
+                        window.MadiunMapLibre.createMarker(adminMap, {
+                            position: startPt,
+                            color: startColor,
+                            size: 16,
+                            ariaLabel: `Titik mulai ${r.route_code}`,
+                            popupHtml: `
                             <div style="font-size:12px; line-height:1.4;">
-                                <strong>🏁 Titik Mulai (Depo)</strong><br>
-                                <b>${r.start_location || 'Depo DLH'}</b><br>
-                                <span style="color:#64748b;">Rute: ${r.route_code}</span><br>
+                                <strong>Titik Mulai (Depo)</strong><br>
+                                <b>${escapeHtml(r.start_location || 'Depo DLH')}</b><br>
+                                <span style="color:#64748b;">Rute: ${escapeHtml(r.route_code)}</span><br>
                                 <span>Status: <b style="color:${startColor};">${sessionStatus.toUpperCase()}</b></span><br>
-                                <small style="color:#64748b;">Mulai: ${session && session.waktu_mulai ? session.waktu_mulai.substring(0, 5) + ' WIB' : 'Belum Berangkat'}</small>
+                                <small style="color:#64748b;">Mulai: ${escapeHtml(session && session.waktu_mulai ? session.waktu_mulai.substring(0, 5) + ' WIB' : 'Belum Berangkat')}</small>
                             </div>
-                        `);
+                            `,
+                        });
 
                         // Titik Akhir: TPS3R Tujuan
                         const endPt = validPoints[validPoints.length - 1];
-                        const endMarker = L.circleMarker(endPt, {
-                            radius: 8,
-                            fillColor: endColor,
-                            color: '#ffffff',
-                            weight: 2,
-                            opacity: 1,
-                            fillOpacity: 0.95
-                        }).addTo(adminMap);
-                        endMarker.bindPopup(`
+                        window.MadiunMapLibre.createMarker(adminMap, {
+                            position: endPt,
+                            color: endColor,
+                            size: 16,
+                            ariaLabel: `Titik selesai ${r.route_code}`,
+                            popupHtml: `
                             <div style="font-size:12px; line-height:1.4;">
-                                <strong>🏢 Titik Selesai (TPS3R)</strong><br>
-                                <b>${r.end_facility || 'TPS3R'}</b><br>
-                                <span style="color:#64748b;">Rute: ${r.route_code}</span><br>
+                                <strong>Titik Selesai (TPS3R)</strong><br>
+                                <b>${escapeHtml(r.end_facility || 'TPS3R')}</b><br>
+                                <span style="color:#64748b;">Rute: ${escapeHtml(r.route_code)}</span><br>
                                 <span>Status: <b style="color:${endColor};">${sessionStatus.toUpperCase()}</b></span><br>
-                                <small style="color:#64748b;">Selesai: ${session && session.waktu_selesai ? session.waktu_selesai.substring(0, 5) + ' WIB' : 'Menunggu Penyelesaian'}</small>
+                                <small style="color:#64748b;">Selesai: ${escapeHtml(session && session.waktu_selesai ? session.waktu_selesai.substring(0, 5) + ' WIB' : 'Menunggu Penyelesaian')}</small>
                             </div>
-                        `);
+                            `,
+                        });
                     }
                 } else if (r.latitude && r.longitude) {
                     const lat = parseFloat(r.latitude);
                     const lng = parseFloat(r.longitude);
                     if (!isNaN(lat) && !isNaN(lng)) {
-                        const m = L.circleMarker([lat, lng], {
-                            radius: 8,
-                            fillColor: polyColor,
-                            color: '#ffffff',
-                            weight: 2,
-                            opacity: 1,
-                            fillOpacity: 0.95
-                        }).addTo(adminMap);
-
-                        m.bindPopup(`
+                        const popupHtml = `
                             <div style="font-size:12px; line-height:1.4;">
-                                <strong style="color:#047857;">${r.route_code}</strong><br>
-                                <strong>${r.route_name}</strong><br>
-                                <span style="color:#64748b;">Wilayah: ${r.district}</span><br>
-                                <span style="color:#0f172a;">Petugas: ${r.petugas ? r.petugas.name : 'Belum Ditugaskan'}</span><br>
+                                <strong style="color:#047857;">${escapeHtml(r.route_code)}</strong><br>
+                                <strong>${escapeHtml(r.route_name)}</strong><br>
+                                <span style="color:#64748b;">Wilayah: ${escapeHtml(r.district)}</span><br>
+                                <span>Petugas: ${escapeHtml(r.petugas ? r.petugas.name : 'Belum Ditugaskan')}</span><br>
                                 <span style="font-weight:700; color:${polyColor};">Status Sesi Hari Ini: ${sessionStatus.toUpperCase()}</span>
                             </div>
-                        `);
-                        savedRouteLayers[r.id] = m;
+                        `;
+                        const marker = window.MadiunMapLibre.createMarker(adminMap, {
+                            position: [lat, lng],
+                            color: polyColor,
+                            size: 16,
+                            ariaLabel: `Lokasi rute ${r.route_code}`,
+                            popupHtml,
+                        });
+                        savedRouteLayers[r.id] = { points: [[lat, lng]], popupHtml, popupPoint: [lat, lng], marker };
+                        allPoints.push([lat, lng]);
                     }
                 }
             });
@@ -458,55 +442,54 @@
                     const slng = parseFloat(s.longitude);
                     if (!isNaN(slat) && !isNaN(slng)) {
                         const color = s.status === 'berlangsung' ? '#0284c7' : (s.status === 'selesai' ? '#16a34a' : '#f59e0b');
-                        const sm = L.circleMarker([slat, slng], {
-                            radius: 7,
-                            fillColor: color,
-                            color: '#ffffff',
-                            weight: 2,
-                            opacity: 1,
-                            fillOpacity: 0.95
-                        }).addTo(adminMap);
-
-                        sm.bindPopup(`
+                        window.MadiunMapLibre.createMarker(adminMap, {
+                            position: [slat, slng],
+                            color,
+                            size: 14,
+                            ariaLabel: `Armada ${s.nama_wilayah_rute || s.id_wilayah_rute}`,
+                            popupHtml: `
                             <div style="font-size:12px; line-height:1.4;">
-                                <strong>${s.nama_wilayah_rute || s.id_wilayah_rute}</strong><br>
+                                <strong>${escapeHtml(s.nama_wilayah_rute || s.id_wilayah_rute)}</strong><br>
                                 <span>Status: <b style="color:${color};">${s.status.toUpperCase()}</b></span><br>
-                                <small style="color:#64748b;">${s.tanggal_penjemputan} • ${s.waktu_mulai}-${s.waktu_selesai}</small><br>
-                                <small style="color:#334155;">Petugas: ${s.petugas ? s.petugas.name : '-'}</small>
+                                <small style="color:#64748b;">${escapeHtml(s.tanggal_penjemputan)} • ${escapeHtml(s.waktu_mulai)}-${escapeHtml(s.waktu_selesai)}</small><br>
+                                <small>Petugas: ${escapeHtml(s.petugas ? s.petugas.name : '-')}</small>
                             </div>
-                        `);
+                            `,
+                        });
+                        allPoints.push([slat, slng]);
                     }
                 }
             });
 
             // Jika ada rute tersimpan, sesuaikan view peta
-            if (allBounds.length > 0) {
+            if (allPoints.length > 0) {
                 try {
-                    let groupBounds = allBounds[0];
-                    for (let i = 1; i < allBounds.length; i++) {
-                        groupBounds.extend(allBounds[i]);
-                    }
-                    adminMap.fitBounds(groupBounds, { padding: [50, 50], animate: false });
+                    window.MadiunMapLibre.fitToPoints(adminMap, allPoints, { padding: 50, maxZoom: 15 });
                 } catch (e) {}
             }
+            });
         }
 
         // Global function untuk tombol 'Jalur' pada tabel rute
         window.focusRouteOnMap = function (routeId) {
             const layer = savedRouteLayers[routeId];
             if (layer && adminMap) {
-                if (layer.getBounds) {
-                    try {
-                        adminMap.fitBounds(layer.getBounds(), { padding: [40, 40] });
-                    } catch (e) {}
-                } else if (layer.getLatLng) {
-                    adminMap.flyTo(layer.getLatLng(), 15);
-                }
-                layer.openPopup();
+                window.MadiunMapLibre.fitToPoints(adminMap, layer.points, {
+                    padding: 48,
+                    maxZoom: 15,
+                    duration: 500,
+                });
+                new window.MadiunMapLibre.Popup({ maxWidth: '320px' })
+                    .setLngLat(window.MadiunMapLibre.toLngLat(layer.popupPoint))
+                    .setHTML(layer.popupHtml)
+                    .addTo(adminMap);
             } else {
                 const target = routesData.find(r => r.id === routeId);
                 if (target && target.latitude && target.longitude && adminMap) {
-                    adminMap.flyTo([target.latitude, target.longitude], 15);
+                    adminMap.flyTo({
+                        center: window.MadiunMapLibre.toLngLat([target.latitude, target.longitude]),
+                        zoom: 15,
+                    });
                 }
             }
         };
@@ -516,7 +499,7 @@
         function start() {
             if (mapInitialized && adminMap) return;
             mapInitialized = true;
-            ensureLeaflet(initMap);
+            ensureMapLibre(initMap);
         }
 
         if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -536,7 +519,7 @@
         });
 
         window.addEventListener('resize', function () {
-            if (adminMap) adminMap.invalidateSize();
+            if (adminMap) adminMap.resize();
         });
     })();
     </script>

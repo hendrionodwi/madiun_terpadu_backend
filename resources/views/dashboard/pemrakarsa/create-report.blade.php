@@ -163,8 +163,9 @@
             <!-- Petunjuk Teknis & Regulasi (1 Kolom) -->
             <div class="space-y-6">
                 <div class="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 shadow-sm text-xs text-zinc-600 dark:text-zinc-400">
-                    <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-3 flex items-center gap-2">
-                        <span>📜</span> Dasar Hukum & Ketentuan
+                    <h3 class="mb-3 flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        <flux:icon.document-text class="size-4" />
+                        Dasar Hukum & Ketentuan
                     </h3>
                     <ul class="space-y-2 list-disc list-inside leading-relaxed">
                         <li>Kewajiban pelaporan berkala 6 bulan sekali (per semester) sesuai ketentuan izin lingkungan.</li>

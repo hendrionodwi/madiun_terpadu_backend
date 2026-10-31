@@ -20,6 +20,7 @@ class PengelolaTps3rProfileResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'public_id' => $this->public_id,
             'nama_tps3r' => $this->nama_tps3r,
             'kode_tps3r' => $this->kode_tps3r,
             'alamat' => $this->alamat,
