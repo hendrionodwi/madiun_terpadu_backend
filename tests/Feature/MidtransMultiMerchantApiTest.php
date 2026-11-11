@@ -90,6 +90,9 @@ test('checkout with midtrans creates snap token from tps3r merchant credentials'
             ],
         ]);
 
+    Http::assertSent(fn ($request) => $request->url() === 'https://app.sandbox.midtrans.com/snap/v1/transactions'
+        && $request['callbacks']['finish'] === route('payment.return'));
+
     $this->assertDatabaseHas('orders', [
         'snap_token' => 'mock-snap-token-xyz-123',
         'metode_pembayaran' => 'midtrans',
@@ -100,9 +103,11 @@ test('checkout with midtrans creates snap token from tps3r merchant credentials'
 test('midtrans webhook notification processes settlement and marks order as dibayar', function () {
     $seller = User::factory()->pengelolaTps3r()->create();
     $serverKey = 'SB-Mid-server-SECRET999';
+    $signatureSecret = 'sandbox-signature-secret-NEW999';
     PengelolaTps3rProfile::factory()->withMidtrans()->create([
         'user_id' => $seller->id,
         'midtrans_server_key' => $serverKey,
+        'midtrans_signature_secret' => $signatureSecret,
     ]);
 
     $product = WasteProduct::factory()->create(['seller_id' => $seller->id, 'harga' => 50000, 'stok' => 5]);
@@ -121,7 +126,7 @@ test('midtrans webhook notification processes settlement and marks order as diba
 
     $statusCode = '200';
     $grossAmount = '50000.00';
-    $signature = hash('sha512', $order->nomor_pesanan.$statusCode.$grossAmount.$serverKey);
+    $signature = hash('sha512', $order->nomor_pesanan.$statusCode.$grossAmount.$signatureSecret);
 
     $response = $this->postJson('/api/v1/marketplace/midtrans/notification', [
         'order_id' => $order->nomor_pesanan,
@@ -177,6 +182,7 @@ test('midtrans webhook notification restores stock when transaction is cancelled
     PengelolaTps3rProfile::factory()->withMidtrans()->create([
         'user_id' => $seller->id,
         'midtrans_server_key' => $serverKey,
+        'midtrans_signature_secret' => null,
     ]);
 
     $product = WasteProduct::factory()->create(['seller_id' => $seller->id, 'harga' => 50000, 'stok' => 3]);
@@ -211,4 +217,44 @@ test('midtrans webhook notification restores stock when transaction is cancelled
     $order->refresh();
     expect($order->status)->toBe('dibatalkan');
     expect($product->fresh()->stok)->toBe(5); // 3 + 2 restored
+});
+
+test('midtrans webhook notification falls back to server key for legacy accounts', function () {
+    $seller = User::factory()->pengelolaTps3r()->create();
+    $serverKey = 'SB-Mid-server-LEGACY999';
+    PengelolaTps3rProfile::factory()->withMidtrans()->create([
+        'user_id' => $seller->id,
+        'midtrans_server_key' => $serverKey,
+        'midtrans_signature_secret' => null,
+    ]);
+
+    $product = WasteProduct::factory()->create(['seller_id' => $seller->id, 'harga' => 25000, 'stok' => 2]);
+    $order = Order::factory()->create([
+        'nomor_pesanan' => 'ORD-20261103-LEGACY',
+        'total_harga' => 25000,
+        'metode_pembayaran' => 'midtrans',
+        'status' => 'pending',
+    ]);
+    $order->items()->create([
+        'product_id' => $product->id,
+        'jumlah' => 1,
+        'harga_satuan' => 25000,
+        'subtotal' => 25000,
+    ]);
+
+    $statusCode = '200';
+    $grossAmount = '25000.00';
+
+    $response = $this->postJson('/api/v1/marketplace/midtrans/notification', [
+        'order_id' => $order->nomor_pesanan,
+        'status_code' => $statusCode,
+        'gross_amount' => $grossAmount,
+        'transaction_status' => 'settlement',
+        'signature_key' => hash('sha512', $order->nomor_pesanan.$statusCode.$grossAmount.$serverKey),
+    ]);
+
+    $response->assertOk()
+        ->assertJson(['success' => true]);
+
+    expect($order->fresh()->status)->toBe('dibayar');
 });

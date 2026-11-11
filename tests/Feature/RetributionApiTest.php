@@ -132,6 +132,9 @@ test('warga can pay retribution bill hybrid with partial points and remaining vi
 });
 
 test('signed midtrans webhook marks a pending retribution bill as paid without deducting reserved points twice', function () {
+    $signatureSecret = 'sandbox-retribution-signature-secret';
+    config()->set('services.midtrans.signature_secret', $signatureSecret);
+
     $warga = User::factory()->warga()->create();
     WargaProfile::factory()->create([
         'user_id' => $warga->id,
@@ -156,7 +159,7 @@ test('signed midtrans webhook marks a pending retribution bill as paid without d
     $midtransOrderId = $bill->midtrans_order_id;
     $statusCode = '200';
     $grossAmount = '7000.00';
-    $signature = hash('sha512', $midtransOrderId.$statusCode.$grossAmount.config('services.midtrans.server_key'));
+    $signature = hash('sha512', $midtransOrderId.$statusCode.$grossAmount.$signatureSecret);
 
     $response = $this->postJson('/api/v1/retributions/midtrans/notification', [
         'order_id' => $midtransOrderId,

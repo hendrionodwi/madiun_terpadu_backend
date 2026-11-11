@@ -27,7 +27,7 @@ test('admin dlh can access all 10 dedicated admin pages', function () {
     $this->actingAs($admin)->get(route('dashboard.admin.points'))->assertOk()->assertSee('Sirkulasi Poin');
     $this->actingAs($admin)->get(route('dashboard.admin.master-data'))->assertOk()->assertSee('Data Master');
     $this->actingAs($admin)->get(route('dashboard.admin.activity-logs'))->assertOk()->assertSee('Audit Trail');
-    $this->actingAs($admin)->get(route('dashboard.admin.broadcasts'))->assertOk()->assertSee('Sistem Siaran Pengumuman');
+    $this->actingAs($admin)->get(route('dashboard.admin.broadcasts'))->assertOk()->assertSee('Pengumuman Portal');
 });
 
 test('admin dlh can toggle user active status', function () {

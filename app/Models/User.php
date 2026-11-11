@@ -231,6 +231,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the user's publicly accessible avatar URL if available.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (! $this->avatar) {
+            return null;
+        }
+
+        if (str_starts_with($this->avatar, 'http://') || str_starts_with($this->avatar, 'https://')) {
+            return $this->avatar;
+        }
+
+        return url('api/v1/media/'.ltrim($this->avatar, '/'));
+    }
+
+    /**
      * Get the user's initials.
      */
     public function initials(): string

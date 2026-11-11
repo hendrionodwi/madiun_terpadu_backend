@@ -74,11 +74,12 @@
 
         <section class="civic-card p-4 sm:p-5">
             <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div class="civic-filter-rail" aria-label="Filter berdasarkan role">
+                <div id="usersRoleTabs" data-ajax-targets="#usersRoleTabs,#usersFilterResetWrap,#usersTableCard" class="civic-filter-rail" aria-label="Filter berdasarkan role">
                     @foreach ($roleFilters as $roleValue => $filter)
                         @php($isActiveRole = ($currentRole ?? '') === $roleValue)
                         <a
                             href="{{ route('dashboard.admin.users', array_filter(['role' => $roleValue, 'q' => $search])) }}"
+                            data-ajax-link
                             class="civic-filter-chip {{ $isActiveRole ? 'civic-filter-chip-active' : '' }}"
                             @if ($isActiveRole) aria-current="page" @endif
                         >
@@ -88,23 +89,23 @@
                     @endforeach
                 </div>
 
-                <form method="GET" action="{{ route('dashboard.admin.users') }}" class="flex w-full flex-col gap-2 sm:flex-row xl:max-w-2xl">
-                    @if ($currentRole)
-                        <input type="hidden" name="role" value="{{ $currentRole }}">
-                    @endif
+                <form id="usersFilterForm" method="GET" action="{{ route('dashboard.admin.users') }}" data-ajax-form data-ajax-targets="#usersRoleTabs,#usersFilterResetWrap,#usersTableCard" class="flex w-full flex-col gap-2 sm:flex-row xl:max-w-2xl">
+                    <input type="hidden" name="role" value="{{ $currentRole ?? '' }}">
 
                     <flux:input name="q" :value="$search" icon="magnifying-glass" placeholder="Cari nama, email, atau nomor telepon..." class="min-w-0 flex-1" />
                     <div class="flex gap-2">
                         <flux:button type="submit" variant="primary">Cari</flux:button>
-                        @if ($search || $currentRole)
-                            <flux:button :href="route('dashboard.admin.users')" variant="ghost" wire:navigate>Reset</flux:button>
-                        @endif
+                        <span id="usersFilterResetWrap" class="contents">
+                            @if ($search || $currentRole)
+                                <flux:button :href="route('dashboard.admin.users')" variant="ghost" data-ajax-link data-ajax-targets="#usersRoleTabs,#usersFilterResetWrap,#usersTableCard">Reset</flux:button>
+                            @endif
+                        </span>
                     </div>
                 </form>
             </div>
         </section>
 
-        <section class="civic-card overflow-hidden">
+        <section id="usersTableCard" data-ajax-zone="admin-users-table" data-ajax-targets="#usersRoleTabs,#usersFilterResetWrap,#usersTableCard" class="civic-card overflow-hidden">
             <div class="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
                 <div>
                     <h2 class="font-display text-base font-extrabold text-slate-950 dark:text-white">Daftar pengguna</h2>

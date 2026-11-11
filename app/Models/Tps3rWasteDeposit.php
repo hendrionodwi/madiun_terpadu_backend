@@ -36,10 +36,13 @@ use Illuminate\Support\Carbon;
     'tps3r_profile_id',
     'petugas_id',
     'nomor_resi',
+    'client_reference_id',
     'route_code',
     'sumber_sampah',
     'jenis_sampah',
     'berat_kg',
+    'berat_bruto_kg',
+    'berat_tara_kg',
     'status',
     'berat_konfirmasi_kg',
     'verified_at',
@@ -64,6 +67,8 @@ class Tps3rWasteDeposit extends Model
     {
         return [
             'berat_kg' => 'float',
+            'berat_bruto_kg' => 'float',
+            'berat_tara_kg' => 'float',
             'berat_konfirmasi_kg' => 'float',
             'berat_organik_pilah_kg' => 'float',
             'berat_anorganik_pilah_kg' => 'float',

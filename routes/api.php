@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AdminCmsController;
 use App\Http\Controllers\Api\V1\AnnouncementController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ComplaintController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Api\V1\MasterDataController;
 use App\Http\Controllers\Api\V1\MediaController;
 use App\Http\Controllers\Api\V1\OrderFulfillmentController;
 use App\Http\Controllers\Api\V1\PointLedgerController;
+use App\Http\Controllers\Api\V1\PublicPortalController;
 use App\Http\Controllers\Api\V1\RetributionController;
 use App\Http\Controllers\Api\V1\Tps3rController;
 use App\Http\Controllers\Api\V1\TrackingController;
@@ -31,18 +33,32 @@ Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
         Route::post('/register', [AuthController::class, 'register']);
+        Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+        Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('/me', [AuthController::class, 'me']);
             Route::patch('/profile', [AuthController::class, 'updateProfile']);
+            Route::patch('/password', [AuthController::class, 'updatePassword']);
             Route::post('/logout', [AuthController::class, 'logout']);
             Route::post('/logout-all', [AuthController::class, 'logoutAll']);
         });
     });
 
     // ==========================================
-    // Public / Protected Master Data & Catalog
+    // Public Portal & Master Data Catalog
     // ==========================================
+    Route::prefix('public')->group(function () {
+        Route::get('/overview', [PublicPortalController::class, 'overview']);
+        Route::get('/announcements', [PublicPortalController::class, 'announcements']);
+        Route::get('/articles', [PublicPortalController::class, 'articles']);
+        Route::get('/articles/{educationArticle}', [PublicPortalController::class, 'showArticle']);
+        Route::get('/documents', [PublicPortalController::class, 'documents']);
+        Route::get('/documents/{publicDocument}/download', [PublicPortalController::class, 'downloadDocument']);
+        Route::get('/facilities', [PublicPortalController::class, 'facilities']);
+        Route::get('/facilities/{pengelolaTps3rProfile}', [PublicPortalController::class, 'showFacility']);
+        Route::get('/routes', [PublicPortalController::class, 'routes']);
+    });
     Route::get('/master-data', [MasterDataController::class, 'index']);
     Route::get('/marketplace/stores', [MarketplaceController::class, 'indexStores']);
     Route::get('/marketplace/stores/{store}', [MarketplaceController::class, 'showStore']);
@@ -57,6 +73,11 @@ Route::prefix('v1')->group(function () {
     // Authenticated API Routes
     // ==========================================
     Route::middleware('auth:sanctum')->group(function () {
+
+        Route::get('/warga/summary', [TrackingController::class, 'wargaSummary'])
+            ->middleware('role:warga');
+        Route::get('/petugas/summary', [TrackingController::class, 'petugasSummary'])
+            ->middleware('role:petugas_lapangan,admin_dlh');
 
         // ==========================================
         // Modul A: Tracking (TRK-F-001, TRK-F-006, TRK-F-009)
@@ -75,6 +96,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/routes/{routeCode}/renew-session', [TrackingController::class, 'renewRouteSession'])
                 ->middleware('role:petugas_lapangan,admin_dlh');
             Route::get('/schedules', [TrackingController::class, 'indexSchedules']);
+            Route::get('/schedules/{pickupSchedule}', [TrackingController::class, 'showSchedule']);
             Route::post('/schedules', [TrackingController::class, 'storeSchedule'])
                 ->middleware('role:petugas_lapangan,admin_dlh,warga');
             Route::patch('/schedules/{pickupSchedule}', [TrackingController::class, 'updateSchedule'])
@@ -88,6 +110,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/weighings', [TrackingController::class, 'storeWeighing'])
                 ->middleware('role:petugas_lapangan,admin_dlh');
             Route::get('/weighings', [TrackingController::class, 'indexWeighings']);
+            Route::get('/weighings/{wasteWeighing}/receipt', [TrackingController::class, 'weighingReceipt']);
         });
 
         // ==========================================
@@ -106,8 +129,14 @@ Route::prefix('v1')->group(function () {
             Route::patch('/deposits/{deposit}/verify', [Tps3rController::class, 'verifyDeposit'])
                 ->middleware('role:pengelola_tps3r,admin_dlh');
 
-            // TPS-F-003: Rekapitulasi Volume Sampah
+            // TPS-F-003: Rekapitulasi Volume Sampah & Pengolahan
             Route::get('/volume-recap', [Tps3rController::class, 'volumeRecap'])
+                ->middleware('role:pengelola_tps3r,admin_dlh');
+            Route::get('/processing', [Tps3rController::class, 'indexProcessing'])
+                ->middleware('role:pengelola_tps3r,admin_dlh');
+            Route::post('/processing', [Tps3rController::class, 'storeProcessing'])
+                ->middleware('role:pengelola_tps3r,admin_dlh');
+            Route::patch('/processing/{wasteProcessingRecord}', [Tps3rController::class, 'updateProcessing'])
                 ->middleware('role:pengelola_tps3r,admin_dlh');
         });
 
@@ -115,8 +144,12 @@ Route::prefix('v1')->group(function () {
         // Modul C: Marketplace (MKT-F-001, MKT-F-003)
         // ==========================================
         Route::prefix('marketplace')->group(function () {
-            // MKT-F-001: Tambah Produk Daur Ulang ke Katalog
+            // MKT-F-001: Tambah, Ubah & Hapus Produk Daur Ulang di Katalog
             Route::post('/products', [MarketplaceController::class, 'storeProduct'])
+                ->middleware('role:pengelola_tps3r,pemrakarsa,admin_dlh');
+            Route::patch('/products/{product}', [MarketplaceController::class, 'updateProduct'])
+                ->middleware('role:pengelola_tps3r,pemrakarsa,admin_dlh');
+            Route::delete('/products/{product}', [MarketplaceController::class, 'destroyProduct'])
                 ->middleware('role:pengelola_tps3r,pemrakarsa,admin_dlh');
 
             // MKT-F-003: Checkout Keranjang Belanja
@@ -144,6 +177,8 @@ Route::prefix('v1')->group(function () {
                 ->middleware('role:warga,petugas_lapangan,admin_dlh');
             Route::post('/', [ComplaintController::class, 'store'])
                 ->middleware('role:warga');
+            Route::post('/{complaint}/additional-info', [ComplaintController::class, 'appendInfo'])
+                ->middleware('role:warga');
             Route::get('/{complaint}/notifications', [ComplaintController::class, 'notifications'])
                 ->middleware('role:warga,petugas_lapangan,admin_dlh');
 
@@ -159,6 +194,10 @@ Route::prefix('v1')->group(function () {
                 ->middleware('role:pemrakarsa,admin_dlh,petugas_lapangan');
             Route::post('/', [EnvironmentalReportController::class, 'store'])
                 ->middleware('role:pemrakarsa');
+            Route::patch('/{environmentalReport}', [EnvironmentalReportController::class, 'update'])
+                ->middleware('role:pemrakarsa');
+            Route::delete('/{environmentalReport}', [EnvironmentalReportController::class, 'destroy'])
+                ->middleware('role:pemrakarsa');
             Route::patch('/{environmentalReport}/verification', [EnvironmentalReportController::class, 'verify'])
                 ->middleware('role:admin_dlh');
             Route::post('/{environmentalReport}/field-check', [EnvironmentalReportController::class, 'fieldCheck'])
@@ -167,6 +206,27 @@ Route::prefix('v1')->group(function () {
 
         Route::get('/admin/monitoring', [EnvironmentalReportController::class, 'monitoringSummary'])
             ->middleware('role:admin_dlh');
+
+        Route::prefix('admin/cms')->middleware('role:admin_dlh')->group(function () {
+            Route::get('/summary', [AdminCmsController::class, 'summary']);
+            Route::get('/announcements', [AdminCmsController::class, 'indexAnnouncements']);
+            Route::post('/announcements', [AdminCmsController::class, 'storeAnnouncement']);
+            Route::patch('/announcements/{broadcastAnnouncement}', [AdminCmsController::class, 'updateAnnouncement']);
+            Route::delete('/announcements/{broadcastAnnouncement}', [AdminCmsController::class, 'destroyAnnouncement']);
+
+            Route::get('/articles', [AdminCmsController::class, 'indexArticles']);
+            Route::post('/articles', [AdminCmsController::class, 'storeArticle']);
+            Route::patch('/articles/{educationArticle}', [AdminCmsController::class, 'updateArticle']);
+            Route::delete('/articles/{educationArticle}', [AdminCmsController::class, 'destroyArticle']);
+
+            Route::get('/documents', [AdminCmsController::class, 'indexDocuments']);
+            Route::post('/documents', [AdminCmsController::class, 'storeDocument']);
+            Route::patch('/documents/{publicDocument}', [AdminCmsController::class, 'updateDocument']);
+            Route::delete('/documents/{publicDocument}', [AdminCmsController::class, 'destroyDocument']);
+
+            Route::get('/portal-settings', [AdminCmsController::class, 'portalSettings']);
+            Route::patch('/portal-settings', [AdminCmsController::class, 'updatePortalSettings']);
+        });
 
         Route::get('/fund-withdrawals', [FundWithdrawalController::class, 'index'])
             ->middleware('role:warga,pengelola_tps3r');

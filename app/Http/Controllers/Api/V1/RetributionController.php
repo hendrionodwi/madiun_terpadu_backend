@@ -332,8 +332,8 @@ class RetributionController extends Controller
         $payload = $request->all();
         $orderId = (string) ($payload['order_id'] ?? '');
 
-        $serverKey = $midtransService->retributionServerKey();
-        if ($serverKey === '' || ! $midtransService->verifySignature($payload, $serverKey)) {
+        $signatureSecret = $midtransService->retributionSignatureSecret();
+        if ($signatureSecret === '' || ! $midtransService->verifySignature($payload, $signatureSecret)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Signature notifikasi Midtrans tidak valid.',

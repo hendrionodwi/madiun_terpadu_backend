@@ -15,6 +15,9 @@ use App\Models\WasteWeighing;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnvironmentalReportController extends Controller
@@ -36,6 +39,8 @@ class EnvironmentalReportController extends Controller
 
         if ($request->filled('status')) {
             $query->where('status', (string) $request->input('status'));
+        } elseif (! $currentUser->isPemrakarsa()) {
+            $query->where('status', '!=', 'draft');
         }
 
         if ($request->boolean('assigned_to_me') && ! $currentUser->isPemrakarsa() && ! $currentUser->isPetugasLapangan()) {
@@ -52,24 +57,9 @@ class EnvironmentalReportController extends Controller
         ], Response::HTTP_OK);
     }
 
-    public function show(Request $request, EnvironmentalReport $environmentalReport): JsonResponse
+    public function show(EnvironmentalReport $environmentalReport): JsonResponse
     {
-        /** @var User $currentUser */
-        $currentUser = $request->user();
-
-        if ($currentUser->isPemrakarsa() && $environmentalReport->pemrakarsa_id !== $currentUser->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Akses ditolak.',
-            ], Response::HTTP_FORBIDDEN);
-        }
-
-        if ($currentUser->isPetugasLapangan() && $environmentalReport->assigned_petugas_id !== $currentUser->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Laporan dokumen ini tidak ditugaskan kepada Anda.',
-            ], Response::HTTP_FORBIDDEN);
-        }
+        Gate::authorize('view', $environmentalReport);
 
         return response()->json([
             'success' => true,
@@ -80,10 +70,16 @@ class EnvironmentalReportController extends Controller
 
     public function store(StoreEnvironmentalReportRequest $request): JsonResponse
     {
+        Gate::authorize('create', EnvironmentalReport::class);
+
         $validated = $request->validated();
         /** @var User $pemrakarsa */
         $pemrakarsa = $request->user();
-        $path = $request->file('file_laporan')->store('environmental_reports', 'public');
+
+        $isDraft = $request->boolean('is_draft') || ($validated['status'] ?? null) === 'draft';
+        $path = $request->hasFile('file_laporan')
+            ? $request->file('file_laporan')->store('environmental_reports', 'public')
+            : null;
 
         $report = EnvironmentalReport::create([
             'pemrakarsa_id' => $pemrakarsa->id,
@@ -93,19 +89,97 @@ class EnvironmentalReportController extends Controller
             'jenis_dokumen' => $validated['jenis_dokumen'],
             'timbulan_sampah_kg' => isset($validated['timbulan_sampah_kg']) ? (float) $validated['timbulan_sampah_kg'] : null,
             'metode_pengelolaan' => $validated['metode_pengelolaan'] ?? null,
+            'monitoring_data' => $validated['monitoring_data'] ?? null,
             'file_path' => $path,
-            'status' => 'menunggu_verifikasi',
+            'status' => $isDraft ? 'draft' : 'menunggu_verifikasi',
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Laporan lingkungan berhasil diunggah dan menunggu verifikasi.',
+            'message' => $isDraft
+                ? 'Draft laporan lingkungan berhasil disimpan.'
+                : 'Laporan lingkungan berhasil diunggah dan menunggu verifikasi.',
             'data' => new EnvironmentalReportResource($report->load(['pemrakarsa:id,name,email', 'assignedPetugas:id,name,phone_number'])),
         ], Response::HTTP_CREATED);
     }
 
+    public function update(StoreEnvironmentalReportRequest $request, EnvironmentalReport $environmentalReport): JsonResponse
+    {
+        Gate::authorize('update', $environmentalReport);
+
+        if (! in_array($environmentalReport->status, ['draft', 'perlu_revisi'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Laporan yang sedang diverifikasi atau sudah disetujui tidak dapat diubah.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $validated = $request->validated();
+        $targetStatus = $validated['status'] ?? null;
+        if ($targetStatus === null && array_key_exists('is_draft', $validated)) {
+            $targetStatus = $request->boolean('is_draft') ? 'draft' : 'menunggu_verifikasi';
+        }
+
+        if ($targetStatus === 'menunggu_verifikasi' && ! $request->hasFile('file_laporan') && empty($environmentalReport->file_path)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File laporan wajib tersedia sebelum mengajukan laporan untuk verifikasi.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $updateData = collect($validated)
+            ->only(['judul_laporan', 'periode_semester', 'tahun', 'jenis_dokumen', 'timbulan_sampah_kg', 'metode_pengelolaan', 'monitoring_data'])
+            ->all();
+
+        if ($request->hasFile('file_laporan')) {
+            if (! empty($environmentalReport->file_path)) {
+                Storage::disk('public')->delete($environmentalReport->file_path);
+            }
+            $updateData['file_path'] = $request->file('file_laporan')->store('environmental_reports', 'public');
+        }
+
+        if ($targetStatus !== null) {
+            $updateData['status'] = $targetStatus;
+        }
+
+        $environmentalReport->update($updateData);
+
+        return response()->json([
+            'success' => true,
+            'message' => ($updateData['status'] ?? $environmentalReport->status) === 'menunggu_verifikasi'
+                ? 'Laporan lingkungan berhasil dikirim untuk verifikasi.'
+                : 'Draft laporan lingkungan berhasil diperbarui.',
+            'data' => new EnvironmentalReportResource($environmentalReport->fresh()->load(['pemrakarsa:id,name,email', 'assignedPetugas:id,name,phone_number'])),
+        ], Response::HTTP_OK);
+    }
+
+    public function destroy(EnvironmentalReport $environmentalReport): JsonResponse
+    {
+        Gate::authorize('delete', $environmentalReport);
+
+        if ($environmentalReport->status !== 'draft') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya laporan berstatus draft yang dapat dihapus.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        if (! empty($environmentalReport->file_path)) {
+            Storage::disk('public')->delete($environmentalReport->file_path);
+        }
+
+        $environmentalReport->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Draft laporan lingkungan berhasil dihapus.',
+        ], Response::HTTP_OK);
+    }
+
     public function verify(VerifyEnvironmentalReportRequest $request, EnvironmentalReport $environmentalReport): JsonResponse
     {
+        Gate::authorize('verify', $environmentalReport);
+
         $validated = $request->validated();
         $isNewFieldAssignment = $validated['status'] === 'perlu_cek_lapangan'
             && ($environmentalReport->status !== 'perlu_cek_lapangan'
@@ -116,6 +190,10 @@ class EnvironmentalReportController extends Controller
             'catatan_verifikasi' => $validated['catatan_verifikasi'] ?? null,
             'verified_at' => Carbon::now(),
         ];
+
+        if ($validated['status'] === 'disetujui' && empty($environmentalReport->nomor_bap)) {
+            $updateData['nomor_bap'] = 'BAP-'.now()->format('Ymd').'-'.strtoupper(Str::random(5));
+        }
 
         if ($validated['status'] === 'perlu_cek_lapangan') {
             $updateData['assigned_petugas_id'] = $validated['assigned_petugas_id'];
@@ -143,15 +221,7 @@ class EnvironmentalReportController extends Controller
      */
     public function fieldCheck(Request $request, EnvironmentalReport $environmentalReport): JsonResponse
     {
-        /** @var User $currentUser */
-        $currentUser = $request->user();
-
-        if (! $currentUser->isAdminDlh() && $environmentalReport->assigned_petugas_id !== $currentUser->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Penugasan inspeksi lapangan ini bukan untuk akun Anda.',
-            ], Response::HTTP_FORBIDDEN);
-        }
+        Gate::authorize('fieldCheck', $environmentalReport);
 
         if ($environmentalReport->status !== 'perlu_cek_lapangan') {
             return response()->json([
@@ -199,7 +269,9 @@ class EnvironmentalReportController extends Controller
         ];
 
         $statusLaporan = [
+            'draft' => EnvironmentalReport::where('status', 'draft')->count(),
             'menunggu_verifikasi' => EnvironmentalReport::where('status', 'menunggu_verifikasi')->count(),
+            'perlu_cek_lapangan' => EnvironmentalReport::where('status', 'perlu_cek_lapangan')->count(),
             'disetujui' => EnvironmentalReport::where('status', 'disetujui')->count(),
             'perlu_revisi' => EnvironmentalReport::where('status', 'perlu_revisi')->count(),
         ];

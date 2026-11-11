@@ -14,6 +14,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -271,6 +273,64 @@ class ComplaintController extends Controller
             'message' => 'Histori notifikasi status pengaduan berhasil diambil.',
             'data' => $logs,
         ], Response::HTTP_OK);
+    }
+
+    /**
+     * Append additional citizen information or supporting photo to an open complaint.
+     */
+    public function appendInfo(Request $request, Complaint $complaint): JsonResponse
+    {
+        Gate::authorize('appendInfo', $complaint);
+
+        if (in_array($complaint->status, ['selesai', 'ditolak'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pengaduan yang sudah ditutup tidak dapat ditambahkan keterangan baru.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $validated = $request->validate([
+            'pesan' => ['required', 'string', 'max:2000'],
+            'foto' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        /** @var User $currentUser */
+        $currentUser = $request->user();
+        $photoPath = null;
+        $photoUrl = null;
+
+        if ($request->hasFile('foto')) {
+            $photoPath = $request->file('foto')->store('complaints', 'public');
+            $photoUrl = Storage::disk('public')->url($photoPath);
+
+            if (empty($complaint->foto)) {
+                $complaint->update(['foto' => $photoPath]);
+            }
+        }
+
+        $message = trim($validated['pesan']);
+        if ($photoUrl !== null) {
+            $message .= "\n[Lampiran Foto: {$photoUrl}]";
+        }
+
+        $log = ComplaintStatusLog::create([
+            'complaint_id' => $complaint->id,
+            'user_id' => $currentUser->id,
+            'status' => $complaint->status,
+            'judul_notifikasi' => 'Informasi Tambahan Pelapor',
+            'pesan' => $message,
+            'is_read' => false,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Informasi tambahan pengaduan berhasil dikirim.',
+            'data' => [
+                'log' => $log,
+                'foto_path' => $photoPath,
+                'foto_url' => $photoUrl,
+            ],
+        ], Response::HTTP_CREATED);
     }
 
     private function protectAnonymousReporter(Complaint $complaint, User $viewer): void

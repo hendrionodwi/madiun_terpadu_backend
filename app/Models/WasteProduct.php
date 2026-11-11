@@ -36,6 +36,7 @@ use Illuminate\Support\Carbon;
     'stok',
     'foto',
     'is_available',
+    'is_featured',
 ])]
 class WasteProduct extends Model
 {
@@ -89,6 +90,7 @@ class WasteProduct extends Model
             'harga' => 'float',
             'stok' => 'integer',
             'is_available' => 'boolean',
+            'is_featured' => 'boolean',
         ];
     }
 

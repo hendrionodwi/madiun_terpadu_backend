@@ -1,18 +1,21 @@
 <x-layouts::app :title="__('Formulir Laporan Lingkungan Semester')">
-    <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-2 md:p-4">
+    <div class="civic-page mx-auto flex w-full max-w-6xl flex-col gap-6 p-2 md:p-4">
         <!-- Header Banner -->
-        <div class="rounded-2xl bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 p-6 text-white shadow-lg">
+        <div class="civic-hero">
+            <div class="civic-hero-grid"></div>
             <div class="flex items-center gap-2 mb-1">
-                <span class="inline-flex items-center rounded-full bg-indigo-950/70 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-200 border border-indigo-500/30">
+                <span class="civic-kicker">
                     Formulir PPL-F-008
                 </span>
-                <span class="text-xs text-indigo-200">Kewajiban Pelaporan Dokumen Lingkungan Semester</span>
+                <span class="text-xs text-civic-100">Pelaporan lingkungan semester</span>
             </div>
-            <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">
-                Unggah Laporan Pelaksanaan Dokumen Lingkungan
+            <h1 class="civic-display mt-3">
+                Susun Laporan Lingkungan
             </h1>
-            <p class="text-sm text-indigo-100/90 mt-1">
-                Instansi: <strong class="text-white">{{ $pemrakarsaProfile->nama_instansi ?? auth()->user()->name }}</strong> • NIB: <strong class="text-white">{{ $pemrakarsaProfile->nib ?? '-' }}</strong>
+            <p class="mt-2 text-sm text-civic-100">
+                <strong class="text-white">{{ $pemrakarsaProfile->nama_instansi ?? auth()->user()->name }}</strong>
+                <span class="mx-1.5 text-civic-300">•</span>
+                NIB {{ $pemrakarsaProfile->nib ?? '-' }}
             </p>
         </div>
 
@@ -29,7 +32,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Form Area (2 Kolom) -->
-            <div class="lg:col-span-2 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 shadow-sm">
+            <div class="civic-card lg:col-span-2 p-5 sm:p-6">
                 <form method="POST" action="{{ route('dashboard.pemrakarsa.store-laporan') }}" enctype="multipart/form-data" class="space-y-4 text-xs">
                     @csrf
 
@@ -47,6 +50,25 @@
                             class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-2.5 text-zinc-900 dark:text-zinc-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
                         />
                     </div>
+
+                    <fieldset class="rounded-2xl border border-civic-200 bg-civic-50/70 p-4 dark:border-civic-900 dark:bg-civic-950/20">
+                        <legend class="px-2 text-sm font-bold text-civic-900 dark:text-civic-100">Ringkasan pemantauan</legend>
+                        <p class="mb-3 text-xs text-zinc-500">Isi nilai utama yang sudah tercantum pada dokumen. Kolom dapat dikosongkan bila tidak relevan.</p>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <label class="space-y-1 font-semibold text-zinc-700 dark:text-zinc-300">
+                                <span>Kualitas air / IPAL</span>
+                                <input type="text" name="monitoring_data[kualitas_air]" value="{{ old('monitoring_data.kualitas_air') }}" placeholder="Contoh: Memenuhi baku mutu" class="w-full rounded-lg border border-zinc-300 bg-white p-2.5 text-sm font-normal text-zinc-900 focus:border-civic-600 focus:ring-civic-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                            </label>
+                            <label class="space-y-1 font-semibold text-zinc-700 dark:text-zinc-300">
+                                <span>Emisi / udara</span>
+                                <input type="text" name="monitoring_data[emisi_udara]" value="{{ old('monitoring_data.emisi_udara') }}" placeholder="Contoh: Dalam batas izin" class="w-full rounded-lg border border-zinc-300 bg-white p-2.5 text-sm font-normal text-zinc-900 focus:border-civic-600 focus:ring-civic-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                            </label>
+                            <label class="space-y-1 font-semibold text-zinc-700 dark:text-zinc-300">
+                                <span>Limbah B3</span>
+                                <input type="text" name="monitoring_data[limbah_b3]" value="{{ old('monitoring_data.limbah_b3') }}" placeholder="Contoh: 12,5 kg" class="w-full rounded-lg border border-zinc-300 bg-white p-2.5 text-sm font-normal text-zinc-900 focus:border-civic-600 focus:ring-civic-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+                            </label>
+                        </div>
+                    </fieldset>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
@@ -129,26 +151,36 @@
 
                     <div>
                         <label for="file_laporan" class="block font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                            Unggah Berkas Laporan (PDF / DOCX, maks 10MB) <span class="text-red-500">*</span>
+                            Berkas Laporan (PDF / DOCX, maks 10MB)
                         </label>
                         <input
                             type="file"
                             name="file_laporan"
                             id="file_laporan"
                             accept=".pdf,.doc,.docx"
-                            required
-                            class="w-full text-xs text-zinc-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900/50 dark:file:text-indigo-300 cursor-pointer"
+                            class="w-full cursor-pointer text-xs text-zinc-500 file:mr-3 file:rounded-xl file:border-0 file:bg-civic-100 file:px-4 file:py-2.5 file:text-xs file:font-semibold file:text-civic-800 hover:file:bg-civic-200 dark:file:bg-civic-900/50 dark:file:text-civic-200"
                         />
-                        <p class="text-[11px] text-zinc-500 mt-1">Format disarankan: Dokumen PDF yang memuat tanda tangan basah/elektronik penanggung jawab.</p>
+                        <p class="mt-1 text-xs text-zinc-500">Berkas boleh ditambahkan nanti saat masih berupa draft, tetapi wajib sebelum dikirim ke DLH.</p>
                     </div>
 
-                    <div class="pt-4 flex items-center gap-3">
+                    <div class="flex flex-wrap items-center gap-3 pt-4">
                         <button
                             type="submit"
-                            class="rounded-xl bg-indigo-700 hover:bg-indigo-800 text-white font-bold py-3 px-6 shadow transition flex items-center justify-center gap-2 cursor-pointer text-sm"
+                            name="is_draft"
+                            value="1"
+                            class="civic-button-secondary"
                         >
-                            <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                            Kirim Dokumen Laporan ke DLH
+                            <flux:icon.bookmark class="size-4" />
+                            Simpan Draft
+                        </button>
+                        <button
+                            type="submit"
+                            name="status"
+                            value="menunggu_verifikasi"
+                            class="civic-button-primary"
+                        >
+                            <flux:icon.paper-airplane class="size-4" />
+                            Kirim ke DLH
                         </button>
                         <a
                             href="{{ route('dashboard.pemrakarsa.reports') }}"
@@ -162,7 +194,7 @@
 
             <!-- Petunjuk Teknis & Regulasi (1 Kolom) -->
             <div class="space-y-6">
-                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 shadow-sm text-xs text-zinc-600 dark:text-zinc-400">
+                <div class="civic-card p-6 text-xs text-zinc-600 dark:text-zinc-400">
                     <h3 class="mb-3 flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-zinc-100">
                         <flux:icon.document-text class="size-4" />
                         Dasar Hukum & Ketentuan
@@ -175,7 +207,7 @@
                     </ul>
                 </div>
 
-                <div class="rounded-2xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/20 p-6 text-xs text-indigo-900 dark:text-indigo-200">
+                <div class="rounded-2xl border border-civic-200 bg-civic-50 p-6 text-xs text-civic-900 dark:border-civic-900/50 dark:bg-civic-950/20 dark:text-civic-200">
                     <h3 class="text-sm font-bold mb-2">Butuh Bantuan?</h3>
                     <p class="leading-relaxed">
                         Jika terdapat kendala pengunggahan atau revisi dokumen, Anda dapat berkonsultasi langsung ke Bidang Tata Lingkungan & Penaatan DLH Kota Madiun.

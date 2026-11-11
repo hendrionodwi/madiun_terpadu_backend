@@ -17,7 +17,7 @@
 >
     <div class="civic-hero-grid" aria-hidden="true"></div>
 
-    <div class="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+    <div class="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
         <div class="flex min-w-0 items-start gap-4 sm:items-center">
             <span class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-lg shadow-civic-950/20 ring-1 ring-white/35 sm:size-16">
                 <x-app-logo-icon class="size-full" />

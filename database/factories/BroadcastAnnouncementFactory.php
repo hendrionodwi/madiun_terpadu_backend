@@ -21,10 +21,14 @@ class BroadcastAnnouncementFactory extends Factory
         return [
             'created_by' => User::factory()->adminDlh(),
             'title' => fake()->sentence(4),
+            'summary' => fake()->sentence(10),
             'content' => fake()->paragraph(),
             'audience_role' => null,
             'priority' => 'normal',
+            'status' => 'published',
+            'kategori' => 'informasi',
             'is_active' => true,
+            'show_on_portal' => true,
             'published_at' => now(),
             'expires_at' => now()->addMonth(),
         ];

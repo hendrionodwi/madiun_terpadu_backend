@@ -55,7 +55,7 @@
         </div>
 
         <div class="grid gap-6">
-                <div class="civic-card overflow-hidden">
+                <div data-ajax-zone="admin-routes-table" class="civic-card overflow-hidden">
                     <div class="flex flex-col gap-3 border-b border-zinc-200 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-700">
                         <div>
                             <h2 class="text-base font-bold text-zinc-900 dark:text-zinc-100">Rute Tetap Aktif Kota Madiun</h2>

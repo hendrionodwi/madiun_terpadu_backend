@@ -8,12 +8,16 @@ use App\Http\Requests\Api\Tracking\StorePickupScheduleRequest;
 use App\Http\Requests\Api\Tracking\StoreWasteWeighingRequest;
 use App\Http\Requests\Api\Tracking\UpdatePickupScheduleRequest;
 use App\Http\Requests\Api\Tracking\UpdatePickupScheduleStatusRequest;
+use App\Models\BroadcastAnnouncement;
+use App\Models\Complaint;
+use App\Models\EnvironmentalReport;
 use App\Models\MasterData;
 use App\Models\PickupSchedule;
 use App\Models\PointLedger;
 use App\Models\RetributionBill;
 use App\Models\RouteAssignment;
 use App\Models\RouteSession;
+use App\Models\Tps3rWasteDeposit;
 use App\Models\User;
 use App\Models\WargaProfile;
 use App\Models\WasteWeighing;
@@ -21,11 +25,165 @@ use App\Services\WeighingProofService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 class TrackingController extends Controller
 {
+    /**
+     * Citizen mobile home summary (saldo poin, nearest schedule, monthly metrics, announcements).
+     */
+    public function wargaSummary(Request $request): JsonResponse
+    {
+        /** @var User $warga */
+        $warga = $request->user();
+        $profile = $warga->wargaProfile;
+        $saldoPoin = (int) ($profile?->saldo_poin ?? 0);
+
+        $rate = (float) (MasterData::query()
+            ->whereIn('group', ['point_conversion', 'point_conversions'])
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->value('numeric_value') ?? 10);
+
+        $nearestSchedule = PickupSchedule::query()
+            ->where('warga_id', $warga->id)
+            ->whereIn('status', ['terjadwal', 'berlangsung'])
+            ->with([
+                'petugas:id,name,phone_number',
+                'petugas.petugasLapanganProfile:user_id,jenis_kendaraan,plat_nomor',
+            ])
+            ->orderBy('tanggal_penjemputan')
+            ->orderBy('waktu_mulai')
+            ->first();
+
+        $startOfMonth = now()->startOfMonth()->toDateString();
+        $endOfMonth = now()->endOfMonth()->toDateString();
+
+        $monthlyKg = (float) WasteWeighing::query()
+            ->where('warga_id', $warga->id)
+            ->whereBetween('created_at', [$startOfMonth.' 00:00:00', $endOfMonth.' 23:59:59'])
+            ->sum('berat_kg');
+
+        $monthlyCompletedPickups = PickupSchedule::query()
+            ->where('warga_id', $warga->id)
+            ->where('status', 'selesai')
+            ->whereBetween('tanggal_penjemputan', [$startOfMonth, $endOfMonth])
+            ->count();
+
+        $overdueBillsQuery = RetributionBill::query()
+            ->where('warga_id', $warga->id)
+            ->overdue();
+
+        $overdueCount = (clone $overdueBillsQuery)->count();
+        $latestOverdueBill = (clone $overdueBillsQuery)->latest('jatuh_tempo')->first();
+
+        $announcements = BroadcastAnnouncement::published()
+            ->where(fn ($q) => $q->whereNull('audience_role')->orWhereIn('audience_role', ['all', 'warga']))
+            ->orderByRaw("CASE priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'important' THEN 2 ELSE 3 END")
+            ->latest('published_at')
+            ->limit(3)
+            ->get(['id', 'title', 'summary', 'content', 'priority', 'published_at']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Ringkasan beranda warga berhasil diambil.',
+            'data' => [
+                'saldo_poin' => $saldoPoin,
+                'point_conversion_rate' => $rate,
+                'estimasi_nilai_rupiah' => round($saldoPoin * $rate, 2),
+                'nearest_schedule' => $nearestSchedule,
+                'monthly_stats' => [
+                    'month_label' => now()->translatedFormat('F Y'),
+                    'total_kg' => round($monthlyKg, 2),
+                    'pickup_completed_count' => $monthlyCompletedPickups,
+                ],
+                'overdue_retribution' => [
+                    'has_overdue' => $overdueCount > 0,
+                    'overdue_count' => $overdueCount,
+                    'latest_bill' => $latestOverdueBill,
+                ],
+                'announcements' => $announcements,
+            ],
+        ], Response::HTTP_OK);
+    }
+
+    /**
+     * Field officer operational home summary (today's tasks, active route, unverified deposits).
+     */
+    public function petugasSummary(Request $request): JsonResponse
+    {
+        /** @var User $petugas */
+        $petugas = $request->user();
+        $petugas->load('petugasLapanganProfile');
+        $today = now()->toDateString();
+
+        $todayPickups = PickupSchedule::query()
+            ->where('petugas_id', $petugas->id)
+            ->whereDate('tanggal_penjemputan', $today)
+            ->with('warga:id,name,phone_number')
+            ->orderBy('waktu_mulai')
+            ->get();
+
+        $completedPickups = $todayPickups->where('status', 'selesai')->count();
+        $pendingPickups = $todayPickups->whereIn('status', ['terjadwal', 'berlangsung']);
+
+        $assignedComplaintsCount = Complaint::query()
+            ->where('assigned_petugas_id', $petugas->id)
+            ->whereNotIn('status', ['selesai', 'ditolak'])
+            ->count();
+
+        $assignedReportsCount = EnvironmentalReport::query()
+            ->where('assigned_petugas_id', $petugas->id)
+            ->where('status', 'perlu_cek_lapangan')
+            ->count();
+
+        $unverifiedDepositsCount = Tps3rWasteDeposit::query()
+            ->where('petugas_id', $petugas->id)
+            ->where('status', 'menunggu_konfirmasi')
+            ->count();
+
+        $unlinkedWeighingsKg = (float) WasteWeighing::query()
+            ->where('petugas_id', $petugas->id)
+            ->whereNull('tps3r_waste_deposit_id')
+            ->sum('berat_kg');
+
+        $activeRoute = RouteAssignment::query()
+            ->where('petugas_id', $petugas->id)
+            ->where('is_active', true)
+            ->with('todaySession')
+            ->orderBy('route_code')
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Ringkasan operasional petugas berhasil diambil.',
+            'data' => [
+                'officer' => [
+                    'id' => $petugas->id,
+                    'name' => $petugas->name,
+                    'nip' => $petugas->petugasLapanganProfile?->nip,
+                    'jenis_kendaraan' => $petugas->petugasLapanganProfile?->jenis_kendaraan,
+                    'plat_nomor' => $petugas->petugasLapanganProfile?->plat_nomor,
+                    'status_tugas' => $petugas->petugasLapanganProfile?->status_tugas ?? 'standby',
+                ],
+                'today_stats' => [
+                    'total_tasks' => $todayPickups->count() + $assignedComplaintsCount + $assignedReportsCount,
+                    'pickup_total' => $todayPickups->count(),
+                    'pickup_completed' => $completedPickups,
+                    'pickup_pending' => $pendingPickups->count(),
+                    'assigned_complaints' => $assignedComplaintsCount,
+                    'assigned_reports' => $assignedReportsCount,
+                    'unverified_deposits_count' => $unverifiedDepositsCount,
+                    'unlinked_weighings_kg' => round($unlinkedWeighingsKg, 2),
+                ],
+                'active_route' => $activeRoute,
+                'next_pickup' => $pendingPickups->first(),
+            ],
+        ], Response::HTTP_OK);
+    }
+
     /**
      * Search active warga for use when recording a waste weighing.
      */
@@ -116,11 +274,26 @@ class TrackingController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->where('status', (string) $request->status);
+            $status = (string) $request->status;
+            if ($status === 'berjalan') {
+                $query->whereIn('status', ['terjadwal', 'berlangsung']);
+            } else {
+                $query->where('status', $status);
+            }
         }
 
         if ($request->filled('id_wilayah_rute')) {
             $query->where('id_wilayah_rute', (string) $request->id_wilayah_rute);
+        }
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->search);
+            $query->where(function ($q) use ($search): void {
+                $q->where('kode_jadwal', 'like', "%{$search}%")
+                    ->orWhere('id_wilayah_rute', 'like', "%{$search}%")
+                    ->orWhere('nama_wilayah_rute', 'like', "%{$search}%")
+                    ->orWhere('alamat_penjemputan', 'like', "%{$search}%");
+            });
         }
 
         $schedules = $query->orderBy('tanggal_penjemputan', 'desc')
@@ -137,6 +310,34 @@ class TrackingController extends Controller
                 'per_page' => $schedules->perPage(),
                 'total' => $schedules->total(),
             ],
+        ], Response::HTTP_OK);
+    }
+
+    /**
+     * Get single pickup schedule detail with assigned route session and weighing items.
+     */
+    public function showSchedule(Request $request, PickupSchedule $pickupSchedule): JsonResponse
+    {
+        Gate::authorize('view', $pickupSchedule);
+
+        $pickupSchedule->load([
+            'petugas:id,name,phone_number',
+            'petugas.petugasLapanganProfile:user_id,jenis_kendaraan,plat_nomor',
+            'warga:id,name,phone_number',
+            'weighings.warga:id,name',
+        ]);
+
+        $routeAssignment = RouteAssignment::query()
+            ->where('route_code', $pickupSchedule->id_wilayah_rute)
+            ->with('todaySession')
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Detail jadwal penjemputan berhasil diambil.',
+            'data' => array_merge($pickupSchedule->toArray(), [
+                'route_assignment' => $routeAssignment,
+            ]),
         ], Response::HTTP_OK);
     }
 
@@ -447,6 +648,7 @@ class TrackingController extends Controller
             'id_wilayah_rute' => $validated['id_wilayah_rute'],
             'nama_wilayah_rute' => $validated['nama_wilayah_rute'] ?? null,
             'jenis_sampah' => $validated['jenis_sampah'] ?? null,
+            'estimasi_berat_kg' => isset($validated['estimasi_berat_kg']) ? (float) $validated['estimasi_berat_kg'] : null,
             'tanggal_penjemputan' => $validated['tanggal_penjemputan'],
             'waktu_mulai' => $validated['waktu_mulai'],
             'waktu_selesai' => $validated['waktu_selesai'],
@@ -537,6 +739,50 @@ class TrackingController extends Controller
         $validated = $request->validated();
         /** @var User $petugas */
         $petugas = $request->user();
+        $clientReferenceId = isset($validated['client_reference_id']) && trim((string) $validated['client_reference_id']) !== ''
+            ? trim((string) $validated['client_reference_id'])
+            : null;
+
+        if ($clientReferenceId !== null) {
+            $existingWeighing = WasteWeighing::query()
+                ->where('petugas_id', $petugas->id)
+                ->where('client_reference_id', $clientReferenceId)
+                ->with([
+                    'warga:id,name,email,phone_number',
+                    'petugas:id,name,phone_number',
+                    'pickupSchedule',
+                ])
+                ->first();
+
+            if ($existingWeighing !== null) {
+                $existingItems = WasteWeighing::query()
+                    ->where('petugas_id', $petugas->id)
+                    ->where(function ($q) use ($clientReferenceId): void {
+                        $q->where('client_reference_id', $clientReferenceId)
+                            ->orWhere('client_reference_id', 'like', $clientReferenceId.'#%');
+                    })
+                    ->with([
+                        'warga:id,name,email,phone_number',
+                        'petugas:id,name,phone_number',
+                        'pickupSchedule',
+                    ])
+                    ->get();
+
+                $wargaProfile = WargaProfile::where('user_id', $existingWeighing->warga_id)->first();
+
+                return response()->json([
+                    'success' => true,
+                    'idempotent_replay' => true,
+                    'message' => 'Data timbangan dari sinkronisasi offline sudah tercatat sebelumnya.',
+                    'data' => [
+                        'timbangan' => $existingWeighing,
+                        'items' => $existingItems,
+                        'poin_didapat' => (int) $existingItems->sum('poin_didapat'),
+                        'total_saldo_poin_warga' => (int) ($wargaProfile?->saldo_poin ?? 0),
+                    ],
+                ], Response::HTTP_OK);
+            }
+        }
 
         $items = $validated['items'] ?? [
             [
@@ -550,11 +796,11 @@ class TrackingController extends Controller
 
         $warga = User::find($validated['warga_id']);
 
-        $result = DB::transaction(function () use ($validated, $petugas, $items, $proofService, $warga) {
+        $result = DB::transaction(function () use ($validated, $petugas, $items, $proofService, $warga, $clientReferenceId) {
             $createdWeighings = [];
             $totalPoinDidapat = 0;
 
-            foreach ($items as $item) {
+            foreach (array_values($items) as $idx => $item) {
                 $beratKg = (float) $item['berat_kg'];
                 $poinPerKg = (int) (MasterData::query()
                     ->where('group', 'waste_category')
@@ -578,10 +824,15 @@ class TrackingController extends Controller
                     ]);
                 }
 
+                $itemClientRef = $clientReferenceId === null
+                    ? null
+                    : ($idx === 0 ? $clientReferenceId : $clientReferenceId.'#'.$idx);
+
                 $weighing = WasteWeighing::create([
                     'warga_id' => $validated['warga_id'],
                     'petugas_id' => $petugas->id,
                     'pickup_schedule_id' => $validated['pickup_schedule_id'] ?? null,
+                    'client_reference_id' => $itemClientRef,
                     'jenis_sampah' => $item['jenis_sampah'],
                     'berat_kg' => $beratKg,
                     'poin_per_kg' => $poinPerKg,
@@ -677,6 +928,52 @@ class TrackingController extends Controller
                 'last_page' => $weighings->lastPage(),
                 'per_page' => $weighings->perPage(),
                 'total' => $weighings->total(),
+            ],
+        ], Response::HTTP_OK);
+    }
+
+    /**
+     * Get detailed weighing receipt data for citizens and officers.
+     */
+    public function weighingReceipt(Request $request, WasteWeighing $wasteWeighing): JsonResponse
+    {
+        /** @var User $currentUser */
+        $currentUser = $request->user();
+
+        abort_unless(
+            $currentUser->isAdminDlh()
+            || $wasteWeighing->warga_id === $currentUser->id
+            || $wasteWeighing->petugas_id === $currentUser->id,
+            Response::HTTP_FORBIDDEN,
+            'Anda tidak berhak melihat bukti penimbangan ini.',
+        );
+
+        $wasteWeighing->load([
+            'warga:id,name,phone_number',
+            'petugas:id,name,phone_number',
+            'pickupSchedule',
+            'tps3rDeposit.tps3rProfile:id,public_id,nama_tps3r,kecamatan',
+        ]);
+
+        $batchItems = $wasteWeighing->pickup_schedule_id
+            ? WasteWeighing::where('pickup_schedule_id', $wasteWeighing->pickup_schedule_id)->get()
+            : collect([$wasteWeighing]);
+
+        $rate = (float) (MasterData::query()
+            ->whereIn('group', ['point_conversion', 'point_conversions'])
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->value('numeric_value') ?? 10);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bukti penimbangan resmi berhasil diambil.',
+            'data' => [
+                'weighing' => $wasteWeighing,
+                'batch_items' => $batchItems,
+                'total_berat_kg' => round((float) $batchItems->sum('berat_kg'), 2),
+                'total_poin' => (int) $batchItems->sum('poin_didapat'),
+                'estimasi_nilai_rupiah' => round((int) $batchItems->sum('poin_didapat') * $rate, 2),
             ],
         ], Response::HTTP_OK);
     }

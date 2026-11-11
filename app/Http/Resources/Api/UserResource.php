@@ -27,6 +27,7 @@ class UserResource extends JsonResource
             'role_label' => $this->role->label(),
             'phone_number' => $this->phone_number,
             'avatar' => $this->avatar,
+            'avatar_url' => $this->avatar_url,
             'is_active' => $this->is_active,
             'profile' => $this->resolveProfileResource(),
             'created_at' => $this->created_at?->toISOString(),

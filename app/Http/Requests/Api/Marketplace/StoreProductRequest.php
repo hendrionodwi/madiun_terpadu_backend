@@ -22,16 +22,19 @@ class StoreProductRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isCreate = $this->isMethod('post');
+
         return [
-            'nama_produk' => ['required', 'string', 'max:255'],
+            'nama_produk' => [$isCreate ? 'required' : 'sometimes', 'string', 'max:255'],
             'deskripsi' => ['nullable', 'string', 'max:2000'],
-            'kategori' => ['required', 'string', 'in:pupuk_kompos,kerajinan_plastik,maggot_pakan,ecobrick,lainnya'],
-            'harga' => ['required', 'numeric', 'min:0', 'max:999999999.99'],
-            'stok' => ['required', 'integer', 'min:0'],
+            'kategori' => [$isCreate ? 'required' : 'sometimes', 'string', 'in:pupuk_kompos,kerajinan_plastik,maggot_pakan,ecobrick,lainnya'],
+            'harga' => [$isCreate ? 'required' : 'sometimes', 'numeric', 'min:0', 'max:999999999.99'],
+            'stok' => [$isCreate ? 'required' : 'sometimes', 'integer', 'min:0'],
             'foto' => $this->hasFile('foto')
                 ? ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120']
                 : ['nullable', 'string', 'max:255'],
             'is_available' => ['nullable', 'boolean'],
+            'is_featured' => ['nullable', 'boolean'],
         ];
     }
 

@@ -10,6 +10,7 @@ use App\Models\AdminDlhProfile;
 use App\Models\BroadcastAnnouncement;
 use App\Models\Complaint;
 use App\Models\ComplaintStatusLog;
+use App\Models\EducationArticle;
 use App\Models\EntityVerification;
 use App\Models\EnvironmentalReport;
 use App\Models\FundWithdrawalRequest;
@@ -19,6 +20,8 @@ use App\Models\PemrakarsaProfile;
 use App\Models\PengelolaTps3rProfile;
 use App\Models\PetugasLapanganProfile;
 use App\Models\PickupSchedule;
+use App\Models\PortalSetting;
+use App\Models\PublicDocument;
 use App\Models\RewardFundAllocation;
 use App\Models\RouteAssignment;
 use App\Models\RouteSession;
@@ -27,11 +30,13 @@ use App\Models\User;
 use App\Models\WargaProfile;
 use App\Models\WasteProduct;
 use App\Models\WasteWeighing;
+use App\Services\PortalCmsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
@@ -172,6 +177,10 @@ class AdminDashboardController extends Controller
     {
         abort_if(auth()->id() === $user->id, Response::HTTP_UNPROCESSABLE_ENTITY, 'Admin tidak dapat menonaktifkan akunnya sendiri.');
         $user->update(['is_active' => ! $user->is_active]);
+
+        if (! $user->is_active) {
+            $user->tokens()->delete();
+        }
 
         return back()->with('status', 'Status akun '.$user->name.' berhasil diperbarui.');
     }
@@ -478,7 +487,7 @@ class AdminDashboardController extends Controller
         $districtFilter = $request->query('kecamatan');
         $categoryFilter = $request->query('kategori');
 
-        $query = Complaint::with(['pelapor', 'assignedPetugas', 'verifications.petugas']);
+        $query = Complaint::with(['pelapor', 'assignedPetugas', 'verifications.petugas', 'statusLogs']);
 
         if ($statusFilter) {
             if (in_array($statusFilter, ['menunggu_verifikasi', 'diterima'])) {
@@ -526,6 +535,11 @@ class AdminDashboardController extends Controller
             ->orderBy('name')
             ->get();
 
+        $activeRoutes = RouteAssignment::query()
+            ->where('is_active', true)
+            ->orderBy('route_code')
+            ->get(['id', 'route_code', 'route_name', 'district']);
+
         return view('dashboard.admin.complaints', [
             'complaints' => $complaints,
             'statusCounts' => $statusCounts,
@@ -535,6 +549,7 @@ class AdminDashboardController extends Controller
             'petugasList' => $petugasList,
             'districts' => $districts,
             'complaintCategories' => $complaintCategories,
+            'activeRoutes' => $activeRoutes,
         ]);
     }
 
@@ -550,12 +565,18 @@ class AdminDashboardController extends Controller
                     ->where('role', UserRole::PetugasLapangan->value)
                     ->where('is_active', true),
             ],
+            'prioritas' => ['nullable', 'string', 'in:rendah,sedang,tinggi,darurat'],
+            'route_code' => ['nullable', 'string', 'max:60'],
+            'target_selesai_at' => ['nullable', 'date'],
             'instruksi_admin' => ['nullable', 'string', 'max:500'],
         ]);
 
         $complaint->update([
             'assigned_petugas_id' => $validated['petugas_id'],
-            'instruksi_admin' => $validated['instruksi_admin'],
+            'prioritas' => $validated['prioritas'] ?? ($complaint->prioritas ?: 'sedang'),
+            'route_code' => $validated['route_code'] ?? $complaint->route_code,
+            'target_selesai_at' => $validated['target_selesai_at'] ?? $complaint->target_selesai_at,
+            'instruksi_admin' => $validated['instruksi_admin'] ?? null,
             'assigned_at' => Carbon::now(),
             'status' => 'ditugaskan',
         ]);
@@ -615,6 +636,8 @@ class AdminDashboardController extends Controller
 
         if ($statusFilter) {
             $query->where('status', $statusFilter);
+        } else {
+            $query->where('status', '!=', 'draft');
         }
 
         if ($jenisFilter) {
@@ -624,7 +647,7 @@ class AdminDashboardController extends Controller
         $reports = $query->latest()->paginate(10)->withQueryString();
 
         $reportCounts = [
-            'all' => EnvironmentalReport::count(),
+            'all' => EnvironmentalReport::where('status', '!=', 'draft')->count(),
             'menunggu_verifikasi' => EnvironmentalReport::where('status', 'menunggu_verifikasi')->count(),
             'perlu_cek_lapangan' => EnvironmentalReport::where('status', 'perlu_cek_lapangan')->count(),
             'disetujui' => EnvironmentalReport::where('status', 'disetujui')->count(),
@@ -648,9 +671,12 @@ class AdminDashboardController extends Controller
     /**
      * Verifikasi laporan semester dokumen lingkungan oleh Admin DLH (SRS Butir 2 & 4).
      */
-    public function verifyReport(Request $request, int $id): RedirectResponse
+    public function verifyReport(Request $request, string $id): RedirectResponse
     {
-        $report = EnvironmentalReport::findOrFail($id);
+        $report = EnvironmentalReport::query()
+            ->where('public_id', $id)
+            ->when(is_numeric($id), fn ($q) => $q->orWhere('id', (int) $id))
+            ->firstOrFail();
 
         $validated = $request->validate([
             'status' => ['required', 'in:disetujui,perlu_revisi,perlu_cek_lapangan'],
@@ -674,6 +700,10 @@ class AdminDashboardController extends Controller
             'catatan_verifikasi' => $validated['catatan_verifikasi'] ?? null,
             'verified_at' => Carbon::now(),
         ];
+
+        if ($validated['status'] === 'disetujui' && empty($report->nomor_bap)) {
+            $updateData['nomor_bap'] = 'BAP-DLH-'.date('Y').'-'.strtoupper(Str::random(5));
+        }
 
         if ($validated['status'] === 'perlu_cek_lapangan') {
             $updateData['assigned_petugas_id'] = $validated['assigned_petugas_id'];
@@ -1006,7 +1036,7 @@ class AdminDashboardController extends Controller
     /**
      * 10. Halaman Sistem Siaran Notifikasi Pengumuman / Broadcast.
      */
-    public function broadcasts(Request $request): View
+    public function broadcasts(Request $request, PortalCmsService $cms): View
     {
         $broadcasts = BroadcastAnnouncement::with('creator')
             ->latest('created_at')
@@ -1015,26 +1045,34 @@ class AdminDashboardController extends Controller
 
         return view('dashboard.admin.broadcasts', [
             'broadcasts' => $broadcasts,
+            'articles' => EducationArticle::with('creator:id,name')->latest('id')->paginate(10, ['*'], 'articles_page'),
+            'documents' => PublicDocument::with('creator:id,name')->latest('id')->paginate(10, ['*'], 'documents_page'),
+            'portalSettings' => PortalSetting::resolved(),
+            'cmsSummary' => $cms->adminSummary(),
         ]);
     }
 
     /**
      * Simpan siaran pengumuman baru.
      */
-    public function storeBroadcast(Request $request): RedirectResponse
+    public function storeBroadcast(Request $request, PortalCmsService $cms): RedirectResponse
     {
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:200'],
+            'summary' => ['nullable', 'string', 'max:500'],
             'content' => ['required', 'string'],
             'audience_role' => ['required', 'string', 'in:all,warga,petugas_lapangan,pengelola_tps3r,pemrakarsa'],
             'priority' => ['required', 'string', 'in:low,normal,high,urgent'],
+            'status' => ['nullable', 'string', 'in:draft,scheduled,published,archived'],
+            'kategori' => ['nullable', 'string', 'in:informasi,jadwal,himbauan,penting'],
+            'show_on_portal' => ['nullable', 'boolean'],
+            'published_at' => ['nullable', 'date'],
+            'expires_at' => ['nullable', 'date'],
         ]);
 
-        $validated['created_by'] = $request->user()->id;
-        $validated['is_active'] = true;
-        $validated['published_at'] = Carbon::now();
-
-        BroadcastAnnouncement::create($validated);
+        /** @var User $admin */
+        $admin = $request->user();
+        $cms->createAnnouncement($admin, $validated);
 
         return back()->with('status', 'Siaran pengumuman "'.$validated['title'].'" berhasil dipublikasikan.');
     }

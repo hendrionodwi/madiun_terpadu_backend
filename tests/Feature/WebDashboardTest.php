@@ -555,7 +555,7 @@ test('pemrakarsa can view reports list and filter reports by status and jenis do
     // View all reports
     $response = $this->actingAs($pemrakarsa)->get(route('dashboard.pemrakarsa.reports'));
     $response->assertOk()
-        ->assertSee('Riwayat & Status Verifikasi Pelaporan', false)
+        ->assertSee('Laporan Lingkungan')
         ->assertSee('Laporan AMDAL Semester 1 2026')
         ->assertSee('Laporan UKL-UPL Semester 2 2026');
 
@@ -583,7 +583,7 @@ test('pemrakarsa can view standalone create report form', function () {
 
     $response->assertOk()
         ->assertSee('Formulir PPL-F-008')
-        ->assertSee('Unggah Laporan Pelaksanaan Dokumen Lingkungan')
+        ->assertSee('Susun Laporan Lingkungan')
         ->assertSee('PT Ramayana Madiun');
 });
 

@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
         $this->call(FundWithdrawalRequestSeeder::class);
         $this->call(WasteProcessingRecordSeeder::class);
         $this->call(ActivityLogSeeder::class);
+        $this->call(PortalCmsSeeder::class);
 
         User::firstOrCreate(
             ['email' => 'test@example.com'],

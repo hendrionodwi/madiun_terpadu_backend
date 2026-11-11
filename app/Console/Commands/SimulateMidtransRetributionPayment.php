@@ -53,13 +53,13 @@ class SimulateMidtransRetributionPayment extends Command
             default => '200',
         };
 
-        $serverKey = $service->retributionServerKey();
-        if ($serverKey === '') {
-            $this->error('MIDTRANS_SERVER_KEY belum dikonfigurasi. Simulasi webhook tidak dapat ditandatangani.');
+        $signatureSecret = $service->retributionSignatureSecret();
+        if ($signatureSecret === '') {
+            $this->error('MIDTRANS_SIGNATURE_SECRET atau MIDTRANS_SERVER_KEY belum dikonfigurasi. Simulasi webhook tidak dapat ditandatangani.');
 
             return self::FAILURE;
         }
-        $signature = hash('sha512', $bill->nomor_tagihan.$statusCode.$grossAmount.$serverKey);
+        $signature = hash('sha512', $bill->nomor_tagihan.$statusCode.$grossAmount.$signatureSecret);
 
         $payload = [
             'order_id' => $bill->midtrans_order_id ?? $bill->nomor_tagihan,

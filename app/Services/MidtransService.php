@@ -71,7 +71,7 @@ class MidtransService
             ],
             'item_details' => $itemDetails,
             'callbacks' => [
-                'finish' => route('dashboard.tps3r.orders'),
+                'finish' => route('payment.return'),
             ],
         ];
 
@@ -105,7 +105,7 @@ class MidtransService
      * Verify Midtrans webhook notification signature key.
      */
     /** @param array<string, mixed> $payload */
-    public function verifySignature(array $payload, string $serverKey): bool
+    public function verifySignature(array $payload, string $signatureSecret): bool
     {
         $orderId = (string) ($payload['order_id'] ?? '');
         $statusCode = (string) ($payload['status_code'] ?? '');
@@ -116,7 +116,7 @@ class MidtransService
             return false;
         }
 
-        $rawSignature = $orderId.$statusCode.$grossAmount.$serverKey;
+        $rawSignature = $orderId.$statusCode.$grossAmount.$signatureSecret;
         $expectedSignature = hash('sha512', $rawSignature);
 
         return hash_equals($expectedSignature, $receivedSignature);
@@ -125,6 +125,13 @@ class MidtransService
     public function retributionServerKey(): string
     {
         return trim((string) config('services.midtrans.server_key', ''));
+    }
+
+    public function retributionSignatureSecret(): string
+    {
+        $signatureSecret = trim((string) config('services.midtrans.signature_secret', ''));
+
+        return $signatureSecret !== '' ? $signatureSecret : $this->retributionServerKey();
     }
 
     /**
@@ -224,7 +231,7 @@ class MidtransService
                 ],
             ],
             'callbacks' => [
-                'finish' => url('/dashboard/warga'),
+                'finish' => route('payment.return'),
             ],
         ];
 

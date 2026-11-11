@@ -37,6 +37,7 @@ return [
 
     'midtrans' => [
         'server_key' => env('MIDTRANS_SERVER_KEY'),
+        'signature_secret' => env('MIDTRANS_SIGNATURE_SECRET'),
         'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
         'allow_mock' => env('MIDTRANS_ALLOW_MOCK', false),
     ],

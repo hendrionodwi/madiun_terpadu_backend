@@ -18,6 +18,8 @@ use App\Services\MidtransService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
@@ -153,7 +155,25 @@ class MarketplaceController extends Controller
             $query->where('is_available', true)->where('stok', '>', 0);
         }
 
-        $products = $query->latest()->paginate((int) ($request->per_page ?? 12));
+        if ($request->boolean('featured_only')) {
+            $query->where('is_featured', true);
+        }
+
+        if ($request->filled('harga_min')) {
+            $query->where('harga', '>=', (float) $request->harga_min);
+        }
+
+        if ($request->filled('harga_max')) {
+            $query->where('harga', '<=', (float) $request->harga_max);
+        }
+
+        match ($request->query('sort')) {
+            'termurah' => $query->orderBy('harga', 'asc'),
+            'termahal' => $query->orderBy('harga', 'desc'),
+            default => $query->orderByDesc('is_featured')->latest(),
+        };
+
+        $products = $query->paginate((int) ($request->per_page ?? 12));
 
         return response()->json([
             'success' => true,
@@ -207,6 +227,7 @@ class MarketplaceController extends Controller
             'stok' => (int) $validated['stok'],
             'foto' => $fotoPath,
             'is_available' => $validated['is_available'] ?? true,
+            'is_featured' => $validated['is_featured'] ?? false,
         ]);
 
         $product->load('seller:id,name,role');
@@ -216,6 +237,64 @@ class MarketplaceController extends Controller
             'message' => 'Produk daur ulang berhasil ditambahkan ke katalog.',
             'data' => $product,
         ], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Update recycled product in catalog with ownership check and photo cleanup.
+     */
+    public function updateProduct(StoreProductRequest $request, WasteProduct $product): JsonResponse
+    {
+        Gate::authorize('update', $product);
+        $validated = $request->validated();
+
+        $fotoPath = $product->foto;
+        if ($request->hasFile('foto')) {
+            $newFoto = $request->file('foto')->store('products', 'public');
+            if ($fotoPath && ! str_starts_with($fotoPath, 'http')) {
+                Storage::disk('public')->delete($fotoPath);
+            }
+            $fotoPath = $newFoto;
+        } elseif (isset($validated['foto']) && is_string($validated['foto'])) {
+            $fotoPath = $validated['foto'];
+        }
+
+        $product->update([
+            'nama_produk' => $validated['nama_produk'] ?? $product->nama_produk,
+            'deskripsi' => array_key_exists('deskripsi', $validated) ? $validated['deskripsi'] : $product->deskripsi,
+            'kategori' => $validated['kategori'] ?? $product->kategori,
+            'harga' => array_key_exists('harga', $validated) ? (float) $validated['harga'] : $product->harga,
+            'stok' => array_key_exists('stok', $validated) ? (int) $validated['stok'] : $product->stok,
+            'foto' => $fotoPath,
+            'is_available' => array_key_exists('is_available', $validated) ? (bool) $validated['is_available'] : $product->is_available,
+            'is_featured' => array_key_exists('is_featured', $validated) ? (bool) $validated['is_featured'] : $product->is_featured,
+        ]);
+
+        $product->load('seller:id,name,role');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Produk daur ulang berhasil diperbarui.',
+            'data' => $product,
+        ], Response::HTTP_OK);
+    }
+
+    /**
+     * Delete recycled product from catalog with photo storage cleanup.
+     */
+    public function destroyProduct(Request $request, WasteProduct $product): JsonResponse
+    {
+        Gate::authorize('delete', $product);
+
+        if ($product->foto && ! str_starts_with($product->foto, 'http')) {
+            Storage::disk('public')->delete($product->foto);
+        }
+
+        $product->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Produk daur ulang berhasil dihapus.',
+        ], Response::HTTP_OK);
     }
 
     /**
@@ -612,14 +691,14 @@ class MarketplaceController extends Controller
         $firstProduct = $order->items->first()?->product;
         $tps3rProfile = $firstProduct?->seller?->pengelolaTps3rProfile;
 
-        if (! $tps3rProfile || empty($tps3rProfile->midtrans_server_key)) {
+        if (! $tps3rProfile || $tps3rProfile->webhookSignatureSecret() === '') {
             return response()->json([
                 'success' => false,
-                'message' => 'Kredensial Midtrans fasilitas TPS3R penjual tidak ditemukan.',
+                'message' => 'Kredensial verifikasi webhook Midtrans fasilitas TPS3R penjual tidak ditemukan.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        if (! $midtransService->verifySignature($payload, (string) $tps3rProfile->midtrans_server_key)) {
+        if (! $midtransService->verifySignature($payload, $tps3rProfile->webhookSignatureSecret())) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid signature key.',

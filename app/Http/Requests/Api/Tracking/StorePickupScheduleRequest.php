@@ -47,6 +47,7 @@ class StorePickupScheduleRequest extends FormRequest
             'id_wilayah_rute' => ['required', 'string', 'max:50'],
             'nama_wilayah_rute' => ['nullable', 'string', 'max:255'],
             'jenis_sampah' => ['nullable', 'string', 'max:255'],
+            'estimasi_berat_kg' => ['nullable', 'numeric', 'min:0.1', 'max:9999.99'],
             'kategori_sampah' => ['nullable', 'array'],
             'kategori_sampah.*' => ['string', 'max:100'],
             'tanggal_penjemputan' => ['required', 'date_format:Y-m-d'],

@@ -41,11 +41,17 @@
                         <flux:sidebar.item icon="building-office-2" :href="route('dashboard.admin.entities')" :current="request()->routeIs('dashboard.admin.entities*')" wire:navigate>{{ __('Validasi Entitas') }}</flux:sidebar.item>
                     </flux:sidebar.group>
 
-                    <flux:sidebar.group :heading="__('Keuangan & Sistem')" expandable :expanded="request()->routeIs('dashboard.admin.points*', 'dashboard.admin.retributions*', 'dashboard.admin.master-data*', 'dashboard.admin.broadcasts*', 'dashboard.admin.activity-logs*')" class="grid">
+                    <flux:sidebar.group :heading="__('Konten Publik')" expandable :expanded="request()->routeIs('dashboard.admin.broadcasts*', 'dashboard.admin.articles*', 'dashboard.admin.documents*', 'dashboard.admin.portal-settings*')" class="grid">
+                        <flux:sidebar.item icon="megaphone" :href="route('dashboard.admin.broadcasts')" :current="request()->routeIs('dashboard.admin.broadcasts*')" wire:navigate>{{ __('Pengumuman') }}</flux:sidebar.item>
+                        <flux:sidebar.item icon="book-open" :href="route('dashboard.admin.articles')" :current="request()->routeIs('dashboard.admin.articles*')" wire:navigate>{{ __('Artikel & Edukasi') }}</flux:sidebar.item>
+                        <flux:sidebar.item icon="document-text" :href="route('dashboard.admin.documents')" :current="request()->routeIs('dashboard.admin.documents*')" wire:navigate>{{ __('Dokumen Publik') }}</flux:sidebar.item>
+                        <flux:sidebar.item icon="paint-brush" :href="route('dashboard.admin.portal-settings')" :current="request()->routeIs('dashboard.admin.portal-settings*')" wire:navigate>{{ __('Tampilan Portal') }}</flux:sidebar.item>
+                    </flux:sidebar.group>
+
+                    <flux:sidebar.group :heading="__('Keuangan & Sistem')" expandable :expanded="request()->routeIs('dashboard.admin.points*', 'dashboard.admin.retributions*', 'dashboard.admin.master-data*', 'dashboard.admin.activity-logs*')" class="grid">
                         <flux:sidebar.item icon="receipt-percent" :href="route('dashboard.admin.retributions')" :current="request()->routeIs('dashboard.admin.retributions*')" wire:navigate>{{ __('Retribusi Sampah') }}</flux:sidebar.item>
                         <flux:sidebar.item icon="banknotes" :href="route('dashboard.admin.points')" :current="request()->routeIs('dashboard.admin.points*')" wire:navigate>{{ __('Poin & Pencairan') }}</flux:sidebar.item>
                         <flux:sidebar.item icon="circle-stack" :href="route('dashboard.admin.master-data')" :current="request()->routeIs('dashboard.admin.master-data*')" wire:navigate>{{ __('Data Master') }}</flux:sidebar.item>
-                        <flux:sidebar.item icon="megaphone" :href="route('dashboard.admin.broadcasts')" :current="request()->routeIs('dashboard.admin.broadcasts*')" wire:navigate>{{ __('Broadcast') }}</flux:sidebar.item>
                         <flux:sidebar.item icon="clock" :href="route('dashboard.admin.activity-logs')" :current="request()->routeIs('dashboard.admin.activity-logs*')" wire:navigate>{{ __('Log Aktivitas') }}</flux:sidebar.item>
                     </flux:sidebar.group>
                 @elseif (auth()->user()->isPengelolaTps3r())

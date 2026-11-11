@@ -1,9 +1,9 @@
 # 🤝 AI COLLABORATION PROTOCOL & HANDOFF BOARD
 **Project:** Sistem Pengelolaan Sampah & Lingkungan Terpadu Kota Madiun  
-**Agents in Sync:** Gemini Antigravity (Backend & Quality Gate) dan ChatGPT / Codex (Flutter UI/UX)  
+**Agents in Sync:** Gemini Antigravity (Laravel backend, API, database) dan ChatGPT / Codex (frontend Laravel & Flutter)
 **Sync Model:** Asinkron melalui file ini; tidak ada koneksi pesan langsung antar-agent.  
-**Last Reviewed:** 2026-10-30 oleh ChatGPT / Codex (audit integrasi marketplace dan dropdown)
-**Repository Baseline:** Backend commit `1dde3f1`; mobile berada di sibling folder `../madiun_terpadu_mobile`.  
+**Last Reviewed:** 2026-11-11 oleh ChatGPT / Codex (Portal Publik dan CMS Admin tersedia; backend hardening serta frontend workspace internal dibagi ke task terpisah agar tidak bertabrakan)
+**Repository Baseline:** Backend commit `0d6a346`; mobile commit `b0c8a53` berada di sibling folder `../madiun_terpadu_mobile`.
 
 ---
 
@@ -16,11 +16,19 @@
    - Backend Laravel wajib lulus `vendor/bin/pint --dirty --format agent` dan `php artisan test --compact`.
    - Frontend Flutter wajib lulus `flutter analyze` dan `flutter test`.
 4. **Log & Handoff:** Setiap selesai mengerjakan tugas, tulis ringkasan perubahan di section **Log Komunikasi** di bawah.
-5. **Read Before Work:** Kedua agent wajib membaca file ini pada awal task dan sebelum mengubah kontrak lintas platform.
+5. **Read at Assignment & Handoff:** Baca file ini saat menerima task, sebelum perubahan kontrak, dan setelah pekerjaan selesai. Tidak perlu membacanya ulang pada setiap percakapan atau langkah kecil.
 6. **Lock Lifecycle:** Tambahkan lock sebelum mengedit, gunakan status `CLAIMED` atau `IN_PROGRESS`, lalu hapus lock setelah handoff berstatus `READY_FOR_REVIEW` atau `DONE`.
 7. **Scope Discipline:** Agent boleh membaca seluruh repository, tetapi hanya mengedit area kepemilikannya kecuali ada handoff eksplisit.
 8. **No Silent Contract Change:** Perubahan API, autentikasi, role, enum status, atau payload harus dicatat sebagai *Contract Change Request* dan diakui agent pemilik sisi lain sebelum implementasi lintas platform.
 9. **Git Safety:** Jangan me-reset, menghapus, atau menimpa perubahan agent lain. File ini menggunakan pola append/update terarah, bukan menghapus histori komunikasi yang masih relevan.
+10. **Design Is Direction, Not a Cage:** Referensi Stitch menjadi pedoman hierarki, komponen, dan suasana visual. Implementasi boleh disederhanakan agar responsif, dapat dipelihara, dan sesuai data nyata.
+11. **Dynamic by Default:** Jadwal, rute, fasilitas, artikel, pengumuman, statistik, produk, status, dan profil harus berasal dari database/API. Data contoh hanya boleh berada di seeder/test dan wajib berlabel `Data Simulasi`.
+12. **Concise Interface Copy:** Utamakan data dan aksi. Hindari paragraf panjang, pengulangan judul, jargon promosi, serta penjelasan yang tidak membantu keputusan pengguna. Gunakan satu aksi utama per panel bila memungkinkan.
+13. **No AI-Looking UI:** Gunakan ikon garis konsisten (Lucide/Heroicons yang setara), bukan emoji. Hindari kartu dekoratif berlebihan, metrik fiktif, klaim AI/IoT, dan animasi tanpa fungsi.
+14. **Complete UI States:** Setiap alur data wajib memiliki keadaan loading, kosong, gagal, berhasil, tidak berizin, serta offline bila relevan untuk mobile petugas.
+15. **Responsive & Accessible:** Mobile-first, target sentuh minimum 44px web/48dp mobile, focus state terlihat, kontras cukup, dan tabel berubah menjadi kartu/scroll yang tetap terbaca pada layar kecil.
+16. **Vertical Slice Delivery:** Selesaikan satu alur dari data sampai UI dan test sebelum membuka terlalu banyak halaman baru. Jangan melakukan refactor besar yang tidak dibutuhkan oleh fitur aktif.
+17. **Dependency Restraint:** Jangan menambah library, mengubah schema, atau mengganti kontrak API jika komponen bawaan/proyek sudah memadai. Perubahan tersebut perlu dicatat lebih dahulu.
 
 ### Status Tugas yang Dipakai
 
@@ -32,8 +40,10 @@ Gunakan `BLOCKED` jika pekerjaan tidak dapat dilanjutkan tanpa keputusan atau pe
 
 | Area | Pemilik Utama | Agent Lain |
 |---|---|---|
-| `madiun_terpadu_backend/**` (Laravel, database, API, Blade/Livewire, test) | Gemini Antigravity | Review read-only; ajukan kebutuhan melalui *Contract Change Request* |
-| `madiun_terpadu_mobile/**` (Flutter UI/UX, widget, state, integrasi API mobile, test) | ChatGPT / Codex | Review read-only; beri spesifikasi endpoint/payload melalui papan ini |
+| Backend Laravel: `app/**`, `database/**`, `routes/**`, backend test | Gemini Antigravity | Codex mengajukan kebutuhan data melalui *Contract Change Request* |
+| Frontend Laravel: `resources/views/**`, `resources/css/**`, `resources/js/**`, test tampilan | ChatGPT / Codex | Gemini tidak mengubah tampilan kecuali ada handoff eksplisit |
+| Flutter: `../madiun_terpadu_mobile/lib/**`, widget/integration test | ChatGPT / Codex | Gemini memberi kontrak endpoint/payload melalui papan ini |
+| Referensi desain: `docs/design-reference/**` | ChatGPT / Codex | Read-only bagi Gemini; bukan sumber kode produksi |
 | `AI_COLLABORATION.md` | Bersama | Boleh diedit keduanya; jangan menghapus handoff aktif |
 
 ---
@@ -42,7 +52,9 @@ Gunakan `BLOCKED` jika pekerjaan tidak dapat dilanjutkan tanpa keputusan atau pe
 
 | File / Folder Path | Sedang Diedit Oleh | Status | Tujuan / Fitur |
 |---|---|---|---|
-| *Tidak ada file terkunci saat ini* | - | IDLE | Seluruh pekerjaan tersinkronisasi dan quality gate 100% lulus |
+| `resources/views/dashboard/admin/{broadcasts,complaints,reports}.blade.php`, `resources/views/dashboard/tps3r/{deposits,deposit-detail,products}.blade.php`, `resources/views/dashboard/pemrakarsa/{create-report,reports}.blade.php`, `resources/views/components/admin/**`, `tests/Feature/{UniversalAsyncFilterWebTest.php,OperationalGapWebTest.php,AdminDashboardPagesTest.php}` | Belum dikunci | FREE | `AG-20261111-004` selesai; dapat diklaim kembali melalui task baru |
+| `resources/views/dashboard.blade.php`, `resources/views/dashboard/admin/{activity-logs,complaints,entities,master-data,points,reports,retributions}.blade.php`, `resources/views/dashboard/tps3r/*.blade.php`, `resources/views/dashboard/pemrakarsa/profile.blade.php`, `../madiun_terpadu_mobile/lib/src/**` (non-WIP Codex) | Belum dikunci | FREE | `AG-20261111-007` selesai (`DONE`); seluruh lock dilepas agar Codex bebas mengklaim Vertical Slice Mobile Petugas & kelanjutan UI saat online |
+| `../madiun_terpadu_mobile/lib/src/features/{home/presentation/{role_home_page,petugas_task_center_page}.dart,tracking/presentation/{weighing_form_page,tps3r_deposit_page}.dart}`, `../madiun_terpadu_mobile/test/{petugas_task_center_test,petugas_route_operation_test,operational_pages_test}.dart` | Belum dikunci | FREE | `AG-20261111-008` selesai; dapat diklaim kembali melalui task baru |
 
 ---
 
@@ -51,11 +63,20 @@ Gunakan `BLOCKED` jika pekerjaan tidak dapat dilanjutkan tanpa keputusan atau pe
 - **Backend Framework:** Laravel 13 (PHP 8.3) melayani Web Dashboard (Livewire/Blade + Tailwind CSS) & Mobile API (Sanctum).
 - **Mobile Framework:** Flutter (Clean Architecture / Feature-first di `madiun_terpadu_mobile`).
 - **5 Roles RBAC:** `warga`, `petugas_lapangan`, `pengelola_tps3r`, `pemrakarsa`, `admin_dlh`.
-- **Status Pengujian Terkini (100% Green):**
-  - **Laravel Backend:** `261 / 261 tests passed` (1.181 assertions).
-  - **Flutter Mobile:** `47 / 47 tests passed` (`flutter analyze` 0 issues).
-  - **Styling:** Laravel Pint clean (`0 issues`).
+- **Baseline terakhir terverifikasi (2026-11-11):**
+  - **CMS Hardening Suite (`PortalCmsBackendHardeningTest`):** **`11 / 11 passed`** (`271 assertions`).
+  - **Web Dashboard & CMS Suites (`WebDashboardTest` 25/25, `PortalCmsBackendHardeningTest`, `PortalCmsTest`, `PublicPortalPageTest`, `OperationalCompletenessTest`):** lulus penuh dengan Pint clean.
+  - **Full Backend Suite (`php artisan test --compact`):** **`310 / 310 passed`** (`1842 assertions`) setelah sinkronisasi 2 assertion heading Pemrakarsa di [`WebDashboardTest.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/tests/Feature/WebDashboardTest.php#L556-L588).
+  - **Frontend Assets & Portal Views:** Vite build lulus (`npm.cmd run build` → `2.46s`), `php artisan view:cache` lulus, `git diff --check` bersih.
+  - **Flutter Mobile:** `flutter analyze` **0 issues** & `flutter test` **`55 / 55 tests passed`** (pasca-`AG-20261111-005`).
+  - **Styling:** Laravel Pint clean (`{"tool":"pint","result":"passed"}`).
 - **Fitur Terakhir Selesai:**
+  - **Vertical Slice Mobile Warga Civic Emerald v1.1 (`AG-20261111-005`):** Tema terpadu `CivicEmeraldTheme`, onboarding 3 slide opsional + alur lupa & reset kata sandi 2 tahap (`/auth/forgot-password`, `/auth/reset-password`), ganti kata sandi & avatar di `ProfilePage` (`PATCH /auth/password`), navigasi bawah Warga 5 destinasi (`Beranda`, `Aktivitas`, `Marketplace`, `Pengaduan`, `Profil`), beranda dinamis paralel `/warga/summary` + `/public/facilities` (tanpa mock TPS3R statis/klaim `Live Update`), edukasi CMS (`/public/articles` & `/public/documents`), kwitansi timbangan (`/tracking/weighings/{id}/receipt`) + `kode_jadwal`, serta follow-up aduan (`/complaints/{ticket}/additional-info`, `/complaints/{ticket}/notifications`). (`55 / 55` Flutter test lulus, `0` analyzer issues).
+  - Hardening Backend CMS Portal Publik & Endpoint Publik (`AG-20261111-003`): Policy otorisasi khusus `admin_dlh`, penegakan jadwal tayang & `PortalSetting` visibility, validasi jadwal/kedaluwarsa, upload & cleanup file transaksional aman rollback, eliminasi potensi lazy loading + clamping pagination + escaped LIKE search.
+  - Penguatan Kontrak Backend Web & Mobile untuk Workspace Internal Role + Perluasan Test Regresi (`berat_bruto_kg >= berat_tara_kg`, filter status `perlu_perbaikan` TPS3R, dukungan `is_featured` Web Produk TPS3R, fix `whereDate` tanggal setoran hari ini di Web/API, `statusLogs` + `$activeRoutes` di Aduan Admin, pengecualian draf Pemrakarsa dari antrean Admin Web & API, serta ekspansi `UniversalAsyncFilterWebTest` untuk `articles`, `documents`, `portal-settings`) (`AG-20261111-001`).
+  - Roll-out Menyeluruh **Universal In-Place Async Engine (`resources/js/app.js`) & Dropdown Kustom Adaptif Terang/Gelap (`<x-public.select-filter />` + `resources/css/app.css`)** ke Portal Publik (`/marketplace`, `/layanan` lengkap dengan sinkronisasi marker/rute MapLibre tanpa reload peta) dan seluruh halaman berfilter/bertab/paginasi pada Dashboard Admin DLH (`10` halaman), TPS3R (`7` halaman), serta Pemrakarsa (`1` halaman) tanpa `onchange="this.form.submit()"` (`AG-20261110-003`).
+  - Penyempurnaan UX & Desain Portal Publik Gaya Satu Data Indonesia × Civic Emerald (Header Instansi Resmi, Hero Light Search-First, Perbaikan Grid Adaptif Seksi TPS3R agar tidak kosong di sisi kanan, serta transisi `.portal-settle` & `.portal-interactive-card` yang halus dengan `prefers-reduced-motion`) (`AG-20261110-003`).
+  - Penyelesaian Gap Backend P0/P1 Civic Emerald v1.1 (Workstream A Fondasi/Policies/Auth, Workstream B Portal & CMS Dinamis, Workstream C Operasional Warga/Petugas/TPS3R/Pemrakarsa/Aduan/Marketplace, Workstream D Hardening & Storage Cleanup) (`AG-20261110-001`).
   - Marketplace Store-First Discovery, Halaman Toko TPS3R, & Proteksi Keranjang Tunggal (Single-Store Cart Enforcement) untuk Memastikan Transaksi Midtrans dan Pengiriman 100% Bebas Error Multi-Seller (`AG-20261030-001`).
   - Penyempurnaan Tampilan Katalog Marketplace Flutter: Rasio Foto Produk Persegi 1:1 (Square Aspect Ratio) & Grid Responsif Multi-Kolom Desktop/Web agar foto tidak pipih/terpotong (`AG-20261029-005`).
   - Migrasi URL Halaman Detail Web Dashboard Menggunakan Non-Numeric Public Identifier (`nomor_resi`, `nomor_pesanan`, `nomor_tiket`) untuk Setoran TPS3R, Pesanan Marketplace, dan Aduan DLH (Revisi Mentor No. 7, `AG-20261029-004`).
@@ -72,6 +93,24 @@ Gunakan `BLOCKED` jika pekerjaan tidak dapat dilanjutkan tanpa keputusan atau pe
   - Modul Export & Cetak Laporan Kedinasan A4 (Kop Resmi Pemkot Madiun & DLH) + Tabular CSV/Excel UTF-8 BOM (`ReportExportController`).
   - Mobile Tracking Page UX: Map sliver scrollable bersama manifest tugas petugas lapangan (`tracking_page.dart`).
   - Mobile Marketplace UX: foto produk, quick add, validasi penjual, konfirmasi checkout, dan halaman sukses transaksi (`AG-20261019-001`).
+
+### Sprint Implementasi Aktif — 2026-11-10
+
+**Target:** Mengubah 34 referensi layar menjadi sistem yang berfungsi tanpa mengejar kesamaan pixel-perfect.
+
+| Urutan | Fokus | Owner | Hasil minimum |
+|---|---|---|---|
+| 1 | Fondasi visual, navigasi, komponen bersama | Codex | Token Civic Emerald, shell publik/internal/mobile, komponen reusable |
+| 2 | Portal publik dan workspace internal utama | Codex | Data dinamis, layout responsif, copy ringkas, state lengkap |
+| 3 | Alur utama Mobile Warga | Codex | Auth/startup, beranda, penjemputan, aktivitas, marketplace, pengaduan |
+| 4 | Alur utama Mobile Petugas | Codex | Beranda, tugas/rute, input hasil, setoran/sinkronisasi |
+| Paralel A | Audit kontrak, auth, RBAC, dan keamanan | Gemini | Gap matrix, API konsisten, policy/middleware dan identifier publik aman |
+| Paralel B | Backend portal publik dan CMS | Gemini | Pengumuman, artikel, dokumen, jadwal/rute, fasilitas, statistik, dan katalog bersumber dari database/API |
+| Paralel C | Backend workflow operasional | Gemini | Penjemputan, pengaduan, setoran/poin, marketplace/Midtrans, dan laporan lingkungan lengkap serta teruji |
+| Paralel D | Hardening dan quality gate backend | Gemini | API Resource, validasi, pagination, eager loading, factory/seeder, targeted dan full test |
+| Akhir | Integrasi dan regression pass | Bersama | Kontrak sinkron, build/analyze/test lulus, tanpa data bisnis hard-coded |
+
+**Definition of Done per alur:** data nyata terhubung, otorisasi sesuai role, responsif, state loading/empty/error tersedia, copy ringkas, dan test relevan lulus.
 
 ---
 
@@ -104,14 +143,316 @@ Required tests:
 
 **Sync pointer saat ini**
 
-- Last handoff: `AG-20261030-003` — Audit Integrasi Marketplace Store-First & `AG-20261030-002` — Standardisasi Dropdown Web Dashboard.
-- Task status: Seluruh task (`AG-20261030-001`, `AG-20261030-002`, `AG-20261030-003`) telah `[DONE]` dan diverifikasi penuh oleh Gemini Antigravity.
-- Next action owner: Sistem dalam keadaan stabil dan siap untuk penugasan fitur atau penyempurnaan berikutnya dari Pengguna (*User*).
-- Quality Gates Baseline: Backend 261/261 passed (1.181 assertions), Flutter 47/47 passed, `flutter analyze` 0 issues, Pint clean, dan Vite build lulus.
+- Parent task frontend `AG-20261110-002` tetap **`IN_PROGRESS`**. Portal Publik, CMS Admin, workspace internal (`AG-20261111-004`), dan **Vertical Slice Mobile Warga (`AG-20261111-005`)** telah selesai.
+- Gemini `AG-20261111-003` **`DONE`**.
+- Codex `AG-20261111-004` **`DONE`** (sinkronisasi akhir 2 assertion copy Pemrakarsa di `WebDashboardTest` L558 & L586 diselesaikan oleh Gemini atas arahan langsung pengguna).
+- Gemini `AG-20261111-005` **`DONE`** (`Rule 0` saat Codex offline) — Vertical Slice Mobile Warga di `../madiun_terpadu_mobile` selesai & seluruh lock `../madiun_terpadu_mobile/**` telah dilepas (`FREE`).
+- Last Completed Gemini (`Rule 0`): `AG-20261111-007` (**`DONE`**) — Penyeragaman desain **Civic Emerald v1.1** untuk seluruh halaman Web & Mobile yang tidak memiliki frame referensi / masih memakai style legacy (tanpa menyentuh WIP lokal Codex); seluruh lock telah dilepas (`FREE`).
+- Previous Completed Gemini (`Rule 0`, Opsi 1): `AG-20261111-006` (**`DONE`**) — Penyeragaman desain Civic Emerald v1.1 pada layar lanjutan Mobile Warga & Auth di `../madiun_terpadu_mobile`.
+- Codex `AG-20261111-008` **`DONE`** — Vertical Slice Mobile Petugas kini memakai navigasi kanonik `Beranda`, `Tugas`, `Setoran`, `Riwayat`, `Profil`; form timbang dan setoran mempertahankan input saat API gagal serta menyediakan aksi coba ulang yang jelas.
+- Next pointer bersama: regression pass lintas role dan audit integrasi kontrak backend-mobile tanpa membuka refactor besar baru. Perubahan lokal pra-existing pada `.vscode/launch.json`, `android/gradle.properties`, platform generated files, `pubspec.*`, dan marketplace tetap utuh.
+- Area terlarang bersama: jangan menimpa Portal Publik (`resources/views/{layouts/public,components/public,public}/**`), mesin asinkron terpusat (`resources/js/app.js`, `resources/css/app.css`), kontrak `data-ajax-*`, atau referensi desain kecuali ada handoff baru.
+- Quality gate aktual (2026-11-11): Backend Laravel **`310 / 310 passed (1842 assertions)`** (`pint` clean, Vite `build` + `view:cache` lulus); Mobile Flutter **`57 / 57 passed`** & `flutter analyze` **`0 issues`**.
 
 ---
 
 ## 💬 5. Log Komunikasi Antar-Agen (Agent-to-Agent Thread)
+
+### Task `AG-20261111-008` — Vertical Slice Mobile Petugas
+
+**Owner:** ChatGPT / Codex
+**Status:** `DONE` — Lock dilepas (`FREE`)
+**Scope eksklusif:**
+- `../madiun_terpadu_mobile/lib/src/features/home/presentation/{role_home_page,petugas_task_center_page}.dart`
+- `../madiun_terpadu_mobile/lib/src/features/tracking/presentation/{weighing_form_page,tps3r_deposit_page}.dart`
+- `../madiun_terpadu_mobile/test/{petugas_task_center_test,petugas_route_operation_test,operational_pages_test}.dart`
+**Goal:** memastikan alur petugas dapat dijalankan dari daftar tugas, pembaruan status, pencatatan hasil timbang, hingga setoran TPS3R dengan umpan balik singkat dan state jaringan yang jelas.
+**Contract impact:** `none`; memakai endpoint dan payload yang sudah tersedia, tanpa mengubah backend/API.
+**Acceptance:** navigasi Petugas tetap 5 tujuan kanonik; kontrol status tidak dapat dilompati sembarang; form hasil timbang dan setoran memiliki state loading/sukses/gagal yang terbaca; kegagalan jaringan tidak menghilangkan input yang sudah diisi; test target, `flutter analyze`, `flutter test`, dan `git diff --check` lulus.
+
+**Hasil implementasi:**
+- Navbar Petugas diselaraskan menjadi `Beranda`, `Tugas`, `Setoran`, `Riwayat`, dan `Profil`; shortcut beranda menuju tab yang sama agar tidak ada dua alur berbeda.
+- Alur status yang sudah tersedia dipertahankan: tugas `terjadwal` harus masuk `berlangsung` sebelum tindakan timbang dapat dilakukan.
+- `WeighingFormPage` dan `Tps3rDepositPage` menerima `ApiClient` opsional untuk pengujian, menampilkan status gagal koneksi secara persisten, menyediakan aksi `Coba kirim lagi`, dan tidak menghapus input ketika request gagal.
+- Dua widget test baru membuktikan data timbang dan setoran tetap berada di formulir setelah respons API `503`.
+
+**Verification:** targeted Petugas **`16 / 16 passed`**; `flutter analyze` **`No issues found`**; full `flutter test` **`57 / 57 passed`**; `git diff --check` exit code `0` (peringatan line-ending Windows bukan error).
+**Handoff:** siap regression pass lintas role dan pengujian manual pada emulator Android.
+
+---
+
+### Task `AG-20261111-007` — Penyeragaman Desain Civic Emerald v1.1 Halaman Web & Mobile Tanpa Frame Referensi
+
+**Owner:** Gemini Antigravity (Rule 0 atas arahan langsung Pengguna)
+**Status:** `DONE` — Lock dilepas (`FREE`)
+**Verifikasi:**
+- Backend (`madiun_terpadu_backend`): `php vendor/bin/pint --dirty --format agent` (`passed`), `php artisan view:cache` & `npm.cmd run build` (`2.77s`), `php artisan test --compact` (**`310 / 310 passed`**, `1842 assertions`), `git diff --check` bersih.
+- Mobile (`../madiun_terpadu_mobile`): `flutter analyze` (**`No issues found!`**), `flutter test` (**`55 / 55 passed`**), audit hex legacy `#7C3AED` / `#9333EA` / `#006654` / `#047857` **0 temuan** di file non-WIP, `git diff --check` bersih.
+**Ringkasan Perubahan:**
+- **Web Shared Components:** [`subpage-header.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/components/civic/subpage-header.blade.php) (header terstandar + slot `$heading` non-escaped & `$actions`), [`complaint-action-forms.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/components/admin/complaint-action-forms.blade.php) (ekstraksi DRY form penugasan & finalisasi pengaduan).
+- **Web Dashboard & Role Views (`20` Blade templates):** [`dashboard.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/dashboard.blade.php), [`pemrakarsa/profile.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/dashboard/pemrakarsa/profile.blade.php), seluruh `11` sub-halaman TPS3R (`resources/views/dashboard/tps3r/*.blade.php`), dan seluruh `7` sub-halaman operasional Admin DLH (`resources/views/dashboard/admin/{activity-logs,complaints,entities,master-data,points,reports,retributions}.blade.php`) diselaraskan ke utility class `.civic-*`, `font-display`, `<x-civic.subpage-header>`, dan badge status konsisten tanpa memutus kontainer/atribut `data-ajax-*`.
+- **Mobile Flutter (`16` file non-WIP):** Menyatukan palet warna ungu (`#7C3AED`/`#9333EA`), teal lama (`#006654`/`#005B4B`/`#047857`), permukaan kartu, status badge (`CivicStatusBadge`), gradient hero (`CivicEmeraldTheme.heroGradient`), operasional dark mode (`CivicEmeraldTheme.operationalDark`), serta menaikkan keterbacaan teks ke minimum `12px` sambil menjaga keamanan layout `Row`/`Expanded` di [`profile_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/profile/presentation/profile_page.dart), [`marketplace_product_image.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/marketplace/presentation/marketplace_product_image.dart), [`map_location_picker.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/tracking/presentation/map_location_picker.dart), [`environmental_report_model.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/environmental_reports/data/environmental_report_model.dart), [`admin_monitoring_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/environmental_reports/presentation/admin_monitoring_page.dart), [`field_inspection_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/environmental_reports/presentation/field_inspection_page.dart), [`report_list_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/environmental_reports/presentation/report_list_page.dart), [`report_upload_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/environmental_reports/presentation/report_upload_page.dart), [`petugas_task_center_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/home/presentation/petugas_task_center_page.dart), [`role_home_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/home/presentation/role_home_page.dart), [`petugas_performance_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/tracking/presentation/petugas_performance_page.dart), [`weighing_form_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/tracking/presentation/weighing_form_page.dart), [`tps3r_deposit_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/tracking/presentation/tps3r_deposit_page.dart), [`tps3r_deposits_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/tracking/presentation/tps3r_deposits_page.dart), [`tps3r_volume_recap_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/tracking/presentation/tps3r_volume_recap_page.dart), dan [`tracking_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/tracking/presentation/tracking_page.dart).
+**Handoff:** Codex dapat langsung melanjutkan **Vertical Slice Mobile Petugas** & integrasi fitur lanjutan tanpa konflik lock maupun ketidaksinkronan desain.
+
+---
+
+### Task `AG-20261111-006` — Penyeragaman Desain Civic Emerald v1.1 Layar Lanjutan Mobile Warga & Auth
+
+**Owner:** Gemini Antigravity (Opsi 1 disetujui pengguna)
+**Status:** `DONE` — Lock dilepas (`FREE`)
+**Verifikasi:** `flutter analyze` (`No issues found!`), `flutter test` (`55 / 55 passed`), dan `git diff --check` bersih di kedua repo. File WIP Codex (`marketplace_cart_page.dart`, `marketplace_order_confirmation_page.dart`, `test/marketplace_checkout_test.dart`, dll.) serta layar Petugas/TPS3R/Pemrakarsa tidak disentuh.
+**Scope eksklusif:**
+- `../madiun_terpadu_mobile/lib/src/core/civic_emerald_theme.dart`
+- `../madiun_terpadu_mobile/lib/src/features/auth/presentation/{login_page,register_page}.dart`
+- `../madiun_terpadu_mobile/lib/src/features/{retribution,points,complaints,education}/**`
+- `../madiun_terpadu_mobile/lib/src/features/tracking/presentation/schedule_form_page.dart`
+- `../madiun_terpadu_mobile/lib/src/features/marketplace/presentation/{marketplace_catalog_page,marketplace_store_page,marketplace_product_page,marketplace_orders_page,marketplace_checkout_page}.dart`
+**Goal:** Menghapus hex warna Tailwind lama (`#006654`, `#047857`, `#ECFDF5`, `#F0FDF4`, `#E2E8F0`, indigo `#6366F1`/`#7C3AED`, dsb.) dan duplikasi formatter pada layar lanjutan Warga & Auth serta menyatukannya memakai token/helper [`CivicEmeraldTheme`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/core/civic_emerald_theme.dart) (`#046A58`, `#E6F4F1`, `#D97706`, `#0F172A`, `#F8FAFC`, `#DDE5E3`) tanpa memutus test atau file WIP Codex.
+
+---
+
+### Task `AG-20261111-005` — Vertical Slice Mobile Warga (`Rule 0` saat Codex Offline)
+
+**Owner:** Gemini Antigravity (atas instruksi langsung Pengguna sesuai Rule 0)
+**Status:** `[DONE]` — Selesai 2026-11-11; lock `../madiun_terpadu_mobile/**` dilepas (`FREE`)
+**Scope dieksekusi (hanya file Warga / shared core tanpa menyentuh file WIP Codex):**
+- **Baru:**
+  - `../madiun_terpadu_mobile/lib/src/core/civic_emerald_theme.dart`
+  - `../madiun_terpadu_mobile/lib/src/features/auth/presentation/onboarding_page.dart`
+  - `../madiun_terpadu_mobile/lib/src/features/auth/presentation/forgot_password_page.dart`
+  - `../madiun_terpadu_mobile/lib/src/features/home/presentation/warga_home_widgets.dart`
+  - `../madiun_terpadu_mobile/test/mobile_warga_flows_test.dart`
+- **Diperbarui:**
+  - `../madiun_terpadu_mobile/lib/src/core/{api_client,session_storage}.dart`
+  - `../madiun_terpadu_mobile/lib/src/app.dart`
+  - `../madiun_terpadu_mobile/lib/src/features/auth/presentation/login_page.dart`
+  - `../madiun_terpadu_mobile/lib/src/features/profile/presentation/profile_page.dart`
+  - `../madiun_terpadu_mobile/lib/src/features/home/presentation/role_home_page.dart`
+  - `../madiun_terpadu_mobile/lib/src/features/complaints/{data/complaint_model.dart,data/complaint_repository.dart,presentation/complaint_detail_page.dart}`
+  - `../madiun_terpadu_mobile/lib/src/features/education/presentation/waste_education_page.dart`
+  - `../madiun_terpadu_mobile/lib/src/features/tracking/presentation/tracking_page.dart`
+  - `../madiun_terpadu_mobile/test/{complaints_test,petugas_task_center_test}.dart`
+**Implementation summary:**
+1. **Token Civic Emerald v1.1 & Core Auth/Storage (`civic_emerald_theme.dart`, `api_client.dart`, `session_storage.dart`, `app.dart`, `login_page.dart`, `onboarding_page.dart`, `forgot_password_page.dart`, `profile_page.dart`):**
+   - Menetapkan `CivicEmeraldTheme.light()` + formatter Indonesia (`formatNumber`, `formatRupiah`, `formatKg`).
+   - `ApiClient.get()` kini mendukung `token` opsional (untuk endpoint `/public/*`) dan mengekstrak error validasi `422` Laravel (`errors` map) via `_extractErrorMessage()`.
+   - Menambahkan onboarding ringkas 3 slide (`OnboardingPage` dengan proteksi overflow `LayoutBuilder` + `hasSeenOnboarding`/`markOnboardingSeen`), alur 2 tahap `Lupa kata sandi?` (`POST /api/v1/auth/forgot-password` & `/auth/reset-password`), serta `_ChangePasswordSheet` (`PATCH /api/v1/auth/password`) + tampilan `avatar_url` di `ProfilePage`.
+2. **Beranda & Navigasi Warga 5 Destinasi (`role_home_page.dart`, `warga_home_widgets.dart`):**
+   - Mengubah bottom navigation `warga` menjadi 5 tab kanonik (`Beranda`, `Aktivitas`, `Marketplace`, `Pengaduan`, `Profil`) dan memperbaiki indeks tab profil AppBar (`4` untuk `warga` & `petugas_lapangan`, `3` untuk role lain), tanpa mengubah navigasi `petugas_lapangan` (`Rute`, `Tugas`, `Kinerja`) atau role lainnya.
+   - Menghapus mock statis `'TPS3R Kartoharjo Nyaman'`, klaim `'Live Update'`, dan metrik palsu; kini memuat `GET /api/v1/warga/summary`, `GET /api/v1/public/facilities?per_page=2`, `/marketplace/orders`, dan `/education/waste-sorting` secara paralel (`Future.wait`) termasuk card retribusi menunggak (`WargaOverdueRetributionCard`), jadwal jemput terdekat + `kode_jadwal`, statistik bulanan `formatKg`, estimasi nilai Rupiah poin real, daftar TPS3R dinamis, sheet pengumuman DLH, serta shortcut `'Tagihan Retribusi'` & `'Riwayat Poin'`.
+3. **Aktivitas, Edukasi CMS & Pengaduan Follow-Up (`tracking_page.dart`, `waste_education_page.dart`, `complaint_*`):**
+   - `TrackingPage`: menampilkan badge `kode_jadwal` dan modal `'Lihat Bukti Timbang'` yang memanggil `GET /api/v1/tracking/weighings/{id}/receipt`.
+   - `WasteEducationPage`: segmented tabs `Pilah Sampah`, `Artikel DLH` (`/public/articles` + modal baca artikel), dan `Dokumen Publik` (`/public/documents` + URL unduhan), search/filter terpadu, serta penghapusan copy `'Pindai Timbangan Digital'`.
+   - Pengaduan (`complaint_model.dart`, `complaint_repository.dart`, `complaint_detail_page.dart`): menambahkan `ComplaintNotificationLog`, metadata `prioritas`/`routeCode`/`targetSelesaiAt`, `getNotifications`, `appendAdditionalInfo`, `_AppendComplaintInfoSheet` (`POST /api/v1/complaints/{ticket}/additional-info`), dan menjaga `_cachedComplaint` saat refresh.
+**Verification (terverifikasi pasca-edit terakhir):**
+- `flutter analyze`: **`No issues found!`** (`4.2s`)
+- `flutter test`: **`55 / 55 passed`** (`api_client_test`, `complaints_test`, `environmental_reports_test`, `marketplace_catalog_test`, `marketplace_checkout_test`, `marketplace_orders_test`, `mobile_warga_flows_test`, `operational_pages_test`, `petugas_route_operation_test`, `petugas_task_center_test`, `schedule_form_page_test`, `widget_test`)
+- `git -C "../madiun_terpadu_mobile" diff --check`: exit code `0` (bersih)
+**Handoff ke Codex:** Lock `../madiun_terpadu_mobile/**` resmi **`FREE`**. Codex dapat melanjutkan **Vertical Slice Mobile Petugas** nanti sore menggunakan fondasi tema `CivicEmeraldTheme`, helper `ApiClient`, serta `AI_COLLABORATION.md` ini.
+
+---
+
+### Task `AG-20261111-003` — Hardening Backend CMS Portal Publik
+
+**Owner:** Gemini Antigravity
+**Status:** `[DONE]` — Selesai 2026-11-11; seluruh lock backend telah dilepas
+**Scope eksklusif:**
+- `app/Policies/{BroadcastAnnouncementPolicy,EducationArticlePolicy,PublicDocumentPolicy,PortalSettingPolicy}.php` (baru)
+- `app/Http/Requests/Cms/{SaveAnnouncementRequest,SaveEducationArticleRequest}.php`
+- `app/Http/Controllers/Api/V1/{AdminCmsController,PublicPortalController}.php`
+- `app/Http/Controllers/Web/AdminContentController.php`
+- `app/Services/{PortalCmsService,PublicPortalDataService}.php`
+- `tests/Feature/PortalCmsBackendHardeningTest.php` (baru)
+**Goal:** memastikan CMS dan API publik aman serta konsisten tanpa mengubah tampilan.
+**Implementation summary:**
+1. **Policy & Otorisasi `403` Berlapis:** Menambahkan 4 Policy (`BroadcastAnnouncementPolicy`, `EducationArticlePolicy`, `PublicDocumentPolicy`, `PortalSettingPolicy`) dan menegakkan `Gate::authorize(...)` di seluruh endpoint baca/mutasi `AdminCmsController` dan `AdminContentController` (non-`admin_dlh` ditolak `403`).
+2. **Jendela Publikasi & `PortalSetting` Visibility:** `PublicPortalDataService::{homeOverview,publicAnnouncementsQuery,paginateArticles,paginateDocuments}` dan `Api\V1\PublicPortalController::{showArticle,downloadDocument}` kini menghormati toggle `announcement_banner_enabled`, `show_stats_section`, `show_education_section`, dan `show_marketplace_section`, mewajibkan `published_at <= now()` pada pengumuman `scheduled`, memeriksa `tanggal_rilis <= today` pada dokumen publik, serta menghormati `is_active` eksplisit tanpa menimpa saat partial PATCH.
+3. **Upload, Jadwal & Lifecycle Storage:** Validator `after()` pada `SaveAnnouncementRequest` (`expires_at >= published_at`, `published_at` wajib bila `scheduled`) dan `SaveEducationArticleRequest` (`published_at` wajib bila `scheduled`); mutasi media di `PortalCmsService` dibungkus `DB::transaction` dengan pembersihan file baru jika DB gagal, dan penghapusan file lama dilakukan hanya setelah commit DB sukses.
+4. **Anti-N+1, Pagination Bound & Wildcard Search:** Helper `PortalCmsService::applyEscapedLike()` (`ESCAPE '!'`) diterapkan lintas query CMS & portal publik; relasi `creator:id,name`, `petugas:id,name`, dan `todaySession` di-eager-load; `per_page` dibatasi `1..50`; serta detail numerik tetap mengembalikan `404`.
+**Contract impact:** `none`; seluruh route name, request contract, dan payload sukses tetap kompatibel.
+**Verification:**
+- `php vendor/bin/pint --dirty --format agent` → `{"tool":"pint","result":"passed"}`
+- `php vendor/bin/pest tests/Feature/PortalCmsBackendHardeningTest.php --compact` → **`11 / 11 passed (271 assertions)`**
+- `php vendor/bin/pest tests/Feature/PortalCmsBackendHardeningTest.php tests/Feature/PortalCmsTest.php tests/Feature/PublicPortalPageTest.php tests/Feature/OperationalCompletenessTest.php --compact` → **`34 / 34 passed (482 assertions)`**
+- `git diff --check` → bersih (`0 issues`)
+- `php artisan test --compact` → **`308 / 310 passed (1833 assertions)`** (`2` kegagalan ada di `WebDashboardTest` baris `558` & `586` pada assertion copy Blade Pemrakarsa pasca perombakan UI `AG-20261111-004`, di luar scope `AG-20261111-003`).
+**Handoff:** Seluruh lock backend `AG-20261111-003` telah dilepas. Sebelum merge/sprint mobile, Codex dapat menyelaraskan 2 assertion copy Blade Pemrakarsa pada `Tests\Feature\WebDashboardTest` lalu melanjutkan vertical slice Flutter `AG-20261110-002`.
+
+---
+
+### Task `AG-20261111-004` — Stabilitas Frontend CMS & Workspace Internal
+
+**Owner:** ChatGPT / Codex
+**Status:** `[DONE]` — selesai 2026-11-11; seluruh lock dilepas
+**Scope eksklusif:**
+- `resources/views/dashboard/admin/broadcasts.blade.php`
+- `resources/views/dashboard/admin/complaints.blade.php`
+- `resources/views/dashboard/admin/reports.blade.php`
+- `resources/views/dashboard/tps3r/deposits.blade.php`
+- `resources/views/dashboard/tps3r/deposit-detail.blade.php`
+- `resources/views/dashboard/tps3r/products.blade.php`
+- `resources/views/dashboard/pemrakarsa/create-report.blade.php`
+- `resources/views/dashboard/pemrakarsa/reports.blade.php`
+- `resources/views/components/admin/**`
+- `tests/Feature/UniversalAsyncFilterWebTest.php`
+- `tests/Feature/OperationalGapWebTest.php`
+- `tests/Feature/AdminDashboardPagesTest.php`
+**Goal:** mengembalikan full frontend regression menjadi hijau dan menerapkan kontrak backend terbaru ke workspace internal dengan UI ringkas serta responsif.
+**Urutan kerja:**
+1. Pulihkan `data-ajax-zone="admin-broadcasts"` dan kompatibilitas label `Siaran Pengumuman` tanpa mengembalikan layout lama.
+2. Admin Aduan: tampilkan SLA/prioritas/rute/status log tanpa menumpuk kontrol.
+3. TPS3R Setoran: tampilkan bruto, tara, netto, fraksi pilah, filter `perlu_perbaikan`, dan aksi koreksi.
+4. TPS3R Produk: dukung status unggulan `is_featured` dengan kontrol yang jelas.
+5. Pemrakarsa: rapikan draft, data monitoring/lab, BAP, dan status verifikasi.
+6. Pertahankan copy singkat, responsive card/table, focus state, empty/error state, serta kontrak `data-ajax-*` yang sudah ada.
+**Contract impact:** `none`; tidak mengubah controller, request, model, migration, API, atau route.
+**Implementation summary:** kontrak async pengumuman dipulihkan; aduan Admin menampilkan prioritas, SLA, rute, dan riwayat status; setoran TPS3R menampilkan bruto/tara/netto, filter dan koreksi; produk mendukung unggulan; laporan Pemrakarsa mendukung draft, monitoring, berkas opsional saat draft, nomor laporan/BAP, edit, kirim, dan hapus draft; Admin DLH dapat membaca ringkasan monitoring serta BAP.
+**Verification:** `php artisan test --compact tests/Feature/UniversalAsyncFilterWebTest.php tests/Feature/OperationalGapWebTest.php tests/Feature/AdminDashboardPagesTest.php tests/Feature/OperationalCompletenessTest.php tests/Feature/PortalCmsTest.php` → **`40 / 40 passed (399 assertions)`**; `php artisan view:cache`, `npm run build`, dan `git diff --check` lulus. Build hanya memberi peringatan non-blocking ukuran chunk MapLibre dan paket opsional `fontaine`.
+**Handoff:** seluruh path frontend di atas bebas diklaim kembali. Vertical slice berikutnya dipilih sesuai instruksi pengguna setelah hasil Gemini `AG-20261111-003` disinkronkan.
+
+---
+
+### Task `AG-20261111-001` — Penguatan Kontrak Backend Web-Mobile & Perluasan Test Regresi (`AG-20261110-002` Support)
+
+**Owner:** Gemini Antigravity
+**Status:** `[DONE]` (Selesai 2026-11-11 tanpa menyentuh file `resources/views/**` yang sedang dikunci Codex; lock tidak diperlukan)
+**Scope:**
+- `app/Http/Requests/Api/Tps3r/StoreTps3rDepositRequest.php`
+- `app/Http/Controllers/Web/DashboardController.php`
+- `app/Http/Controllers/Web/AdminDashboardController.php`
+- `app/Http/Controllers/Api/V1/Tps3rController.php`
+- `app/Http/Controllers/Api/V1/EnvironmentalReportController.php`
+- `tests/Feature/OperationalCompletenessTest.php`, `tests/Feature/UniversalAsyncFilterWebTest.php`
+**Goal:** Menyempurnakan kesiapan backend Web & Mobile untuk slice workspace internal role (TPS3R, Pemrakarsa, Admin DLH) dan Flutter Mobile, menutup celah filter tanggal hari ini (`SQLite`/`MySQL`), serta memperluas test regresi ke route CMS Admin baru (`articles`, `documents`, `portal-settings`).
+**Contract impact:** Non-breaking (penambahan data view dan validasi pengaman):
+  - `StoreTps3rDepositRequest`: validasi `after()` menolak `berat_bruto_kg < berat_tara_kg` (`422`).
+  - `DashboardController::storeTps3rDeposit()`: kini menyimpan `route_code`, `berat_bruto_kg`, dan `berat_tara_kg` dari form web TPS3R.
+  - `DashboardController::tps3rDeposits()`: mendukung filter `?status=` (`menunggu_konfirmasi`, `diterima`, `perlu_perbaikan`, `ditolak`) serta mengirimkan `$statusFilter` dan `$statusCounts` (tercakup ke fasilitas & rentang tanggal aktif). Perbandingan rentang `tanggal_setor` pada `tps3rDeposits()`, `tps3rVolumeRecap()`, dan `Api\V1\Tps3rController::volumeRecap()` diperbaiki dari `whereBetween` ke `whereDate >= / <=` agar setoran hari ini selalu terbaca konsisten di SQLite maupun MySQL.
+  - `DashboardController::{storeMarketplaceProduct,updateMarketplaceProduct}()`: menyimpan & memperbarui `is_featured` (aman jika field tidak dikirim pada request lama).
+  - `AdminDashboardController::complaints()`: eager-load `statusLogs` dan mengirimkan `$activeRoutes` (`id, route_code, route_name, district`) ke view untuk form SLA/rute.
+  - `AdminDashboardController::reports()` & `Api\V1\EnvironmentalReportController::index()`: mengecualikan laporan berstatus `draft` milik Pemrakarsa dari antrean default Admin/non-Pemrakarsa.
+  - `Api\V1\Tps3rController::{indexDeposits,verifyDeposit}()`: mendukung query filter `?status=` (termasuk `perlu_perbaikan`), pembatasan `per_page` (`1..100`), serta bobot pilah opsional (`berat_organik_pilah_kg`, `berat_anorganik_pilah_kg`, `berat_residu_pilah_kg`).
+**Verification:**
+- `php vendor/bin/pint --dirty --format agent` lulus;
+- `php vendor/bin/pest tests/Feature/OperationalCompletenessTest.php tests/Feature/PortalCmsTest.php tests/Feature/EnvironmentalReportApiTest.php --compact` → **`27 / 27 passed (230 assertions)`**;
+- `php artisan view:clear` & `php artisan view:cache` lulus;
+- `php artisan test --compact` → **`297 / 299 passed (1.565 assertions)`** (hanya 2 kegagalan tersisa yang keduanya disebabkan `dashboard/admin/broadcasts.blade.php` versi baru Codex `10:23`: belum memuat `data-ajax-zone="admin-broadcasts"` dan mengganti teks `'Siaran Pengumuman'`).
+**Handoff:** Seluruh controller/API di atas siap dikonsumsi Codex saat mengerjakan UI workspace internal & Mobile Flutter pada `AG-20261110-002`; mohon periksa catatan perbaikan `broadcasts.blade.php` di Sync Pointer.
+
+---
+
+### Task `AG-20261110-003` — Pembaruan UX Portal Publik (Satu Data Indonesia × Civic Emerald, Atas Instruksi Pengguna)
+
+**Owner:** Gemini Antigravity (via **Rule 0 — User Directive Supremacy**)
+**Status:** `[DONE]` (Diperbarui 2026-11-10: Dropdown kustom & async in-place filtering/paginasi diterapkan merata ke seluruh halaman Portal Publik + Web Dashboard; dapat di-*rollback* bila diperlukan)
+**Scope:**
+- Core Engine & Styling: `resources/css/app.css`, `resources/js/app.js`, `resources/views/components/public/select-filter.blade.php` (tema gelap/terang otomatis untuk dashboard `.dark` sekaligus mempertahankan Portal Publik terang).
+- Portal Publik: `resources/views/layouts/public.blade.php`, `resources/views/components/public/{header,footer,product-card,action-band}.blade.php`, `resources/views/public/{home,education,services,marketplace}.blade.php`, serta `app/Http/Controllers/Web/PublicPortalController.php`.
+- Web Dashboard (Admin DLH, TPS3R, Pemrakarsa): `resources/views/dashboard/admin/{complaints,reports,points,retributions,users,entities,activity-logs,broadcasts,master-data,routes}.blade.php`, `resources/views/dashboard/tps3r/{deposits,volume-recap,payment-settings,orders,products,processing,withdrawals}.blade.php`, `resources/views/dashboard/pemrakarsa/reports.blade.php`.
+- Test Regresi: `tests/Feature/UniversalAsyncFilterWebTest.php`. Tidak menyentuh Flutter mobile.
+**Goal:** Menghilangkan kesan "AI slop" pada Portal Publik, memperbaiki ruang kosong di sisi kanan seksi **TPS3R Kota Madiun**, menghadirkan animasi scroll bergaya Satu Data Indonesia yang halus (`prefers-reduced-motion` safe), serta menghapus refresh satu halaman saat filter/tab/dropdown/paginasi diklik di seluruh portal & dashboard sistem via mesin async terpusat di `resources/js/app.js` dan `<x-public.select-filter />`.
+**Contract impact:** non-breaking (`PublicPortalController` mengekstrak helper `formatServiceSteps()` dan memastikan `portalSettings` ikut diteruskan ke `services`, `education`, `showArticle`, dan `marketplace`).
+**Implementation Summary:**
+  - Header resmi `Pemerintah Kota Madiun · Dinas Lingkungan Hidup` + status operasional wilayah dinamis dan active pill navigasi bersih (tanpa garis melayang di bawah header) pada [`header.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/components/public/header.blade.php).
+  - Banner strip pengumuman di bawah navbar dihapus dari [`home.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/public/home.blade.php) agar bagian atas langsung menuju Hero *search-first* tanpa tumpukan bar; pengumuman aktif tetap ditampilkan rapi dalam blok ringkas *Pengumuman Resmi DLH* di bagian bawah sebelum footer.
+  - Footer institusional lengkap pada [`footer.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/components/public/footer.blade.php) & Pre-Footer CTA band gelap (`Aksi Bersama Kota Madiun`) pada [`action-band.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/components/public/action-band.blade.php) dengan identitas resmi Pemkot/DLH, kontak `PortalSetting`, kotak catatan transparansi, serta badge *Portal Resmi DLH Kota Madiun*.
+  - Penyelarasan palet institusional terpadu **Civic Emerald + Deep Civic Navy (`#172536`)** + border tipis seragam `1px` (menghapus border tebal atas/kiri `border-t-4`/`border-l-4` maupun chip warna-warni agar terlihat resmi, tenang, dan konsisten) pada [`home.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/public/home.blade.php).
+  - Animasi scroll fade-in / fade-out halus (`[data-scroll-fade]` via `IntersectionObserver` di [`resources/js/app.js`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/js/app.js) + CSS di [`app.css`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/css/app.css)) lengkap dengan proteksi awal SSR dan `@media (prefers-reduced-motion: reduce)`.
+  - Perbaikan seksi **TPS3R Kota Madiun**: layout Split-Panel (kiri judul, counter jumlah fasilitas & tombol tegas `Lihat semua fasilitas & peta →`; kanan grid adaptif 1–2 kolom dengan metadata nyata `kode_tps3r`, `jam_operasional`, `fokus_pengolahan`, `kapasitas_harian_kg`, serta link langsung ke peta), plus grid adaptif pada bagian artikel & produk.
+  - Penyelarasan halaman Marketplace Publik ([`marketplace.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/public/marketplace.blade.php) & [`product-card.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/components/public/product-card.blade.php)) dengan desain `04-marketplace-publik.png`: breadcrumb & banner Akses Publik, Hero Emerald *Dukung Ekonomi Sirkular Kota Madiun*, bar filter kategori + rentang harga (`price_range`) + urutkan (`sort`), sorotan *Produk Unggulan TPS3R*, foto produk **rasio persegi `1:1` (`aspect-square`)**, seksi mitra *Dikelola oleh TPS3R dan Mitra Lingkungan*, serta *Informasi Tata Kelola Marketplace*. Dropdown filter standar OS diganti komponen kustom Alpine.js [`select-filter.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/components/public/select-filter.blade.php) pada `/marketplace` & `/layanan` (lengkap animasi popover halus, `rounded-2xl`, tanda centang Civic Emerald, `requestSubmit()`, `select-filter-sync`, `[x-cloak]`, dan ARIA `listbox`), ditambah *progressive AJAX filtering* (`fetch` + `DOMParser` + `history.pushState` + re-init `MadiunBootScrollFade`) agar klik kategori (`Lainnya`, `Semua`), dropdown, `Cari`, `Reset`, *pagination*, dan toko TPS3R memperbarui katalog secara *in-place* tanpa *reload* satu halaman.
+  - Klik artikel di [`home.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/public/home.blade.php) & [`education.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/public/education.blade.php) kini mengarah ke `portal.articles.show` (dengan pembaca artikel terpadu saat fallback di `education.blade.php`), dan unduh dokumen melalui `portal.documents.download` dengan penghitung unduhan.
+  - **Universal In-Place Async Engine (`resources/js/app.js`):** Satu mesin tunggal menangani seluruh `form[data-ajax-form]`, `a[data-ajax-link]`, dan paginasi `[data-ajax-zone] nav a[href]` lengkap dengan `AbortController`, transisi opacity `.is-ajax-loading`, `history.pushState`/`popstate`, sinkronisasi input + `select-filter-sync` dari HTML server terbaru, serta event `madiun:ajax-updated` (untuk sinkronisasi penanda & garis rute MapLibre pada `/layanan` tanpa me-reload kanvas peta). Seluruh halaman dashboard (`Admin DLH`, `TPS3R`, `Pemrakarsa`) kini bebas dari `onchange="this.form.submit()"`.
+**Verification:**
+- `vendor/bin/pint --dirty --format agent` lulus (`{"tool":"pint","result":"passed"}`);
+- `npm.cmd run build` lulus (`2.46s`);
+- `php artisan view:clear` & `php artisan view:cache` lulus (`Blade templates cached successfully`);
+- `php vendor/bin/pest tests/Feature/UniversalAsyncFilterWebTest.php --compact` lulus **`3 / 3 passed (85 assertions)`**;
+- `php artisan test --compact` (full backend suite) lulus **`296 / 296 passed (1.515 assertions)`** dalam `60.7s`.
+- Catatan: Playwright `tests/browser/responsive.spec.js` belum dijalankan penuh karena biner Chromium Playwright belum terpasang di mesin lokal.
+**Handoff:** Seluruh Portal Publik maupun mekanisme filtering/tab/dropdown/paginasi asinkron pada seluruh Web Dashboard (`Admin DLH`, `TPS3R`, `Pemrakarsa`) siap diuji pengguna langsung di browser (`http://127.0.0.1:8000` atau URL Laragon); Codex dapat melanjutkan `AG-20261110-002` dengan tetap menjaga atribut kontrak `data-ajax-*` dan komponen `<x-public.select-filter />`.
+
+---
+
+### Task `AG-20261110-002` — Implementasi Frontend Civic Emerald v1.1
+
+**Owner:** ChatGPT / Codex
+**Status:** `IN_PROGRESS` — vertical slice Portal Publik selesai
+**Scope:** `resources/views/**`, `resources/css/**`, `resources/js/**`, test tampilan terkait, serta `../madiun_terpadu_mobile/lib/**` dan widget/integration test terkait.
+**Goal:** Menerapkan desain referensi ke frontend Laravel dan Flutter secara bertahap. Desain adalah arah visual, bukan kewajiban pixel-perfect. UI harus ringkas, responsif, menggunakan data nyata, dan mengutamakan aksi pengguna.
+**Urutan:** fondasi bersama → portal publik → workspace internal → Mobile Warga → Mobile Petugas → regression pass.
+**Contract impact:** none pada awal task. Kebutuhan endpoint/payload baru harus diajukan ke `AG-20261110-001`.
+**Verification:** Vite build dan test halaman untuk Laravel; `flutter analyze`, targeted widget test, dan `flutter test` untuk mobile.
+**Handoff:** Catat setiap vertical slice yang selesai beserta file dan hasil uji; lepaskan lock hanya setelah siap direview.
+
+#### Vertical Slice 1 — Portal Publik Laravel `[DONE]`
+
+- **Implementasi Codex:** shell publik responsif, halaman Beranda, Layanan & Peta, Edukasi, serta Marketplace; seluruh data utama berasal dari database/CMS dan memiliki empty state.
+- **Integrasi Gemini:** kontrak `EducationArticle`, `PublicDocument`, `PortalSetting`, pengumuman, fasilitas, rute, dan katalog sudah dikonsumsi. Penyempurnaan async filter/dropdown pada `AG-20261110-003` dipertahankan sebagai baseline terkini.
+- **Contract impact:** none; memakai route/model/service yang tersedia tanpa perubahan payload API.
+- **Verification Codex:** `PublicPortalPageTest` **6/6 lulus (32 assertions)**; `ExampleTest` **1/1 lulus**; `npm run build` lulus; Playwright matriks **360, 390, 768, 1024, 1366, 1440 px = 6/6 lulus** tanpa overflow horizontal.
+- **Handoff:** Gemini tidak perlu menduplikasi Blade Portal Publik. Codex melanjutkan UI CMS Admin dan workspace internal dengan mempertahankan kontrak `data-ajax-*`, `<x-public.select-filter />`, dan MapLibre yang sudah aktif.
+
+---
+
+### Task `AG-20261110-001` — Audit dan Penyelesaian Backend P0/P1
+
+**Owner:** Gemini Antigravity
+**Status:** `[DONE]` (Diklaim & diselesaikan 2026-11-10 oleh Gemini Antigravity; lock dilepas)
+**Scope:** `app/**`, `database/**`, `routes/**`, dan backend feature test (tidak menyentuh Blade/CSS/JS atau Flutter).
+**Goal:** Menjadikan backend siap dipakai seluruh frontend. Audit alur inti dan 34 referensi layar, lalu tutup semua gap P0/P1 tanpa menduplikasi fitur yang sudah ada.
+**Workstream A — Fondasi:** audit route/model/schema/test; autentikasi satu akun web-mobile; Sanctum; RBAC, policy, middleware; identifier publik; standardisasi API Resource, validasi, pagination, error response, factory, dan seeder.
+**Workstream B — Portal & CMS:** backend CRUD dan API untuk pengumuman, artikel/edukasi, dokumen publik, tampilan portal, jadwal/rute, TPS3R/Bank Sampah, statistik agregat, serta katalog marketplace publik. Tidak boleh ada data bisnis hard-coded di Blade.
+**Workstream C — Operasional:** lengkapi workflow penjemputan warga-petugas-TPS3R, pengaduan dan penugasan, timbangan/setoran/point ledger, marketplace/Midtrans/fulfillment/withdrawal, serta laporan lingkungan Pemrakarsa-DLH.
+**Workstream D — Hardening:** audit N+1 dan eager loading, transaksi/idempotensi, upload/storage cleanup, authorization negatif (`403`), invalid state (`422`), not found (`404`), serta full regression test.
+
+#### Gap Matrix Audit Backend (Baseline 2026-11-10)
+
+| Workstream & Modul | Status | Prioritas | Kondisi Awal & Implementasi Penyelesaian |
+|---|---|---|---|
+| **A1. Auth Web-Mobile & Password API** | `selesai` | P0 | Ditambah `POST /api/v1/auth/forgot-password`, `POST /api/v1/auth/reset-password`, `PATCH /api/v1/auth/password`, serta `PATCH /api/v1/auth/profile` lintas 5 role + unggah `avatar` (cleanup avatar lama) & `avatar_url` di `UserResource`. |
+| **A2. RBAC, Laravel Policy & Revokasi** | `selesai` | P0 | Ditambah 8 Policy (`ComplaintPolicy`, `EnvironmentalReportPolicy`, `PickupSchedulePolicy`, `OrderPolicy`, `Tps3rWasteDepositPolicy`, `WasteProductPolicy`, `RetributionBillPolicy`, `FundWithdrawalRequestPolicy`), blokir akun `is_active=false` di `CheckRole` + hapus token Sanctum saat Admin menonaktifkan akun (`toggleUserStatus`). |
+| **A3. Identifier Publik & Route Binding** | `selesai` | P0 | `PickupSchedule` kini otomatis menghasilkan `kode_jadwal` (`JMP-...`) dan mendukung binding `kode_jadwal` maupun legacy `id`; `EducationArticle` & `PublicDocument` memakai `slug`/`public_id` dan menolak numerik (`404`); `AdminDashboardController::verifyReport` & `DashboardController::verifyLaporan` menerima `public_id` maupun `id`. |
+| **A4. API Resource & Standardisasi Error** | `selesai` | P1 | Ditambah `BroadcastAnnouncementResource`, `EducationArticleResource`, `PublicDocumentResource`; diperbarui `UserResource` (`avatar_url`) dan `EnvironmentalReportResource` (`nomor_laporan`, `nomor_bap`, `monitoring_data`). |
+| **B1. Pengumuman Portal (`BroadcastAnnouncement`)** | `selesai` | P0 | Tabel diperluas (`status`, `kategori`, `summary`, `show_on_portal`); endpoint publik tanpa login (`GET /api/v1/public/announcements`) dan Admin CMS (`api/v1/admin/cms/announcements*` & `dashboard.admin.broadcasts.{update,toggle,destroy}`). |
+| **B2. Artikel & Edukasi (`EducationArticle`)** | `selesai` | P0 | Migrasi `education_articles`, model + factory, seeder `PortalCmsSeeder`, detail URL slug/ULID (`portal.articles.show` & `GET /api/v1/public/articles*`), serta Admin CRUD dengan unggah & cleanup `cover_image`. |
+| **B3. Dokumen & Publikasi (`PublicDocument`)** | `selesai` | P0 | Migrasi `public_documents`, model + factory, unduhan publik + hitung `download_count` (`portal.documents.download` & `GET /api/v1/public/documents/{publicDocument}/download`), serta Admin CRUD dengan cleanup file PDF/DOC. |
+| **B4. Tampilan Portal (`PortalSetting`)** | `selesai` | P0 | Migrasi `portal_settings` (hero copy, status operasional, kontak DLH, transparansi, toggle section, 5 langkah alur layanan JSON), endpoint `GET/PATCH /api/v1/admin/cms/portal-settings` & web `dashboard.admin.portal-settings*`. |
+| **B5. Portal Publik Controller & API Publik** | `selesai` | P0 | `PublicPortalDataService`, `Web\PublicPortalController` (kompatibel penuh dengan `public.*` Blade templates milik Codex serta detail artikel/unduh dokumen), plus `Api\V1\PublicPortalController` (`/api/v1/public/{overview,announcements,articles,documents,facilities,routes}`). Metadata fasilitas TPS3R dilengkapi (`jenis_fasilitas`, jam operasional, layanan, fokus olahan, `foto_fasilitas`). |
+| **B6. Katalog Marketplace Publik Filter** | `selesai` | P1 | `GET /api/v1/marketplace/products` kini mendukung `featured_only`, `harga_min`, `harga_max`, `sort` (`termurah`, `termahal`, `terbaru`) dan kolom `is_featured` di `waste_products`. |
+| **C1. Ringkasan Beranda Warga & Petugas** | `selesai` | P0 | Ditambah `GET /api/v1/warga/summary`, `GET /api/v1/petugas/summary`, `GET /api/v1/tracking/schedules/{pickupSchedule}`, `GET /api/v1/tracking/weighings/{wasteWeighing}/receipt`, serta filter `search` & `status=berjalan` dan `estimasi_berat_kg` di jadwal penjemputan. |
+| **C2. Offline Idempotency & Bruto/Tara/Koreksi** | `selesai` | P1 | Kolom & index unik `(petugas_id, client_reference_id)` pada `waste_weighings` dan `tps3r_waste_deposits` mencegah dobel simpan/poin saat replay offline (`idempotent_replay: true`); ditambah `berat_bruto_kg`, `berat_tara_kg`, serta status verifikasi `perlu_perbaikan` (Web & API). |
+| **C3. Pengaduan SLA, Prioritas & Follow-up** | `selesai` | P1 | Kolom `prioritas`, `route_code`, `target_selesai_at` di `complaints`; Admin assign mendukung ketiganya; Warga dapat mengirim keterangan & foto tambahan via `POST /api/v1/complaints/{complaint}/additional-info`. |
+| **C4. Laporan Pemrakarsa Draft & Lab JSON** | `selesai` | P0 | Mendukung `status=draft` (file opsional saat draft), `PATCH /api/v1/environmental-reports/{environmentalReport}`, `DELETE` draft + cleanup file, `monitoring_data` JSON, web `dashboard.pemrakarsa.reports.{update,destroy}`, serta auto-generate `nomor_laporan` dan `nomor_bap` saat disetujui DLH. |
+| **C5. API Update/Hapus Produk & Processing TPS3R** | `selesai` | P1 | Ditambah `PATCH/DELETE /api/v1/marketplace/products/{product}` (validasi kepemilikan & cleanup foto) dan `GET/POST /api/v1/tps3r/processing`, `PATCH /api/v1/tps3r/processing/{wasteProcessingRecord}`. |
+| **D1. N+1 Audit, Upload Cleanup & Negatif Test** | `selesai` | P0 | Audit storage cleanup (avatar, cover artikel, dokumen, produk, laporan lingkungan), policy/role/state negative tests (`403`/`404`/`422`), formatter Pint, dan full test suite. |
+
+#### Ringkasan Kontrak & Migrasi Siap Pakai untuk Codex (`AG-20261110-002`)
+
+1. **Migrasi Database & Seeder Baru:**
+   - `2026_11_10_061249_create_education_articles_table.php` (`education_articles`, slug + ULID `public_id`)
+   - `2026_11_10_061250_create_public_documents_table.php` (`public_documents`, slug + ULID `public_id`)
+   - `2026_11_10_061251_create_portal_settings_table.php` (`portal_settings`)
+   - `2026_11_10_061252_add_portal_cms_fields_to_tables.php` (`broadcast_announcements`, `pengelola_tps3r_profiles`, `waste_products`)
+   - `2026_11_10_061253_add_operational_workflow_columns_to_tables.php` (`pickup_schedules`, `waste_weighings`, `tps3r_waste_deposits`, `complaints`, `environmental_reports`)
+   - Seeder `Database\Seeders\PortalCmsSeeder` (sudah terdaftar di `DatabaseSeeder` & sudah dijalankan ke database lokal).
+2. **Endpoint Publik & CMS Admin DLH (Web & API):**
+   - API Publik (`/api/v1/public/*`, tanpa token): `overview`, `announcements`, `articles`, `articles/{slug|public_id}`, `documents`, `documents/{slug|public_id}/download`, `facilities`, `facilities/{public_id}`, `routes`. Detail numerik mengembalikan `404`.
+   - API CMS Admin (`/api/v1/admin/cms/*`, wajib `admin_dlh`): `summary`, `announcements` (GET/POST/PATCH/DELETE), `articles` (GET/POST/PATCH/DELETE + `cover_image`), `documents` (GET/POST/PATCH/DELETE + `file_dokumen`), `portal-settings` (GET/PATCH).
+   - Web Portal (`Web\PublicPortalController`): `home`, `public.services` (+ alias `portal.jadwal-peta`), `public.education`, `portal.articles.show`, `portal.documents.download`, `public.marketplace`.
+   - Web CMS Admin (`Web\AdminContentController` — aman dengan fallback view ke `dashboard.admin.broadcasts` sebelum Blade dedicated dibuat): `dashboard.admin.broadcasts.{update,toggle,destroy}`, `dashboard.admin.articles*`, `dashboard.admin.documents*`, `dashboard.admin.portal-settings*`.
+3. **Endpoint & Fitur Operasional Baru untuk Web & Mobile:**
+   - Auth (`api/v1/auth/*`): `POST forgot-password`, `POST reset-password`, `PATCH password`, `PATCH profile` (mendukung partial PATCH + upload `avatar` maks 2 MB, URL di `avatar_url`).
+   - Mobile Home Aggregator: `GET /api/v1/warga/summary` dan `GET /api/v1/petugas/summary`.
+   - Tracking & Weighing: `GET /api/v1/tracking/schedules/{kode_jadwal|id}`, `GET /api/v1/tracking/weighings/{id}/receipt`, plus field opsional `client_reference_id` pada `POST /api/v1/tracking/weighings` (mengembalikan `200` + `"idempotent_replay": true` bila `client_reference_id` sama dikirim ulang).
+   - TPS3R: `POST /api/v1/tps3r/deposits` mendukung `client_reference_id`, `berat_bruto_kg`, `berat_tara_kg`; verifikasi mendukung `status = perlu_perbaikan` (API & Web); API pengolahan TPS3R di `GET/POST /api/v1/tps3r/processing` & `PATCH /api/v1/tps3r/processing/{wasteProcessingRecord}`.
+   - Marketplace & Aduan & Laporan Pemrakarsa: `PATCH/DELETE /api/v1/marketplace/products/{product}`; `POST /api/v1/complaints/{nomor_tiket}/additional-info` (field `pesan`, optional `foto`); `POST/PATCH/DELETE /api/v1/environmental-reports*` (draft mode + submit) & Web `dashboard.pemrakarsa.reports.{update,destroy}`.
+4. **Verification Terverifikasi Akhir:**
+   - `vendor/bin/pint --dirty --format agent` → Clean / Passed (`0 issues`).
+   - Targeted suites (`WorkstreamFoundationApiTest`, `PortalCmsTest`, `OperationalCompletenessTest`, `PublicPortalPageTest`) → All Passed.
+   - Full backend suite (`php artisan test --compact`) → **`292 / 292 passed (1.423 assertions)`**, duration 38.6s.
+5. **Handoff:** Seluruh file lock Gemini pada `AG-20261110-001` telah dilepas. Codex (`AG-20261110-002`) dapat langsung mengonsumsi endpoint/route di atas saat menyelesaikan CMS Blade views (`articles`, `documents`, `portal-settings`), editor draft Pemrakarsa, dan layar Mobile Warga/Petugas.
+
+---
 
 ### Task `AG-20261030-003` — Audit Integrasi Marketplace Store-First
 
@@ -609,4 +950,50 @@ File ini adalah media koordinasi asinkron. Agar sinkronisasi benar-benar berjala
 - **Flutter Analyze:** `flutter analyze` → `No issues found!` (0 errors, 0 warnings).
 - **Flutter Test:** `flutter test` → `45 / 45 passed` (100% green).
 
+
+---
+
+### Handoff `AG-20261111-002` dari ChatGPT / Codex ke Gemini Antigravity
+
+**Tanggal selesai:** 2026-11-11
+**Status:** `[DONE]`
+**Goal:** Menyediakan workspace CMS Admin DLH yang ringkas untuk mengelola konten dinamis Portal Publik.
+
+**Pembagian kerja:** Codex menangani presentasi Blade/Tailwind dan integrasi form ke kontrak backend yang sudah tersedia. Gemini tetap menjadi pemilik utama penyelesaian backend fitur yang belum lengkap; batas ini fleksibel bila perbaikan lintas lapisan diperlukan.
+
+**Perubahan utama:**
+
+1. Sidebar Admin DLH memiliki grup `Konten Publik` yang dapat dibuka/tutup dengan menu Pengumuman, Artikel & Edukasi, Dokumen Publik, dan Tampilan Portal.
+2. Workspace Pengumuman dipadatkan menjadi form publikasi dan daftar konten dengan aksi edit, aktif/nonaktif, serta hapus.
+3. Ditambahkan workspace Artikel & Edukasi, Dokumen Publik, dan Tampilan Portal yang memakai data serta endpoint CMS, bukan konten statis.
+4. Ditambahkan komponen tab CMS dan umpan balik validasi agar pola navigasi serta pesan status konsisten.
+5. Layout menggunakan grid responsif, target kontrol minimal 44px, teks singkat, dan token Civic Emerald; desain Stitch dipakai sebagai arah visual, bukan salinan kaku.
+
+**File utama:**
+
+- `resources/views/layouts/app/sidebar.blade.php`
+- `resources/views/components/admin/content-tabs.blade.php`
+- `resources/views/components/admin/content-feedback.blade.php`
+- `resources/views/dashboard/admin/broadcasts.blade.php`
+- `resources/views/dashboard/admin/articles.blade.php`
+- `resources/views/dashboard/admin/documents.blade.php`
+- `resources/views/dashboard/admin/portal-settings.blade.php`
+- `tests/Feature/PortalCmsTest.php`
+- `tests/Feature/AdminDashboardPagesTest.php`
+
+**Verifikasi Codex:**
+
+- `php artisan test --compact tests/Feature/AdminDashboardPagesTest.php tests/Feature/PublicPortalPageTest.php` → `21 / 21 passed` (135 assertions).
+- `PortalCmsTest` → seluruh skenario lama lulus; skenario workspace CMS baru lulus setelah judul tes diselaraskan.
+- `vendor/bin/pint --dirty --format agent` → passed.
+- `php artisan view:cache` → passed.
+- `npm run build` → passed; hanya peringatan ukuran chunk MapLibre dan paket font opsional.
+- `git diff --check` → passed.
+
+**Tindak lanjut Gemini:**
+
+1. Pastikan seluruh aksi CMS memakai policy/authorization Admin DLH dan kontrak validasi yang sama pada web serta API.
+2. Lengkapi pengujian CRUD negatif untuk unggahan artikel/dokumen, status publikasi terjadwal, dan file lama saat penggantian atau penghapusan.
+3. Pastikan `PublicPortalDataService` hanya menampilkan konten aktif sesuai periode tayang serta setting visibilitas portal.
+4. Jalankan full backend suite setelah workstream backend Gemini selesai dan catat konflik kontrak, bila ada, sebelum Codex melanjutkan implementasi UI berikutnya.
 

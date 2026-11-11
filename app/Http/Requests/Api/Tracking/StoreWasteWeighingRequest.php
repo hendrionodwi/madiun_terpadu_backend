@@ -39,6 +39,7 @@ class StoreWasteWeighingRequest extends FormRequest
         return [
             'warga_id' => ['required', 'integer', 'exists:users,id'],
             'pickup_schedule_id' => ['nullable', 'integer', 'exists:pickup_schedules,id'],
+            'client_reference_id' => ['nullable', 'string', 'max:100'],
             'items' => ['nullable', 'array', 'min:1'],
             'items.*.jenis_sampah' => ['required_with:items', 'string', Rule::in($allowedCategories)],
             'items.*.berat_kg' => ['required_with:items', 'numeric', 'min:0.1', 'max:9999.99'],

@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -221,9 +222,12 @@ class DashboardController extends Controller
             'pengelola_id' => $pengelola->id,
             'tps3r_profile_id' => $tps3rProfile->id,
             'nomor_resi' => 'DEP-'.now()->format('Ymd').'-'.strtoupper(Str::random(6)),
+            'route_code' => $validated['route_code'] ?? null,
             'sumber_sampah' => $validated['sumber_sampah'],
             'jenis_sampah' => $validated['jenis_sampah'],
             'berat_kg' => (float) $validated['berat_kg'],
+            'berat_bruto_kg' => isset($validated['berat_bruto_kg']) ? (float) $validated['berat_bruto_kg'] : null,
+            'berat_tara_kg' => isset($validated['berat_tara_kg']) ? (float) $validated['berat_tara_kg'] : null,
             'status' => 'diterima',
             'verified_at' => now(),
             'tanggal_setor' => $validated['tanggal_setor'],
@@ -245,7 +249,7 @@ class DashboardController extends Controller
         abort_unless($pengelola->isAdminDlh() || ($tps3rProfile !== null && $deposit->tps3r_profile_id === $tps3rProfile->id), 403);
 
         $validated = $request->validate([
-            'status' => ['required', 'string', 'in:diterima,ditolak'],
+            'status' => ['required', 'string', 'in:diterima,ditolak,perlu_perbaikan'],
             'berat_konfirmasi_kg' => ['nullable', 'numeric', 'min:0.1', 'max:999999.99'],
             'berat_organik_pilah_kg' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'berat_anorganik_pilah_kg' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
@@ -277,9 +281,11 @@ class DashboardController extends Controller
 
         $deposit->update($updateData);
 
-        $msg = $status === 'diterima'
-            ? "Setoran {$deposit->nomor_resi} berhasil diverifikasi dan diterima."
-            : "Setoran {$deposit->nomor_resi} ditolak.";
+        $msg = match ($status) {
+            'diterima' => "Setoran {$deposit->nomor_resi} berhasil diverifikasi dan diterima.",
+            'perlu_perbaikan' => "Setoran {$deposit->nomor_resi} ditandai perlu perbaikan pemilahan.",
+            default => "Setoran {$deposit->nomor_resi} ditolak.",
+        };
 
         return back()->with('status', $msg);
     }
@@ -357,20 +363,34 @@ class DashboardController extends Controller
         $period = $request->validate([
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'status' => ['nullable', 'string', 'in:all,menunggu_konfirmasi,diterima,perlu_perbaikan,ditolak'],
         ]);
         $startDate = $period['start_date'] ?? Carbon::now()->startOfMonth()->toDateString();
         $endDate = $period['end_date'] ?? Carbon::now()->toDateString();
+        $statusFilter = $period['status'] ?? null;
 
-        $deposits = Tps3rWasteDeposit::query()
+        $baseQuery = Tps3rWasteDeposit::query()
             ->where('tps3r_profile_id', $profile?->id)
-            ->whereBetween('tanggal_setor', [$startDate, $endDate])
+            ->whereDate('tanggal_setor', '>=', $startDate)
+            ->whereDate('tanggal_setor', '<=', $endDate);
+
+        $statusCounts = [
+            'all' => (clone $baseQuery)->count(),
+            'menunggu_konfirmasi' => (clone $baseQuery)->where('status', 'menunggu_konfirmasi')->count(),
+            'diterima' => (clone $baseQuery)->where('status', 'diterima')->count(),
+            'perlu_perbaikan' => (clone $baseQuery)->where('status', 'perlu_perbaikan')->count(),
+            'ditolak' => (clone $baseQuery)->where('status', 'ditolak')->count(),
+        ];
+
+        $deposits = (clone $baseQuery)
+            ->when($statusFilter && $statusFilter !== 'all', fn (Builder $query) => $query->where('status', $statusFilter))
             ->with(['petugas:id,name', 'pengelola:id,name', 'weighings.warga:id,name,phone_number'])
             ->latest('tanggal_setor')
             ->latest('id')
             ->paginate(15)
             ->withQueryString();
 
-        return view('dashboard.tps3r.deposits', compact('profile', 'deposits', 'startDate', 'endDate'));
+        return view('dashboard.tps3r.deposits', compact('profile', 'deposits', 'startDate', 'endDate', 'statusFilter', 'statusCounts'));
     }
 
     /**
@@ -494,6 +514,7 @@ class DashboardController extends Controller
             'stok' => (int) $validated['stok'],
             'foto' => $fotoPath,
             'is_available' => $validated['is_available'] ?? true,
+            'is_featured' => (bool) ($validated['is_featured'] ?? false),
         ]);
 
         return to_route('dashboard.tps3r.products')->with('status', 'Produk daur ulang berhasil ditambahkan ke katalog.');
@@ -526,7 +547,9 @@ class DashboardController extends Controller
             $depositQuery->where('tps3r_profile_id', $profile->id);
         }
 
-        $basePeriodQuery = (clone $depositQuery)->whereBetween('tanggal_setor', [$startDate, $endDate]);
+        $basePeriodQuery = (clone $depositQuery)
+            ->whereDate('tanggal_setor', '>=', $startDate)
+            ->whereDate('tanggal_setor', '<=', $endDate);
 
         // Total metrik periode
         $totalVolumeKg = (float) (clone $basePeriodQuery)->sum('berat_kg');
@@ -669,6 +692,7 @@ class DashboardController extends Controller
             'stok' => ['required', 'integer', 'min:0'],
             'foto' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
             'is_available' => ['nullable', 'boolean'],
+            'is_featured' => ['nullable', 'boolean'],
         ], [
             'foto.image' => 'File foto produk harus berupa gambar.',
             'foto.mimes' => 'Format foto harus berupa jpeg, png, jpg, atau webp.',
@@ -683,6 +707,10 @@ class DashboardController extends Controller
             'stok' => (int) $validated['stok'],
             'is_available' => (bool) ($validated['is_available'] ?? false),
         ];
+
+        if ($request->exists('is_featured')) {
+            $updateData['is_featured'] = $request->boolean('is_featured');
+        }
 
         if ($request->hasFile('foto')) {
             if ($wasteProduct->foto && ! str_starts_with($wasteProduct->foto, 'http')) {
@@ -728,6 +756,7 @@ class DashboardController extends Controller
             ->get();
 
         $totalLaporan = $riwayatLaporan->count();
+        $draftCount = $riwayatLaporan->where('status', 'draft')->count();
         $disetujuiCount = $riwayatLaporan->where('status', 'disetujui')->count();
         $menungguCount = $riwayatLaporan->where('status', 'menunggu_verifikasi')->count();
         $perluRevisiCount = $riwayatLaporan->where('status', 'perlu_revisi')->count();
@@ -737,6 +766,7 @@ class DashboardController extends Controller
             'riwayatLaporan' => $riwayatLaporan,
             'stats' => [
                 'total' => $totalLaporan,
+                'draft' => $draftCount,
                 'disetujui' => $disetujuiCount,
                 'menunggu' => $menungguCount,
                 'perlu_revisi' => $perluRevisiCount,
@@ -776,6 +806,7 @@ class DashboardController extends Controller
         $baseCountQuery = EnvironmentalReport::where('pemrakarsa_id', $user->id);
         $reportCounts = [
             'all' => (clone $baseCountQuery)->count(),
+            'draft' => (clone $baseCountQuery)->where('status', 'draft')->count(),
             'menunggu_verifikasi' => (clone $baseCountQuery)->where('status', 'menunggu_verifikasi')->count(),
             'disetujui' => (clone $baseCountQuery)->where('status', 'disetujui')->count(),
             'perlu_revisi' => (clone $baseCountQuery)->where('status', 'perlu_revisi')->count(),
@@ -810,6 +841,8 @@ class DashboardController extends Controller
      */
     public function storeLaporanPemrakarsa(Request $request): RedirectResponse
     {
+        $isDraft = $request->boolean('is_draft') || $request->input('status') === 'draft';
+
         $validated = $request->validate([
             'judul_laporan' => ['required', 'string', 'max:255'],
             'periode_semester' => ['required', 'string', 'in:Semester 1 (Jan - Jun),Semester 2 (Jul - Des)'],
@@ -817,13 +850,17 @@ class DashboardController extends Controller
             'jenis_dokumen' => ['required', 'string', 'in:SPPL,UKL-UPL,AMDAL'],
             'timbulan_sampah_kg' => ['nullable', 'numeric', 'min:0'],
             'metode_pengelolaan' => ['nullable', 'string', 'max:2000'],
-            'file_laporan' => ['required', 'file', 'mimes:pdf,doc,docx', 'max:10240'],
+            'monitoring_data' => ['nullable', 'array'],
+            'status' => ['nullable', 'string', 'in:draft,menunggu_verifikasi'],
+            'file_laporan' => [$isDraft ? 'nullable' : 'required', 'file', 'mimes:pdf,doc,docx', 'max:10240'],
         ]);
 
         /** @var User $user */
         $user = $request->user();
 
-        $path = $request->file('file_laporan')->store('environmental_reports', 'public');
+        $path = $request->hasFile('file_laporan')
+            ? $request->file('file_laporan')->store('environmental_reports', 'public')
+            : null;
 
         EnvironmentalReport::create([
             'pemrakarsa_id' => $user->id,
@@ -833,30 +870,121 @@ class DashboardController extends Controller
             'jenis_dokumen' => $validated['jenis_dokumen'],
             'timbulan_sampah_kg' => isset($validated['timbulan_sampah_kg']) ? (float) $validated['timbulan_sampah_kg'] : null,
             'metode_pengelolaan' => $validated['metode_pengelolaan'] ?? null,
+            'monitoring_data' => $validated['monitoring_data'] ?? null,
             'file_path' => $path,
-            'status' => 'menunggu_verifikasi',
+            'status' => $isDraft ? 'draft' : 'menunggu_verifikasi',
         ]);
 
+        $msg = $isDraft
+            ? 'Draft laporan lingkungan berhasil disimpan dan dapat diselesaikan kapan saja.'
+            : 'Laporan pengelolaan lingkungan hidup semesteran berhasil diunggah dan siap diverifikasi oleh DLH Kota Madiun.';
+
         return redirect()->route('dashboard.pemrakarsa')
-            ->with('status', 'Laporan pengelolaan lingkungan hidup semesteran berhasil diunggah dan siap diverifikasi oleh DLH Kota Madiun.');
+            ->with('status', $msg);
+    }
+
+    /**
+     * Update a draft or revision-requested environmental report for Pemrakarsa.
+     */
+    public function pemrakarsaUpdateReport(Request $request, EnvironmentalReport $environmentalReport): RedirectResponse
+    {
+        Gate::authorize('update', $environmentalReport);
+
+        if (! in_array($environmentalReport->status, ['draft', 'perlu_revisi'], true)) {
+            return back()->withErrors([
+                'report' => 'Laporan yang sudah diajukan atau disetujui tidak dapat diubah.',
+            ]);
+        }
+
+        $submitNow = $request->boolean('submit') || $request->input('status') === 'menunggu_verifikasi';
+
+        $validated = $request->validate([
+            'judul_laporan' => ['sometimes', 'required', 'string', 'max:255'],
+            'periode_semester' => ['sometimes', 'required', 'string', 'in:Semester 1 (Jan - Jun),Semester 2 (Jul - Des)'],
+            'tahun' => ['sometimes', 'required', 'integer', 'min:2020', 'max:2035'],
+            'jenis_dokumen' => ['sometimes', 'required', 'string', 'in:SPPL,UKL-UPL,AMDAL'],
+            'timbulan_sampah_kg' => ['nullable', 'numeric', 'min:0'],
+            'metode_pengelolaan' => ['nullable', 'string', 'max:2000'],
+            'monitoring_data' => ['nullable', 'array'],
+            'file_laporan' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:10240'],
+        ]);
+
+        if ($submitNow && ! $request->hasFile('file_laporan') && empty($environmentalReport->file_path)) {
+            return back()->withErrors([
+                'file_laporan' => 'File laporan wajib diunggah sebelum mengirimkan laporan untuk verifikasi.',
+            ]);
+        }
+
+        $updateData = collect($validated)
+            ->only(['judul_laporan', 'periode_semester', 'tahun', 'jenis_dokumen', 'timbulan_sampah_kg', 'metode_pengelolaan', 'monitoring_data'])
+            ->all();
+
+        if ($request->hasFile('file_laporan')) {
+            if (! empty($environmentalReport->file_path)) {
+                Storage::disk('public')->delete($environmentalReport->file_path);
+            }
+            $updateData['file_path'] = $request->file('file_laporan')->store('environmental_reports', 'public');
+        }
+
+        if ($submitNow) {
+            $updateData['status'] = 'menunggu_verifikasi';
+        }
+
+        $environmentalReport->update($updateData);
+
+        return redirect()->route('dashboard.pemrakarsa.reports')
+            ->with('status', $submitNow ? 'Laporan lingkungan berhasil dikirim untuk verifikasi DLH.' : 'Draft laporan lingkungan berhasil diperbarui.');
+    }
+
+    /**
+     * Delete a draft environmental report owned by Pemrakarsa.
+     */
+    public function pemrakarsaDestroyReport(EnvironmentalReport $environmentalReport): RedirectResponse
+    {
+        Gate::authorize('delete', $environmentalReport);
+
+        if ($environmentalReport->status !== 'draft') {
+            return back()->withErrors([
+                'report' => 'Hanya laporan berstatus draft yang dapat dihapus.',
+            ]);
+        }
+
+        if (! empty($environmentalReport->file_path)) {
+            Storage::disk('public')->delete($environmentalReport->file_path);
+        }
+
+        $environmentalReport->delete();
+
+        return redirect()->route('dashboard.pemrakarsa.reports')
+            ->with('status', 'Draft laporan lingkungan berhasil dihapus.');
     }
 
     /**
      * Admin DLH verifies environmental report.
      */
-    public function verifyLaporan(Request $request, int $id): RedirectResponse
+    public function verifyLaporan(Request $request, string $id): RedirectResponse
     {
         $validated = $request->validate([
             'status' => ['required', 'string', 'in:disetujui,perlu_revisi'],
             'catatan_verifikasi' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $report = EnvironmentalReport::findOrFail($id);
-        $report->update([
+        $report = EnvironmentalReport::query()
+            ->where('public_id', $id)
+            ->when(is_numeric($id), fn ($query) => $query->orWhere('id', (int) $id))
+            ->firstOrFail();
+
+        $updateData = [
             'status' => $validated['status'],
             'catatan_verifikasi' => $validated['catatan_verifikasi'] ?? null,
             'verified_at' => Carbon::now(),
-        ]);
+        ];
+
+        if ($validated['status'] === 'disetujui' && empty($report->nomor_bap)) {
+            $updateData['nomor_bap'] = 'BAP-'.now()->format('Ymd').'-'.strtoupper(Str::random(5));
+        }
+
+        $report->update($updateData);
 
         return redirect()->back()
             ->with('status', 'Verifikasi dokumen laporan lingkungan berhasil diperbarui.');

@@ -1,18 +1,27 @@
 <?php
 
+use App\Http\Controllers\Web\AdminContentController;
 use App\Http\Controllers\Web\AdminDashboardController;
 use App\Http\Controllers\Web\AdminRetributionController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\FundWithdrawalController;
 use App\Http\Controllers\Web\OrderFulfillmentController;
 use App\Http\Controllers\Web\PemrakarsaProfileController;
+use App\Http\Controllers\Web\PublicPortalController;
 use App\Http\Controllers\Web\ReportExportController;
 use App\Http\Controllers\Web\Tps3rPaymentSettingsController;
 use App\Http\Controllers\Web\Tps3rProfileController;
 use App\Http\Controllers\Web\WasteProcessingController;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::get('/', [PublicPortalController::class, 'index'])->name('home');
+Route::get('layanan', [PublicPortalController::class, 'services'])->name('public.services');
+Route::get('jadwal-peta', [PublicPortalController::class, 'services'])->name('portal.jadwal-peta');
+Route::get('edukasi', [PublicPortalController::class, 'education'])->name('public.education');
+Route::get('edukasi/{educationArticle}', [PublicPortalController::class, 'showArticle'])->name('portal.articles.show');
+Route::get('dokumen/{publicDocument}/unduh', [PublicPortalController::class, 'downloadDocument'])->name('portal.documents.download');
+Route::get('marketplace', [PublicPortalController::class, 'marketplace'])->name('public.marketplace');
+Route::view('payment/return', 'payment-return')->name('payment.return');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Primary dynamic dashboard router
@@ -68,9 +77,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // 9. Pemantauan Log Aktivitas Pengguna (Audit Trail)
         Route::get('dashboard/admin/activity-logs', [AdminDashboardController::class, 'activityLogs'])->name('dashboard.admin.activity-logs');
 
-        // 10. Sistem Siaran Notifikasi Pengumuman / Broadcast
+        // 10. Sistem Siaran Notifikasi Pengumuman, Artikel Edukasi, Dokumen & Pengaturan Portal
         Route::get('dashboard/admin/broadcasts', [AdminDashboardController::class, 'broadcasts'])->name('dashboard.admin.broadcasts');
         Route::post('dashboard/admin/broadcasts', [AdminDashboardController::class, 'storeBroadcast'])->name('dashboard.admin.broadcasts.store');
+        Route::patch('dashboard/admin/broadcasts/{broadcastAnnouncement}', [AdminContentController::class, 'updateBroadcast'])->name('dashboard.admin.broadcasts.update');
+        Route::patch('dashboard/admin/broadcasts/{broadcastAnnouncement}/toggle', [AdminContentController::class, 'toggleBroadcast'])->name('dashboard.admin.broadcasts.toggle');
+        Route::delete('dashboard/admin/broadcasts/{broadcastAnnouncement}', [AdminContentController::class, 'destroyBroadcast'])->name('dashboard.admin.broadcasts.destroy');
+
+        Route::get('dashboard/admin/articles', [AdminContentController::class, 'articles'])->name('dashboard.admin.articles');
+        Route::post('dashboard/admin/articles', [AdminContentController::class, 'storeArticle'])->name('dashboard.admin.articles.store');
+        Route::patch('dashboard/admin/articles/{educationArticle}', [AdminContentController::class, 'updateArticle'])->name('dashboard.admin.articles.update');
+        Route::delete('dashboard/admin/articles/{educationArticle}', [AdminContentController::class, 'destroyArticle'])->name('dashboard.admin.articles.destroy');
+
+        Route::get('dashboard/admin/documents', [AdminContentController::class, 'documents'])->name('dashboard.admin.documents');
+        Route::post('dashboard/admin/documents', [AdminContentController::class, 'storeDocument'])->name('dashboard.admin.documents.store');
+        Route::patch('dashboard/admin/documents/{publicDocument}', [AdminContentController::class, 'updateDocument'])->name('dashboard.admin.documents.update');
+        Route::delete('dashboard/admin/documents/{publicDocument}', [AdminContentController::class, 'destroyDocument'])->name('dashboard.admin.documents.destroy');
+
+        Route::get('dashboard/admin/portal-settings', [AdminContentController::class, 'portalSettings'])->name('dashboard.admin.portal-settings');
+        Route::patch('dashboard/admin/portal-settings', [AdminContentController::class, 'updatePortalSettings'])->name('dashboard.admin.portal-settings.update');
 
         // 11. Kelola Retribusi Pelayanan Persampahan Warga (TRK-F-013)
         Route::get('dashboard/admin/retributions', [AdminRetributionController::class, 'index'])->name('dashboard.admin.retributions');
@@ -170,6 +195,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('dashboard/pemrakarsa/laporan', [DashboardController::class, 'storeLaporanPemrakarsa'])
         ->name('dashboard.pemrakarsa.store-laporan')
         ->middleware('role:pemrakarsa,admin_dlh');
+    Route::patch('dashboard/pemrakarsa/reports/{environmentalReport}', [DashboardController::class, 'pemrakarsaUpdateReport'])
+        ->name('dashboard.pemrakarsa.reports.update')
+        ->middleware('role:pemrakarsa');
+    Route::delete('dashboard/pemrakarsa/reports/{environmentalReport}', [DashboardController::class, 'pemrakarsaDestroyReport'])
+        ->name('dashboard.pemrakarsa.reports.destroy')
+        ->middleware('role:pemrakarsa');
     Route::get('dashboard/pemrakarsa/profile', [PemrakarsaProfileController::class, 'edit'])
         ->name('dashboard.pemrakarsa.profile.edit')
         ->middleware('role:pemrakarsa');

@@ -33,6 +33,7 @@ use Illuminate\Support\Carbon;
     'nomor_tiket',
     'pelapor_id',
     'assigned_petugas_id',
+    'route_code',
     'judul',
     'kategori_masalah',
     'deskripsi',
@@ -44,8 +45,10 @@ use Illuminate\Support\Carbon;
     'foto',
     'is_anonim',
     'status',
+    'prioritas',
     'instruksi_admin',
     'assigned_at',
+    'target_selesai_at',
 ])]
 class Complaint extends Model
 {
@@ -75,6 +78,7 @@ class Complaint extends Model
             'longitude' => 'float',
             'is_anonim' => 'boolean',
             'assigned_at' => 'datetime',
+            'target_selesai_at' => 'datetime',
         ];
     }
 

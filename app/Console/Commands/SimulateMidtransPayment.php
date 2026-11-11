@@ -52,15 +52,15 @@ class SimulateMidtransPayment extends Command
         $seller = $order->items->first()?->product?->seller;
         $profile = $seller?->pengelolaTps3rProfile;
 
-        if (! $profile || empty($profile->midtrans_server_key)) {
-            $this->error("TPS3R penjual ({$seller?->name}) belum memiliki Server Key Midtrans terkonfigurasi.");
+        if (! $profile || $profile->webhookSignatureSecret() === '') {
+            $this->error("TPS3R penjual ({$seller?->name}) belum memiliki kredensial tanda tangan webhook Midtrans.");
 
             return self::FAILURE;
         }
 
         $statusCode = in_array($transactionStatus, ['settlement', 'capture'], true) ? '200' : '202';
         $grossAmount = number_format((float) $order->total_harga, 2, '.', '');
-        $signature = hash('sha512', $order->nomor_pesanan.$statusCode.$grossAmount.$profile->midtrans_server_key);
+        $signature = hash('sha512', $order->nomor_pesanan.$statusCode.$grossAmount.$profile->webhookSignatureSecret());
 
         $payload = [
             'order_id' => $order->nomor_pesanan,

@@ -60,6 +60,7 @@ class Tps3rPaymentSettingsController extends Controller
             'midtrans_merchant_id' => ['nullable', 'string', 'max:100'],
             'midtrans_client_key' => ['nullable', 'string', 'max:255'],
             'midtrans_server_key' => ['nullable', 'string', 'max:255'],
+            'midtrans_signature_secret' => ['nullable', 'string', 'max:512'],
             'midtrans_is_production' => ['nullable', 'boolean'],
             'midtrans_is_active' => ['nullable', 'boolean'],
         ]);
@@ -79,6 +80,11 @@ class Tps3rPaymentSettingsController extends Controller
         // Only update server_key if filled (do not wipe if left blank on edit)
         if (! empty($validated['midtrans_server_key'])) {
             $dataToUpdate['midtrans_server_key'] = $validated['midtrans_server_key'];
+        }
+
+        // Keep the saved webhook secret when the masked field is left blank.
+        if (! empty($validated['midtrans_signature_secret'])) {
+            $dataToUpdate['midtrans_signature_secret'] = $validated['midtrans_signature_secret'];
         }
 
         $profile->update($dataToUpdate);

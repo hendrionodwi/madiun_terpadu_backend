@@ -2,6 +2,7 @@
 
 use App\Models\PengelolaTps3rProfile;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 test('pengelola tps3r can view midtrans payment settings and tutorial page', function () {
@@ -17,11 +18,12 @@ test('pengelola tps3r can view midtrans payment settings and tutorial page', fun
         ->assertSee('Gateway Pembayaran Midtrans Mandiri')
         ->assertSee('TPS3R Manguharjo Berdikari')
         ->assertSee('Panduan Menghubungkan Akun Midtrans TPS3R')
+        ->assertSee('Signature Secret Key')
         ->assertSee('Payment Notification URL')
         ->assertSee('Salin URL');
 });
 
-test('pengelola tps3r can update midtrans credentials and server key is encrypted', function () {
+test('pengelola tps3r can update midtrans credentials and secrets are encrypted', function () {
     $user = User::factory()->pengelolaTps3r()->create();
     $profile = PengelolaTps3rProfile::factory()->create(['user_id' => $user->id]);
 
@@ -29,6 +31,7 @@ test('pengelola tps3r can update midtrans credentials and server key is encrypte
         'midtrans_merchant_id' => 'G12345678',
         'midtrans_client_key' => 'SB-Mid-client-SecretKey123',
         'midtrans_server_key' => 'SB-Mid-server-SecretKey456',
+        'midtrans_signature_secret' => 'sandbox-signature-secret-789',
         'midtrans_is_production' => '0',
         'midtrans_is_active' => '1',
     ];
@@ -44,8 +47,14 @@ test('pengelola tps3r can update midtrans credentials and server key is encrypte
     expect($profile->midtrans_merchant_id)->toBe('G12345678');
     expect($profile->midtrans_client_key)->toBe('SB-Mid-client-SecretKey123');
     expect($profile->midtrans_server_key)->toBe('SB-Mid-server-SecretKey456');
+    expect($profile->midtrans_signature_secret)->toBe('sandbox-signature-secret-789');
     expect($profile->midtrans_is_active)->toBeTrue();
     expect($profile->midtrans_is_production)->toBeFalse();
+
+    $storedProfile = DB::table('pengelola_tps3r_profiles')->where('id', $profile->id)->first();
+    expect($storedProfile->midtrans_server_key)->not->toBe('SB-Mid-server-SecretKey456');
+    expect($storedProfile->midtrans_signature_secret)->not->toBe('sandbox-signature-secret-789');
+    expect($profile->toArray())->not->toHaveKeys(['midtrans_server_key', 'midtrans_signature_secret']);
 });
 
 test('tps3r can test midtrans connection successfully via mock ping', function () {

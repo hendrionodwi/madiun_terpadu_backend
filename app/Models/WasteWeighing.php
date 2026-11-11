@@ -30,6 +30,7 @@ use Illuminate\Support\Carbon;
     'petugas_id',
     'pickup_schedule_id',
     'tps3r_waste_deposit_id',
+    'client_reference_id',
     'jenis_sampah',
     'berat_kg',
     'poin_per_kg',

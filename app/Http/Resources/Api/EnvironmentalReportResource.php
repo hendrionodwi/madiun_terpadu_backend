@@ -20,6 +20,8 @@ class EnvironmentalReportResource extends JsonResource
         return [
             'id' => $this->id,
             'public_id' => $this->public_id,
+            'nomor_laporan' => $this->nomor_laporan,
+            'nomor_bap' => $this->nomor_bap,
             'pemrakarsa_id' => $this->pemrakarsa_id,
             'pemrakarsa' => $this->whenLoaded('pemrakarsa', fn () => [
                 'id' => $this->pemrakarsa->id,
@@ -32,8 +34,9 @@ class EnvironmentalReportResource extends JsonResource
             'jenis_dokumen' => $this->jenis_dokumen,
             'timbulan_sampah_kg' => $this->timbulan_sampah_kg,
             'metode_pengelolaan' => $this->metode_pengelolaan,
+            'monitoring_data' => $this->monitoring_data,
             'file_path' => $this->file_path,
-            'file_url' => Storage::disk('public')->url($this->file_path),
+            'file_url' => $this->file_path ? Storage::disk('public')->url($this->file_path) : null,
             'status' => $this->status,
             'catatan_verifikasi' => $this->catatan_verifikasi,
             'assigned_petugas_id' => $this->assigned_petugas_id,

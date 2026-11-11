@@ -3,16 +3,20 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Web\WasteProcessingController;
 use App\Http\Requests\Api\Tps3r\StoreTps3rDepositRequest;
 use App\Models\MasterData;
 use App\Models\PengelolaTps3rProfile;
 use App\Models\Tps3rWasteDeposit;
 use App\Models\User;
+use App\Models\WasteProcessingRecord;
 use App\Models\WasteWeighing;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -65,9 +69,15 @@ class Tps3rController extends Controller
             $query->where('sumber_sampah', (string) $request->sumber_sampah);
         }
 
+        if ($request->filled('status')) {
+            $query->where('status', (string) $request->status);
+        }
+
+        $perPage = min(max((int) ($request->per_page ?? 15), 1), 100);
+
         $deposits = $query->latest('tanggal_setor')
             ->latest('id')
-            ->paginate((int) ($request->per_page ?? 15));
+            ->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -87,6 +97,8 @@ class Tps3rController extends Controller
      */
     public function showDeposit(Tps3rWasteDeposit $deposit): JsonResponse
     {
+        Gate::authorize('view', $deposit);
+
         $deposit->load([
             'pengelola:id,name,phone_number',
             'petugas:id,name,phone_number',
@@ -122,6 +134,27 @@ class Tps3rController extends Controller
         $petugasId = $currentUser->isPetugasLapangan()
             ? $currentUser->id
             : ($validated['petugas_id'] ?? null);
+
+        $clientReferenceId = isset($validated['client_reference_id']) && trim((string) $validated['client_reference_id']) !== ''
+            ? trim((string) $validated['client_reference_id'])
+            : null;
+
+        if ($clientReferenceId !== null && $petugasId !== null) {
+            $existingDeposit = Tps3rWasteDeposit::query()
+                ->where('petugas_id', $petugasId)
+                ->where('client_reference_id', $clientReferenceId)
+                ->with(['pengelola:id,name', 'petugas:id,name', 'tps3rProfile', 'weighings.warga:id,name'])
+                ->first();
+
+            if ($existingDeposit !== null) {
+                return response()->json([
+                    'success' => true,
+                    'idempotent_replay' => true,
+                    'message' => 'Setoran sampah TPS3R dari sinkronisasi offline sudah tercatat sebelumnya.',
+                    'data' => $existingDeposit,
+                ], Response::HTTP_OK);
+            }
+        }
 
         $nomorResi = 'DEP-'.date('Ymd').'-'.strtoupper(Str::random(6));
 
@@ -165,10 +198,13 @@ class Tps3rController extends Controller
             'tps3r_profile_id' => $profile->id,
             'petugas_id' => $petugasId,
             'nomor_resi' => $nomorResi,
+            'client_reference_id' => $clientReferenceId,
             'route_code' => $validated['route_code'] ?? null,
             'sumber_sampah' => $validated['sumber_sampah'],
             'jenis_sampah' => $validated['jenis_sampah'],
             'berat_kg' => (float) $validated['berat_kg'],
+            'berat_bruto_kg' => isset($validated['berat_bruto_kg']) ? (float) $validated['berat_bruto_kg'] : null,
+            'berat_tara_kg' => isset($validated['berat_tara_kg']) ? (float) $validated['berat_tara_kg'] : null,
             'berat_organik_pilah_kg' => isset($validated['berat_organik_pilah_kg']) ? (float) $validated['berat_organik_pilah_kg'] : null,
             'berat_anorganik_pilah_kg' => isset($validated['berat_anorganik_pilah_kg']) ? (float) $validated['berat_anorganik_pilah_kg'] : null,
             'berat_residu_pilah_kg' => isset($validated['berat_residu_pilah_kg']) ? (float) $validated['berat_residu_pilah_kg'] : null,
@@ -213,8 +249,11 @@ class Tps3rController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => ['required', 'string', 'in:diterima,ditolak'],
+            'status' => ['required', 'string', 'in:diterima,ditolak,perlu_perbaikan'],
             'berat_konfirmasi_kg' => ['nullable', 'numeric', 'min:0.1', 'max:999999.99'],
+            'berat_organik_pilah_kg' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'berat_anorganik_pilah_kg' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'berat_residu_pilah_kg' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'catatan_verifikasi' => ['nullable', 'string', 'max:500'],
         ]);
 
@@ -223,16 +262,28 @@ class Tps3rController extends Controller
             ? (float) $validated['berat_konfirmasi_kg']
             : ($status === 'diterima' ? $deposit->berat_kg : null);
 
-        $deposit->update([
+        $updateData = [
             'status' => $status,
             'berat_konfirmasi_kg' => $beratKonfirmasi,
             'verified_at' => now(),
             'catatan_verifikasi' => $validated['catatan_verifikasi'] ?? null,
-        ]);
+        ];
+
+        foreach (['berat_organik_pilah_kg', 'berat_anorganik_pilah_kg', 'berat_residu_pilah_kg'] as $pillarField) {
+            if (array_key_exists($pillarField, $validated)) {
+                $updateData[$pillarField] = $validated[$pillarField];
+            }
+        }
+
+        $deposit->update($updateData);
 
         $deposit->load(['pengelola:id,name', 'petugas:id,name', 'tps3rProfile']);
 
-        $statusText = $status === 'diterima' ? 'diterima dan diverifikasi' : 'ditolak';
+        $statusText = match ($status) {
+            'diterima' => 'diterima dan diverifikasi',
+            'perlu_perbaikan' => 'dikembalikan untuk koreksi data',
+            default => 'ditolak',
+        };
 
         return response()->json([
             'success' => true,
@@ -251,7 +302,8 @@ class Tps3rController extends Controller
         $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
         $endDate = $request->input('end_date', Carbon::now()->toDateString());
 
-        $query->whereBetween('tanggal_setor', [$startDate, $endDate]);
+        $query->whereDate('tanggal_setor', '>=', $startDate)
+            ->whereDate('tanggal_setor', '<=', $endDate);
 
         /** @var User $currentUser */
         $currentUser = $request->user();
@@ -375,6 +427,127 @@ class Tps3rController extends Controller
                 'rincian_per_jenis_sampah' => $byJenisSampah,
                 'rincian_per_sumber_sampah' => $bySumberSampah,
             ],
+        ], Response::HTTP_OK);
+    }
+
+    /**
+     * List waste processing batches for TPS3R API parity.
+     */
+    public function indexProcessing(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $query = WasteProcessingRecord::query()
+            ->with(['deposit:id,nomor_resi,jenis_sampah,berat_kg', 'tps3rProfile:id,public_id,nama_tps3r']);
+
+        if ($user->isPengelolaTps3r()) {
+            $query->where('pengelola_id', $user->id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', (string) $request->query('status'));
+        }
+
+        $records = $query->latest('started_on')->latest('id')->paginate(15);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Daftar batch pengolahan sampah TPS3R berhasil diambil.',
+            'data' => $records->items(),
+            'meta' => [
+                'current_page' => $records->currentPage(),
+                'last_page' => $records->lastPage(),
+                'per_page' => $records->perPage(),
+                'total' => $records->total(),
+                'process_methods' => WasteProcessingController::processMethods(),
+            ],
+        ], Response::HTTP_OK);
+    }
+
+    /**
+     * Store a new TPS3R waste processing batch via API.
+     */
+    public function storeProcessing(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $profile = $user->pengelolaTps3rProfile;
+        abort_if($profile === null, Response::HTTP_UNPROCESSABLE_ENTITY, 'Lengkapi profil TPS3R terlebih dahulu.');
+
+        $masterCategoryCodes = MasterData::query()
+            ->where('group', 'waste_category')
+            ->where('is_active', true)
+            ->pluck('code')
+            ->all();
+
+        $allowedWasteTypes = array_unique(array_merge(
+            ['organik', 'anorganik_daur_ulang', 'residu'],
+            $masterCategoryCodes,
+        ));
+
+        $validated = $request->validate([
+            'tps3r_waste_deposit_id' => ['nullable', 'integer', 'exists:tps3r_waste_deposits,id'],
+            'process_method' => ['required', Rule::in(array_keys(WasteProcessingController::processMethods()))],
+            'waste_type' => ['required', Rule::in($allowedWasteTypes)],
+            'input_weight_kg' => ['required', 'numeric', 'min:0.1', 'max:999999.99'],
+            'started_on' => ['required', 'date'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if (isset($validated['tps3r_waste_deposit_id'])) {
+            Tps3rWasteDeposit::query()
+                ->where('pengelola_id', $user->id)
+                ->findOrFail($validated['tps3r_waste_deposit_id']);
+        }
+
+        $record = WasteProcessingRecord::create([
+            ...$validated,
+            'pengelola_id' => $user->id,
+            'tps3r_profile_id' => $profile->id,
+            'status' => 'planned',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Batch pengolahan sampah berhasil dibuat.',
+            'data' => $record->load('deposit:id,nomor_resi,jenis_sampah,berat_kg'),
+        ], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Update a TPS3R waste processing batch status via API.
+     */
+    public function updateProcessing(Request $request, WasteProcessingRecord $wasteProcessingRecord): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        abort_unless($user->isAdminDlh() || $wasteProcessingRecord->pengelola_id === $user->id, Response::HTTP_FORBIDDEN);
+
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(['processing', 'completed', 'cancelled'])],
+            'output_weight_kg' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $allowed = [
+            'planned' => ['processing', 'cancelled'],
+            'processing' => ['completed', 'cancelled'],
+        ];
+
+        if (! in_array($validated['status'], $allowed[$wasteProcessingRecord->status] ?? [], true)) {
+            throw ValidationException::withMessages(['status' => ['Perubahan status pengolahan tidak valid.']]);
+        }
+
+        $wasteProcessingRecord->update([
+            ...$validated,
+            'completed_on' => $validated['status'] === 'completed' ? now()->toDateString() : null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status pengolahan berhasil diperbarui.',
+            'data' => $wasteProcessingRecord->fresh('deposit:id,nomor_resi,jenis_sampah,berat_kg'),
         ], Response::HTTP_OK);
     }
 }
