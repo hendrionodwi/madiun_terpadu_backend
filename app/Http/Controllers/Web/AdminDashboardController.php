@@ -678,6 +678,8 @@ class AdminDashboardController extends Controller
             ->when(is_numeric($id), fn ($q) => $q->orWhere('id', (int) $id))
             ->firstOrFail();
 
+        abort_if($report->status === 'draft', Response::HTTP_NOT_FOUND);
+
         $validated = $request->validate([
             'status' => ['required', 'in:disetujui,perlu_revisi,perlu_cek_lapangan'],
             'catatan_verifikasi' => ['nullable', 'string'],

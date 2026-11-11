@@ -54,6 +54,8 @@ class CreateFundWithdrawalRequest
                     throw ValidationException::withMessages(['source' => ['Pencairan pendapatan toko hanya tersedia untuk pengelola TPS3R.']]);
                 }
 
+                User::query()->whereKey($user->id)->lockForUpdate()->first();
+
                 if ($amount < 10000 || $amount > $this->availableStoreBalance($user)) {
                     throw ValidationException::withMessages(['amount' => ['Nominal minimal Rp10.000 dan tidak boleh melebihi saldo toko tersedia.']]);
                 }
@@ -91,6 +93,11 @@ class CreateFundWithdrawalRequest
     {
         $grossRevenue = (float) OrderItem::query()
             ->whereHas('product', fn ($query) => $query->where('seller_id', $user->id))
+            ->whereHas('order', fn ($query) => $query
+                ->where('status', '!=', 'dibatalkan')
+                ->where(fn ($paidQuery) => $paidQuery
+                    ->where('metode_pembayaran', '!=', 'midtrans')
+                    ->orWhere('status', '!=', 'pending')))
             ->whereHas('order.fulfillments', fn ($query) => $query
                 ->where('seller_id', $user->id)
                 ->where('status', OrderFulfillmentStatus::Selesai->value))

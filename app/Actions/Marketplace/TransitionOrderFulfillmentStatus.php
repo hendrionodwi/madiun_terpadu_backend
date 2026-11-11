@@ -6,7 +6,7 @@ use App\Enums\OrderFulfillmentStatus;
 use App\Models\Order;
 use App\Models\OrderFulfillment;
 use App\Models\OrderItem;
-use App\Models\WargaProfile;
+use App\Models\PointLedger;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -38,18 +38,38 @@ class TransitionOrderFulfillmentStatus
                 ]);
             }
 
+            // Callback status yang sama bersifat idempoten tanpa mengulang efek samping stok/poin
+            if ($lockedFulfillment->status === $targetStatus) {
+                return $lockedFulfillment->fresh();
+            }
+
+            if (
+                $targetStatus !== OrderFulfillmentStatus::Dibatalkan
+                && $order->metode_pembayaran === 'midtrans'
+                && $order->status === 'pending'
+            ) {
+                throw ValidationException::withMessages([
+                    'status' => ['Pesanan Midtrans belum dibayar oleh pembeli sehingga belum dapat diproses.'],
+                ]);
+            }
+
+            $previousStatus = $lockedFulfillment->status;
             $attributes = [
                 'status' => $targetStatus,
                 'catatan_status' => $note,
             ];
 
-            if ($lockedFulfillment->status !== $targetStatus && $targetStatus->timestampColumn() !== null) {
+            if ($targetStatus->timestampColumn() !== null) {
                 $attributes[$targetStatus->timestampColumn()] = now();
             }
 
             $lockedFulfillment->update($attributes);
 
-            if ($targetStatus === OrderFulfillmentStatus::Dibatalkan) {
+            if (
+                $targetStatus === OrderFulfillmentStatus::Dibatalkan
+                && $previousStatus !== OrderFulfillmentStatus::Dibatalkan
+                && $order->status !== 'dibatalkan'
+            ) {
                 // Restore stock for items belonging to this seller
                 $orderItems = OrderItem::where('order_id', $order->id)
                     ->whereHas('product', fn ($q) => $q->where('seller_id', $lockedFulfillment->seller_id))
@@ -62,12 +82,18 @@ class TransitionOrderFulfillmentStatus
                     }
                 }
 
-                // If paid with points, refund points for these items
+                // If paid with points, refund points atomically via PointLedger once
                 if ($order->metode_pembayaran === 'poin_sampah') {
-                    $subtotalRefund = (float) $orderItems->sum('subtotal');
-                    $buyerProfile = WargaProfile::where('user_id', $order->buyer_id)->first();
-                    if ($buyerProfile && $subtotalRefund > 0) {
-                        $buyerProfile->increment('saldo_poin', (int) ceil($subtotalRefund));
+                    $pointsToRefund = (int) ceil((float) $orderItems->sum('subtotal'));
+                    if ($pointsToRefund > 0) {
+                        PointLedger::record(
+                            $order->buyer_id,
+                            'kredit',
+                            'refund_marketplace',
+                            $pointsToRefund,
+                            "Pengembalian poin pembatalan pesanan {$order->nomor_pesanan}",
+                            $order
+                        );
                     }
                 }
             }

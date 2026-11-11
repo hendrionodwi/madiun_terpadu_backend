@@ -180,6 +180,13 @@ class EnvironmentalReportController extends Controller
     {
         Gate::authorize('verify', $environmentalReport);
 
+        if ($environmentalReport->status === 'draft') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Laporan yang masih berstatus draft belum diajukan dan tidak dapat diverifikasi.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         $validated = $request->validated();
         $isNewFieldAssignment = $validated['status'] === 'perlu_cek_lapangan'
             && ($environmentalReport->status !== 'perlu_cek_lapangan'

@@ -55,7 +55,8 @@ Gunakan `BLOCKED` jika pekerjaan tidak dapat dilanjutkan tanpa keputusan atau pe
 | `resources/views/dashboard/admin/{broadcasts,complaints,reports}.blade.php`, `resources/views/dashboard/tps3r/{deposits,deposit-detail,products}.blade.php`, `resources/views/dashboard/pemrakarsa/{create-report,reports}.blade.php`, `resources/views/components/admin/**`, `tests/Feature/{UniversalAsyncFilterWebTest.php,OperationalGapWebTest.php,AdminDashboardPagesTest.php}` | Belum dikunci | FREE | `AG-20261111-004` selesai; dapat diklaim kembali melalui task baru |
 | `resources/views/dashboard.blade.php`, `resources/views/dashboard/admin/{activity-logs,complaints,entities,master-data,points,reports,retributions}.blade.php`, `resources/views/dashboard/tps3r/*.blade.php`, `resources/views/dashboard/pemrakarsa/profile.blade.php`, `../madiun_terpadu_mobile/lib/src/**` (non-WIP Codex) | Belum dikunci | FREE | `AG-20261111-007` selesai (`DONE`); seluruh lock dilepas agar Codex bebas mengklaim Vertical Slice Mobile Petugas & kelanjutan UI saat online |
 | `../madiun_terpadu_mobile/lib/src/features/{home/presentation/{role_home_page,petugas_task_center_page}.dart,tracking/presentation/{weighing_form_page,tps3r_deposit_page}.dart}`, `../madiun_terpadu_mobile/test/{petugas_task_center_test,petugas_route_operation_test,operational_pages_test}.dart` | Belum dikunci | FREE | `AG-20261111-008` selesai; dapat diklaim kembali melalui task baru |
-| `app/Http/Controllers/Api/V1/**`, `app/Http/Requests/**`, `app/Http/Resources/**`, `app/Policies/**`, `routes/api.php`, `tests/Feature/**` | Belum dikunci | FREE | `AG-20261111-009` selesai (`DONE`); siap diklaim untuk `AG-20261111-010` |
+| `app/Http/Controllers/Api/V1/**`, `app/Http/Requests/**`, `app/Http/Resources/**`, `app/Policies/**`, `routes/api.php`, `tests/Feature/**` | Belum dikunci | FREE | `AG-20261111-009` selesai (`DONE`, commit `831bb2f`) |
+| `app/**`, `routes/**`, `database/factories/**`, `database/seeders/**`, `tests/Feature/**` | Belum dikunci | FREE | `AG-20261111-010` selesai (`DONE`); seluruh lock backend telah dilepas agar Codex bebas melanjutkan Mobile Petugas |
 
 ---
 
@@ -67,7 +68,7 @@ Gunakan `BLOCKED` jika pekerjaan tidak dapat dilanjutkan tanpa keputusan atau pe
 - **Baseline terakhir terverifikasi (2026-11-11):**
   - **CMS Hardening Suite (`PortalCmsBackendHardeningTest`):** **`11 / 11 passed`** (`271 assertions`).
   - **Web Dashboard & CMS Suites (`WebDashboardTest` 25/25, `PortalCmsBackendHardeningTest`, `PortalCmsTest`, `PublicPortalPageTest`, `OperationalCompletenessTest`):** lulus penuh dengan Pint clean.
-  - **Full Backend Suite (`php artisan test --compact`):** **`310 / 310 passed`** (`1842 assertions`) setelah sinkronisasi 2 assertion heading Pemrakarsa di [`WebDashboardTest.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/tests/Feature/WebDashboardTest.php#L556-L588).
+  - **Full Backend Suite (`php artisan test --compact`):** **`322 / 322 passed`** (`2047 assertions`) setelah penyelesaian `AG-20261111-009` (`PetugasOperationalContractTest` 7/7) & `AG-20261111-010` (`CrossRoleReleaseCandidateTest` 5/5).
   - **Frontend Assets & Portal Views:** Vite build lulus (`npm.cmd run build` → `2.46s`), `php artisan view:cache` lulus, `git diff --check` bersih.
   - **Flutter Mobile:** `flutter analyze` **0 issues** & `flutter test` **`55 / 55 tests passed`** (pasca-`AG-20261111-005`).
   - **Styling:** Laravel Pint clean (`{"tool":"pint","result":"passed"}`).
@@ -152,9 +153,9 @@ Required tests:
 - Previous Completed Gemini (`Rule 0`, Opsi 1): `AG-20261111-006` (**`DONE`**) — Penyeragaman desain Civic Emerald v1.1 pada layar lanjutan Mobile Warga & Auth di `../madiun_terpadu_mobile`.
 - Codex `AG-20261111-008` **`DONE`** — Vertical Slice Mobile Petugas kini memakai navigasi kanonik `Beranda`, `Tugas`, `Setoran`, `Riwayat`, `Profil`; form timbang dan setoran mempertahankan input saat API gagal serta menyediakan aksi coba ulang yang jelas.
 - Next pointer bersama: regression pass lintas role dan audit integrasi kontrak backend-mobile tanpa membuka refactor besar baru. Perubahan lokal pra-existing pada `.vscode/launch.json`, `android/gradle.properties`, platform generated files, `pubspec.*`, dan marketplace tetap utuh.
-- Active Gemini: selesai `AG-20261111-009` (**`DONE`**) -> lanjut otomatis ke `AG-20261111-010` (Backend Release Candidate: Regression Lintas 5 Role).
+- Active Gemini: tidak ada lock aktif (**`AG-20261111-009` & `AG-20261111-010` `DONE`**); siap handoff ke Codex untuk penyelarasan navigasi Mobile Petugas (`Tugas` = rute penjemputan + verifikasi lapangan).
 - Area terlarang bersama: jangan menimpa Portal Publik (`resources/views/{layouts/public,components/public,public}/**`), mesin asinkron terpusat (`resources/js/app.js`, `resources/css/app.css`), kontrak `data-ajax-*`, atau referensi desain kecuali ada handoff baru.
-- Quality gate aktual (2026-11-11): Backend Laravel **`317 / 317 passed (1968 assertions)`** (`pint` clean, `PetugasOperationalContractTest` `7 / 7 passed`, Vite `build` + `view:cache` lulus); Mobile Flutter **`59 / 59 passed`** & `flutter analyze` **`0 issues`**. Pengujian emulator Petugas berhasil untuk login, buka/mulai tugas, input timbang, setoran TPS3R, dan kegagalan jaringan tanpa kehilangan input.
+- Quality gate aktual (2026-11-11): Backend Laravel **`322 / 322 passed (2047 assertions)`** (`pint` clean, `PetugasOperationalContractTest` `7 / 7 passed`, `CrossRoleReleaseCandidateTest` `5 / 5 passed`, Vite `build` + `view:cache` lulus); Mobile Flutter **`59 / 59 passed`** & `flutter analyze` **`0 issues`**. Pengujian emulator Petugas berhasil untuk login, buka/mulai tugas, input timbang, setoran TPS3R, dan kegagalan jaringan tanpa kehilangan input.
 
 ---
 
@@ -216,15 +217,15 @@ Required tests:
   - `POST /api/v1/tracking/weighings`: menambahkan guard `403` jika `pickup_schedule_id` milik petugas lain, `422` jika jadwal sudah `selesai`/`batal`/`dibatalkan`, `warga_id` tidak cocok dengan jadwal, atau penerima bukan akun `warga`, serta fallback idempotent replay `200` bila terjadi race condition unique constraint `(petugas_id, client_reference_id)` — menjamin poin `PointLedger` dan `WargaProfile.saldo_poin` hanya dikreditkan sekali sambil mempertahankan bentuk `data.{timbangan, items, poin_didapat, total_saldo_poin_warga}`.
   - `POST /api/v1/tps3r/deposits`: menambahkan guard `403` bila `pengelola_tps3r` mengirim `tps3r_profile_id` milik fasilitas lain dan bila `petugas_lapangan` mengirim `weighing_ids` milik petugas lain; `422` bila fasilitas TPS3R non-aktif, `weighing_ids` sudah tertaut ke setoran lain, atau `petugas_id` yang dipilih admin/pengelola bukan petugas aktif; membungkus penautan `weighing_ids` dalam `DB::transaction` + `lockForUpdate()`; serta memperluas idempotency `client_reference_id` untuk setoran tanpa `petugas_id` (`warga_mandiri`) + race collision fallback.
   - `POST /api/v1/complaints/{complaint}/verify` & `/environmental-reports/{id}/field-check`: `fieldCheck` sudah terlindungi dari status final di controller (`EnvironmentalReportApiTest`), dan `ComplaintController::verify` kini menolak (`422`) verifikasi ulang pada pengaduan berstatus final `selesai`/`ditolak`.
-- **Test ditambah & hasil verifikasi:** `tests/Feature/PetugasOperationalContractTest.php` (**`7 passed, 116 assertions`**); targeted Petugas API suite (**`60 passed, 318 assertions`**); full backend suite (`php artisan test --compact`) **`317 / 317 passed (1968 assertions)`**; Laravel Pint clean (`{"tool":"pint","result":"passed"}`); `git diff --check` bersih. Commit checkpoint dibuat terpisah sebelum mengklaim `AG-20261111-010`.
+- **Test ditambah & hasil verifikasi:** `tests/Feature/PetugasOperationalContractTest.php` (**`7 passed, 116 assertions`**); targeted Petugas API suite (**`60 passed, 318 assertions`**); full backend suite (`php artisan test --compact`) **`317 / 317 passed (1968 assertions)`**; Laravel Pint clean (`{"tool":"pint","result":"passed"}`); `git diff --check` bersih. Commit checkpoint: `831bb2f`.
 - **Gap ditunda (P2):** delta-sync / ETag pagination khusus cache offline daftar jadwal & rute petugas pada `GET /api/v1/tracking/routes` & `/schedules` (tidak memengaruhi keandalan rilis saat ini).
 
 ---
 
 ### Task `AG-20261111-010` — Backend Release Candidate: Regression Lintas 5 Role
 
-**Owner:** Gemini Antigravity  
-**Status:** `PROPOSED` — antrean lanjutan; klaim otomatis setelah `AG-20261111-009` berstatus `DONE`.  
+**Owner:** Gemini Antigravity
+**Status:** `DONE` (seluruh lock backend dilepas `FREE`; siap diambil kembali oleh Codex)
 **Scope:** backend Laravel (`app/**`, `routes/**`, `database/factories/**`, `database/seeders/**`, dan `tests/**`) dengan pengecualian semua file frontend. Migration/schema hanya boleh diubah jika gap P0 terbukti dan dicatat sebagai `Contract Change Request`.
 
 **Goal:** membawa backend ke release candidate melalui regression pass berbasis alur bisnis utama, bukan menambah halaman atau fitur dekoratif.
@@ -254,7 +255,28 @@ Required tests:
 - Pint dan `git diff --check` bersih.
 - Handoff mencantumkan jumlah test/assertion terbaru, hash commit, contract impact, serta backlog P2 yang tersisa.
 
-**Handoff ke Codex:** setelah kedua task selesai, Codex akan menyelaraskan navigasi Petugas agar menu `Tugas` menggabungkan tugas rute penjemputan dan verifikasi lapangan tanpa menduplikasi alur.
+**Handoff ke Codex:** kedua task backend release candidate (`AG-20261111-009` & `AG-20261111-010`) sudah selesai (`DONE`) dan seluruh lock dilepas (`FREE`); Codex dapat langsung menyelaraskan navigasi Petugas agar menu `Tugas` menggabungkan tugas rute penjemputan dan verifikasi lapangan tanpa menduplikasi alur maupun memindahkan logika bisnis ke client.
+
+**Handoff `AG-20261111-010`:**
+- **Berkas diubah (`AG-20261111-010`):** `app/Http/Controllers/Api/V1/MarketplaceController.php`, `app/Actions/Marketplace/TransitionOrderFulfillmentStatus.php`, `app/Actions/CreateFundWithdrawalRequest.php`, `app/Http/Controllers/Api/V1/EnvironmentalReportController.php`, `app/Http/Controllers/Web/AdminDashboardController.php`, `tests/Feature/CrossRoleReleaseCandidateTest.php`, `AI_COLLABORATION.md`. Tidak ada file Blade/CSS/JS, migration, ataupun `../madiun_terpadu_mobile/**` yang diubah.
+- **Perbaikan P0/P1 & Contract Impact (100% kompatibel Flutter & Web existing):**
+  - **Marketplace & Midtrans (`MarketplaceController` + `TransitionOrderFulfillmentStatus` + `CreateFundWithdrawalRequest`):**
+    - `POST /api/v1/marketplace/midtrans/notification`: menambahkan verifikasi `gross_amount` vs `order.total_harga` (`422`), `lockForUpdate()` pada `Order`, idempotensi penuh callback `settlement`/`expire`, proteksi terhadap downgrade `pending` maupun restock ganda setelah `dibayar`, serta penolakan `409 Conflict` jika `settlement` datang pada order yang sudah `dibatalkan` (atau `expire` pada order yang sudah dibayar).
+    - `PATCH /api/v1/marketplace/fulfillments/{orderFulfillment}` & Web `fulfillments.update`: menutup celah pembatalan berulang pada status yang sama (`Dibatalkan -> Dibatalkan`) yang sebelumnya menggandakan `stok` dan `saldo_poin`; memindahkan refund poin pembatalan seller dari increment mentah ke `PointLedger::record(..., 'kredit', 'refund_marketplace', ...)` tepat satu kali (`$order->status !== 'dibatalkan'`); serta menolak (`422`) pemrosesan order `midtrans` yang masih berstatus `pending`.
+    - `POST /api/v1/marketplace/checkout` & `confirmReceived`: menolak produk milik toko TPS3R non-aktif (`422`), membungkus `confirmReceived` dalam transaksi terkunci dan menolak konfirmasi pada order `midtrans` yang belum dibayar (`422`).
+    - `CreateFundWithdrawalRequest`: menambahkan `lockForUpdate()` saat pencairan pendapatan toko (`source=store`) serta mengecualikan order `dibatalkan` dan `midtrans` berstatus `pending` dari perhitungan `availableStoreBalance()`.
+  - **Pemrakarsa & Admin DLH (`EnvironmentalReportController` + `AdminDashboardController`):** mencegah verifikasi Admin atas laporan berstatus `draft` yang belum diajukan (`422` API / `404` Web), melengkapi isolasi draf antar-Pemrakarsa.
+  - **Domain lain yang diaudit & hijau (`Warga`, `Petugas Lapangan`, `Pengelola TPS3R`, `Portal Publik`):** perhitungan harga server-side & single-seller checkout, akses aman berbasis `nomor_pesanan`/`public_id`/`slug`, isolasi file legalitas entitas (`local` disk admin-only) dan dokumen publik (`local` disk + filter jadwal rilis/publish), serta seluruh alur `009`.
+- **Hasil verifikasi terbaru:**
+  - `tests/Feature/CrossRoleReleaseCandidateTest.php`: **`5 passed (79 assertions)`**
+  - Targeted domain suites (`MarketplaceApiTest`, `MidtransMultiMerchantApiTest`, `OrderFulfillmentApiTest`, `OrderFulfillmentWebTest`, `OperationalGapApiTest`, `OperationalGapWebTest`, `EnvironmentalReportApiTest`, `SimulateMidtransPaymentCommandTest`, `RetributionApiTest`): **`74 passed (350 assertions)`**
+  - Full backend suite (`php artisan test --compact`): **`322 / 322 passed (2047 assertions)`**
+  - Laravel Pint (`vendor/bin/pint --dirty --format agent`) & `git diff --check`: **bersih**
+  - Checkpoint commits: `AG-20261111-009` = `831bb2f`; checkpoint `AG-20261111-010` di-commit langsung setelah pembaruan dokumen ini (`git add` hanya berkas `010`, tanpa push).
+- **Backlog P2 tersisa (non-blocker RC, ditunda terencana):**
+  1. Delta-sync / ETag pagination cache offline untuk `GET /api/v1/tracking/routes` & `/schedules`.
+  2. API endpoint khusus unggah/pantau dokumen legalitas `EntityVerification` jika nanti alur verifikasi entitas dibuka langsung di Mobile Pemrakarsa/TPS3R (saat ini ditangani penuh via Web Dashboard + `local` disk).
+  3. Migrasi lampiran laporan Pemrakarsa (`environmental_reports`) ke private disk dengan stream controller terotorisasi (saat ini `public` disk dipertahankan sesuai kontrak `EnvironmentalReportResource::file_url` existing agar tidak menimbulkan breaking contract atau migration tambahan).
 
 ---
 

@@ -313,7 +313,8 @@ class MarketplaceController extends Controller
         }
 
         $order = DB::transaction(function () use ($validated, $buyer, $quantitiesByProduct): Order {
-            $products = WasteProduct::whereIn('id', array_keys($quantitiesByProduct))
+            $products = WasteProduct::with('seller:id,is_active')
+                ->whereIn('id', array_keys($quantitiesByProduct))
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get()
@@ -329,6 +330,12 @@ class MarketplaceController extends Controller
                 if (! $product || ! $product->is_available) {
                     throw ValidationException::withMessages([
                         'items' => 'Salah satu produk tidak tersedia lagi.',
+                    ]);
+                }
+
+                if (! $product->seller || ! $product->seller->is_active) {
+                    throw ValidationException::withMessages([
+                        'items' => "Toko TPS3R untuk produk '{$product->nama_produk}' sedang tidak aktif.",
                     ]);
                 }
 
@@ -613,8 +620,6 @@ class MarketplaceController extends Controller
         /** @var User $currentUser */
         $currentUser = $request->user();
 
-        $order->load('fulfillments');
-
         if (! $currentUser->isAdminDlh() && $order->buyer_id !== $currentUser->id) {
             return response()->json([
                 'success' => false,
@@ -622,23 +627,25 @@ class MarketplaceController extends Controller
             ], Response::HTTP_FORBIDDEN);
         }
 
-        if ($order->status === 'selesai') {
-            return response()->json([
-                'success' => true,
-                'message' => 'Pesanan sudah berstatus selesai.',
-                'data' => $order,
-            ], Response::HTTP_OK);
-        }
+        $outcome = DB::transaction(function () use ($order): array {
+            $lockedOrder = Order::with('fulfillments')
+                ->whereKey($order->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if ($order->status === 'dibatalkan') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Pesanan yang telah dibatalkan tidak dapat dikonfirmasi.',
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
+            if ($lockedOrder->status === 'selesai') {
+                return ['status' => 'already_done', 'order' => $lockedOrder];
+            }
 
-        DB::transaction(function () use ($order) {
-            foreach ($order->fulfillments as $fulfillment) {
+            if ($lockedOrder->status === 'dibatalkan') {
+                return ['status' => 'cancelled', 'order' => $lockedOrder];
+            }
+
+            if ($lockedOrder->metode_pembayaran === 'midtrans' && $lockedOrder->status === 'pending') {
+                return ['status' => 'unpaid_midtrans', 'order' => $lockedOrder];
+            }
+
+            foreach ($lockedOrder->fulfillments as $fulfillment) {
                 if ($fulfillment->status !== OrderFulfillmentStatus::Dibatalkan) {
                     $fulfillment->update([
                         'status' => OrderFulfillmentStatus::Selesai,
@@ -648,10 +655,34 @@ class MarketplaceController extends Controller
                 }
             }
 
-            $order->update(['status' => 'selesai']);
+            $lockedOrder->update(['status' => 'selesai']);
+
+            return ['status' => 'completed', 'order' => $lockedOrder];
         });
 
-        $order->load(['items.product', 'fulfillments.seller:id,name']);
+        if ($outcome['status'] === 'already_done') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Pesanan sudah berstatus selesai.',
+                'data' => $outcome['order'],
+            ], Response::HTTP_OK);
+        }
+
+        if ($outcome['status'] === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pesanan yang telah dibatalkan tidak dapat dikonfirmasi.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        if ($outcome['status'] === 'unpaid_midtrans') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pesanan Midtrans yang belum dibayar tidak dapat dikonfirmasi diterima.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $order = $outcome['order']->load(['items.product', 'fulfillments.seller:id,name']);
 
         return response()->json([
             'success' => true,
@@ -705,28 +736,63 @@ class MarketplaceController extends Controller
             ], Response::HTTP_FORBIDDEN);
         }
 
+        $receivedAmountInCents = (int) round(((float) ($payload['gross_amount'] ?? 0)) * 100);
+        $expectedAmountInCents = (int) round(((float) $order->total_harga) * 100);
+
+        if ($receivedAmountInCents !== $expectedAmountInCents) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nominal pembayaran Midtrans tidak sesuai dengan total pesanan.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         $transactionStatus = (string) ($payload['transaction_status'] ?? '');
         $fraudStatus = (string) ($payload['fraud_status'] ?? '');
 
-        DB::transaction(function () use ($order, $transactionStatus, $fraudStatus, $payload) {
-            $order->update(['payment_gateway_response' => $payload]);
+        $outcome = DB::transaction(function () use ($order, $transactionStatus, $fraudStatus, $payload): string {
+            $lockedOrder = Order::with(['items.product', 'fulfillments'])
+                ->whereKey($order->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-            if ($transactionStatus === 'capture') {
-                if ($fraudStatus === 'accept') {
-                    $order->update(['status' => 'dibayar', 'paid_at' => now()]);
+            $isSettlement = ($transactionStatus === 'capture' && $fraudStatus === 'accept')
+                || $transactionStatus === 'settlement';
+
+            if ($isSettlement) {
+                if ($lockedOrder->status === 'dibatalkan') {
+                    return 'conflict_cancelled';
                 }
-            } elseif ($transactionStatus === 'settlement') {
-                $order->update(['status' => 'dibayar', 'paid_at' => now()]);
-            } elseif (in_array($transactionStatus, ['cancel', 'deny', 'expire'], true)) {
-                if ($order->status !== 'dibatalkan') {
-                    // Kembalikan stok produk jika dibatalkan/kadaluarsa oleh Midtrans
-                    foreach ($order->items as $item) {
-                        if ($item->product) {
-                            $item->product->increment('stok', $item->jumlah);
-                        }
+
+                $lockedOrder->update(['payment_gateway_response' => $payload]);
+
+                if ($lockedOrder->status === 'pending') {
+                    $lockedOrder->update(['status' => 'dibayar', 'paid_at' => now()]);
+                }
+
+                return 'ok';
+            }
+
+            if (in_array($transactionStatus, ['cancel', 'deny', 'expire'], true)) {
+                if ($lockedOrder->status === 'dibatalkan') {
+                    return 'ok';
+                }
+
+                if ($lockedOrder->status !== 'pending') {
+                    return 'conflict_paid';
+                }
+
+                $lockedOrder->update(['payment_gateway_response' => $payload]);
+
+                // Kembalikan stok produk hanya sekali saat masih pending
+                foreach ($lockedOrder->items as $item) {
+                    if ($item->product) {
+                        $item->product->increment('stok', $item->jumlah);
                     }
-                    $order->update(['status' => 'dibatalkan']);
-                    foreach ($order->fulfillments as $f) {
+                }
+
+                $lockedOrder->update(['status' => 'dibatalkan']);
+                foreach ($lockedOrder->fulfillments as $f) {
+                    if ($f->status !== OrderFulfillmentStatus::Dibatalkan) {
                         $f->update([
                             'status' => OrderFulfillmentStatus::Dibatalkan,
                             'catatan_status' => "Pembayaran Midtrans {$transactionStatus}.",
@@ -734,10 +800,26 @@ class MarketplaceController extends Controller
                         ]);
                     }
                 }
-            } elseif ($transactionStatus === 'pending') {
-                $order->update(['status' => 'pending']);
+
+                return 'ok';
             }
+
+            if ($transactionStatus === 'pending' && $lockedOrder->status === 'pending') {
+                $lockedOrder->update([
+                    'payment_gateway_response' => $payload,
+                    'status' => 'pending',
+                ]);
+            }
+
+            return 'ok';
         });
+
+        if ($outcome !== 'ok') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Status pesanan saat ini tidak dapat ditimpa oleh notifikasi Midtrans tersebut.',
+            ], Response::HTTP_CONFLICT);
+        }
 
         return response()->json([
             'success' => true,
