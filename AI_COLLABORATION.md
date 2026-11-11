@@ -56,7 +56,8 @@ Gunakan `BLOCKED` jika pekerjaan tidak dapat dilanjutkan tanpa keputusan atau pe
 | `resources/views/dashboard.blade.php`, `resources/views/dashboard/admin/{activity-logs,complaints,entities,master-data,points,reports,retributions}.blade.php`, `resources/views/dashboard/tps3r/*.blade.php`, `resources/views/dashboard/pemrakarsa/profile.blade.php`, `../madiun_terpadu_mobile/lib/src/**` (non-WIP Codex) | Belum dikunci | FREE | `AG-20261111-007` selesai (`DONE`); seluruh lock dilepas agar Codex bebas mengklaim Vertical Slice Mobile Petugas & kelanjutan UI saat online |
 | `../madiun_terpadu_mobile/lib/src/features/{home/presentation/{role_home_page,petugas_task_center_page}.dart,tracking/presentation/{weighing_form_page,tps3r_deposit_page}.dart}`, `../madiun_terpadu_mobile/test/{petugas_task_center_test,petugas_route_operation_test,operational_pages_test}.dart` | Belum dikunci | FREE | `AG-20261111-008` selesai; dapat diklaim kembali melalui task baru |
 | `app/Http/Controllers/Api/V1/**`, `app/Http/Requests/**`, `app/Http/Resources/**`, `app/Policies/**`, `routes/api.php`, `tests/Feature/**` | Belum dikunci | FREE | `AG-20261111-009` selesai (`DONE`, commit `831bb2f`) |
-| `app/**`, `routes/**`, `database/factories/**`, `database/seeders/**`, `tests/Feature/**` | Belum dikunci | FREE | `AG-20261111-010` selesai (`DONE`); seluruh lock backend telah dilepas agar Codex bebas melanjutkan Mobile Petugas |
+| `app/**`, `routes/**`, `database/factories/**`, `database/seeders/**`, `tests/Feature/**` | Belum dikunci | FREE | `AG-20261111-010` selesai (`DONE`, commit `3648e00`); seluruh lock backend dilepas |
+| `../madiun_terpadu_mobile/lib/src/features/home/presentation/{role_home_page,petugas_task_center_page}.dart`, `../madiun_terpadu_mobile/lib/src/features/tracking/presentation/{tracking_page,weighing_form_page,tps3r_deposit_page}.dart`, `../madiun_terpadu_mobile/test/{petugas_task_center_test,petugas_route_operation_test,operational_pages_test}.dart` | Belum dikunci | FREE | `AG-20261111-011` selesai (`DONE`, commit mobile `0abec1e`); seluruh lock dilepas (`FREE`) |
 
 ---
 
@@ -153,13 +154,32 @@ Required tests:
 - Previous Completed Gemini (`Rule 0`, Opsi 1): `AG-20261111-006` (**`DONE`**) — Penyeragaman desain Civic Emerald v1.1 pada layar lanjutan Mobile Warga & Auth di `../madiun_terpadu_mobile`.
 - Codex `AG-20261111-008` **`DONE`** — Vertical Slice Mobile Petugas kini memakai navigasi kanonik `Beranda`, `Tugas`, `Setoran`, `Riwayat`, `Profil`; form timbang dan setoran mempertahankan input saat API gagal serta menyediakan aksi coba ulang yang jelas.
 - Next pointer bersama: regression pass lintas role dan audit integrasi kontrak backend-mobile tanpa membuka refactor besar baru. Perubahan lokal pra-existing pada `.vscode/launch.json`, `android/gradle.properties`, platform generated files, `pubspec.*`, dan marketplace tetap utuh.
-- Active Gemini: tidak ada lock aktif (**`AG-20261111-009` & `AG-20261111-010` `DONE`**); siap handoff ke Codex untuk penyelarasan navigasi Mobile Petugas (`Tugas` = rute penjemputan + verifikasi lapangan).
+- Active Gemini: tidak ada lock aktif (**`AG-20261111-009`, `010`, & `011` `DONE`**); seluruh lock `FREE`. Codex dapat menyelaraskan navigasi terpadu tab `Tugas` Petugas atau melanjutkan Bagian 2 (Mobile Warga).
 - Area terlarang bersama: jangan menimpa Portal Publik (`resources/views/{layouts/public,components/public,public}/**`), mesin asinkron terpusat (`resources/js/app.js`, `resources/css/app.css`), kontrak `data-ajax-*`, atau referensi desain kecuali ada handoff baru.
-- Quality gate aktual (2026-11-11): Backend Laravel **`322 / 322 passed (2047 assertions)`** (`pint` clean, `PetugasOperationalContractTest` `7 / 7 passed`, `CrossRoleReleaseCandidateTest` `5 / 5 passed`, Vite `build` + `view:cache` lulus); Mobile Flutter **`59 / 59 passed`** & `flutter analyze` **`0 issues`**. Pengujian emulator Petugas berhasil untuk login, buka/mulai tugas, input timbang, setoran TPS3R, dan kegagalan jaringan tanpa kehilangan input.
+- Quality gate aktual (2026-11-11): Backend Laravel **`322 / 322 passed (2047 assertions)`** (`pint` clean, `PetugasOperationalContractTest` `7 / 7 passed`, `CrossRoleReleaseCandidateTest` `5 / 5 passed`, Vite `build` + `view:cache` lulus); Mobile Flutter **`60 / 60 passed`** & `flutter analyze` **`0 issues`**.
 
 ---
 
 ## 💬 5. Log Komunikasi Antar-Agen (Agent-to-Agent Thread)
+
+### Task `AG-20261111-011` — Penyelarasan Tampilan Mobile Petugas (`01`–`05`)
+
+**Owner:** Gemini Antigravity (`Rule 0` atas instruksi langsung Pengguna: *"bagian 1"*)
+**Status:** `DONE` (commit mobile `0abec1e`; seluruh lock dilepas `FREE`)
+**Scope dieksekusi (`../madiun_terpadu_mobile` saja, tanpa mengubah backend/frontend web):**
+- `lib/src/features/home/presentation/petugas_home_widgets.dart` (baru)
+- `lib/src/features/home/presentation/{role_home_page,petugas_task_center_page}.dart`
+- `lib/src/features/tracking/presentation/{tracking_page,weighing_form_page,tps3r_deposit_page}.dart`
+- `test/{operational_pages_test,petugas_route_operation_test}.dart`
+**Ringkasan implementasi (`01`–`05` menggunakan data real API tanpa klaim simulasi):**
+- **Beranda Petugas (`01-beranda-petugas` — `role_home_page.dart` + `petugas_home_widgets.dart`):** Integrasi `GET /api/v1/petugas/summary` ke [`PetugasBerandaFeed`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/home/presentation/petugas_home_widgets.dart) (kartu identitas NIP/armada/status petugas, grid KPI 2×2 real `Tugas Hari Ini`/`Selesai`/`Menunggu`/`Setoran Pending`, strip 4 aksi cepat lapangan, kartu *Wilayah Operasional & Rute Aktif* + *Penjemputan Terdekat*), header Petugas + badge `Online`, serta dark operational bottom nav (`#0F172A`, menjaga 5 tab kanonik).
+- **Pusat Tugas & Daftar Tugas (`02-daftar-tugas-harian` — `petugas_task_center_page.dart` & `tracking_page.dart`):** Search pill real-time kode/lokasi, 2-column summary bar (`Target Selesai` & `Perlu Aksi`), kartu dengan vertical accent stripe 4px sesuai status, serta manifest antrean `TrackingPage` rata border Civic Emerald tanpa mengubah struktur tab Codex.
+- **Input Penimbangan (`04-input-hasil-penjemputan` — `weighing_form_page.dart`):** Strip total berat gradien Civic Emerald (`TOTAL TIMBANGAN LAPANGAN`) dan banner *Pemberitahuan Transparansi Penimbangan*, sambil mempertahankan proteksi form/error retry `AG-20261111-008`.
+- **Setoran TPS3R (`05-setoran-tps3r-sinkronisasi` — `tps3r_deposit_page.dart`):** Stepper horizontal 4-tahap [`Tps3rValidationStepper`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/home/presentation/petugas_home_widgets.dart) (*Belum Diserahkan → Menunggu Verifikasi → Diterima → Perlu Perbaikan*), banner *Ketentuan Prosedural*, dan `SingleChildScrollView` agar tombol submit selalu dapat dijangkau bersih.
+**Verification:** `flutter analyze` **`No issues found!`** (`4.3s`); full `flutter test` **`60 / 60 passed`**; `git -C "../madiun_terpadu_mobile" diff --check` bersih (`0abec1e`).
+**Handoff:** Seluruh navigasi kanonik Petugas (`Beranda`, `Tugas`, `Setoran`, `Riwayat`, `Profil`) serta label test tetap utuh; Codex dapat menyelaraskan penyatuan rute + verifikasi pada tab `Tugas` atau melanjutkan Bagian 2 (Mobile Warga).
+
+---
 
 ### Task `AG-20261111-009` — Backend Release Candidate: Kontrak Operasional Petugas
 
