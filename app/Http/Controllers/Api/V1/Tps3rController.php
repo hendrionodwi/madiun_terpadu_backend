@@ -11,9 +11,12 @@ use App\Models\Tps3rWasteDeposit;
 use App\Models\User;
 use App\Models\WasteProcessingRecord;
 use App\Models\WasteWeighing;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -121,13 +124,34 @@ class Tps3rController extends Controller
         $validated = $request->validated();
         /** @var User $currentUser */
         $currentUser = $request->user();
-        $profile = $currentUser->isPengelolaTps3r()
-            ? $currentUser->pengelolaTps3rProfile
-            : PengelolaTps3rProfile::find($validated['tps3r_profile_id'] ?? null);
 
-        if ($profile === null) {
+        if ($currentUser->isPengelolaTps3r()) {
+            $profile = $currentUser->pengelolaTps3rProfile;
+            if ($profile === null) {
+                throw ValidationException::withMessages([
+                    'tps3r_profile_id' => ['Profil fasilitas TPS3R pengelola tidak ditemukan.'],
+                ]);
+            }
+
+            if (! empty($validated['tps3r_profile_id']) && (int) $validated['tps3r_profile_id'] !== (int) $profile->id) {
+                abort(
+                    Response::HTTP_FORBIDDEN,
+                    'Akses ditolak. Anda hanya dapat mencatat setoran untuk fasilitas TPS3R Anda sendiri.'
+                );
+            }
+        } else {
+            $profile = PengelolaTps3rProfile::find($validated['tps3r_profile_id'] ?? null);
+            if ($profile === null) {
+                throw ValidationException::withMessages([
+                    'tps3r_profile_id' => ['Fasilitas TPS3R tujuan wajib dipilih.'],
+                ]);
+            }
+        }
+
+        $profile->loadMissing('user');
+        if (! $profile->user || ! $profile->user->is_active) {
             throw ValidationException::withMessages([
-                'tps3r_profile_id' => ['Fasilitas TPS3R tujuan wajib dipilih.'],
+                'tps3r_profile_id' => ['Fasilitas TPS3R tujuan sedang tidak aktif.'],
             ]);
         }
 
@@ -135,24 +159,27 @@ class Tps3rController extends Controller
             ? $currentUser->id
             : ($validated['petugas_id'] ?? null);
 
+        if (! $currentUser->isPetugasLapangan() && $petugasId !== null) {
+            $assignedOfficer = User::find($petugasId);
+            if ($assignedOfficer === null || ! $assignedOfficer->isPetugasLapangan() || ! $assignedOfficer->is_active) {
+                throw ValidationException::withMessages([
+                    'petugas_id' => ['Petugas pengirim sampah harus merupakan akun petugas lapangan yang aktif.'],
+                ]);
+            }
+        }
+
         $clientReferenceId = isset($validated['client_reference_id']) && trim((string) $validated['client_reference_id']) !== ''
             ? trim((string) $validated['client_reference_id'])
             : null;
 
-        if ($clientReferenceId !== null && $petugasId !== null) {
-            $existingDeposit = Tps3rWasteDeposit::query()
-                ->where('petugas_id', $petugasId)
-                ->where('client_reference_id', $clientReferenceId)
-                ->with(['pengelola:id,name', 'petugas:id,name', 'tps3rProfile', 'weighings.warga:id,name'])
-                ->first();
-
-            if ($existingDeposit !== null) {
-                return response()->json([
-                    'success' => true,
-                    'idempotent_replay' => true,
-                    'message' => 'Setoran sampah TPS3R dari sinkronisasi offline sudah tercatat sebelumnya.',
-                    'data' => $existingDeposit,
-                ], Response::HTTP_OK);
+        if ($clientReferenceId !== null) {
+            $replayResponse = $this->findIdempotentDepositResponse(
+                $petugasId !== null ? (int) $petugasId : null,
+                (int) $profile->id,
+                $clientReferenceId
+            );
+            if ($replayResponse !== null) {
+                return $replayResponse;
             }
         }
 
@@ -160,79 +187,184 @@ class Tps3rController extends Controller
 
         $status = $currentUser->isPetugasLapangan() ? 'menunggu_konfirmasi' : 'diterima';
         $verifiedAt = $currentUser->isPengelolaTps3r() ? now() : null;
+        $weighingIds = array_values(array_unique(array_map('intval', $validated['weighing_ids'] ?? [])));
 
-        // Sinkronkan 3 pilar komposisi muatan secara akurat dari Data Master
-        $weighings = ! empty($validated['weighing_ids'])
-            ? WasteWeighing::whereIn('id', $validated['weighing_ids'])->get()
-            : ($currentUser->isPetugasLapangan()
-                ? WasteWeighing::query()
-                    ->where('petugas_id', $currentUser->id)
-                    ->whereNull('tps3r_waste_deposit_id')
-                    ->whereDate('created_at', now()->toDateString())
-                    ->get()
-                : collect());
+        try {
+            $deposit = DB::transaction(function () use ($validated, $currentUser, $profile, $petugasId, $clientReferenceId, $nomorResi, $status, $verifiedAt, $weighingIds) {
+                if ($clientReferenceId !== null) {
+                    $existingDeposit = $this->findIdempotentDepositModel(
+                        $petugasId !== null ? (int) $petugasId : null,
+                        (int) $profile->id,
+                        $clientReferenceId
+                    );
+                    if ($existingDeposit !== null) {
+                        return ['replay' => $existingDeposit];
+                    }
+                }
 
-        if ($weighings->isNotEmpty()) {
-            $calcOrg = 0.0;
-            $calcAnorg = 0.0;
-            $calcResidu = 0.0;
+                // Sinkronkan 3 pilar komposisi muatan secara akurat dari Data Master
+                if (! empty($weighingIds)) {
+                    $weighings = WasteWeighing::whereIn('id', $weighingIds)->lockForUpdate()->get();
 
-            foreach ($weighings as $w) {
-                $pillar = MasterData::resolvePillar($w->jenis_sampah);
-                if ($pillar === 'organik') {
-                    $calcOrg += (float) $w->berat_kg;
-                } elseif ($pillar === 'residu') {
-                    $calcResidu += (float) $w->berat_kg;
+                    if ($weighings->count() !== count($weighingIds)) {
+                        throw ValidationException::withMessages([
+                            'weighing_ids' => ['Sebagian data timbangan tidak ditemukan.'],
+                        ]);
+                    }
+
+                    if ($currentUser->isPetugasLapangan() && $weighings->contains(fn (WasteWeighing $w): bool => (int) $w->petugas_id !== (int) $currentUser->id)) {
+                        abort(
+                            Response::HTTP_FORBIDDEN,
+                            'Akses ditolak. Anda hanya dapat menyetorkan hasil timbangan milik Anda sendiri.'
+                        );
+                    }
+
+                    if (! $currentUser->isPetugasLapangan() && $petugasId !== null && $weighings->contains(fn (WasteWeighing $w): bool => (int) $w->petugas_id !== (int) $petugasId)) {
+                        throw ValidationException::withMessages([
+                            'weighing_ids' => ['Sebagian data timbangan bukan milik petugas pengirim yang dipilih.'],
+                        ]);
+                    }
+
+                    if ($weighings->contains(fn (WasteWeighing $w): bool => $w->tps3r_waste_deposit_id !== null)) {
+                        throw ValidationException::withMessages([
+                            'weighing_ids' => ['Sebagian data timbangan sudah terhubung ke setoran TPS3R sebelumnya.'],
+                        ]);
+                    }
+                } elseif ($currentUser->isPetugasLapangan()) {
+                    $weighings = WasteWeighing::query()
+                        ->where('petugas_id', $currentUser->id)
+                        ->whereNull('tps3r_waste_deposit_id')
+                        ->whereDate('created_at', now()->toDateString())
+                        ->lockForUpdate()
+                        ->get();
                 } else {
-                    $calcAnorg += (float) $w->berat_kg;
+                    $weighings = collect();
+                }
+
+                $orgPilah = isset($validated['berat_organik_pilah_kg']) ? (float) $validated['berat_organik_pilah_kg'] : null;
+                $anorgPilah = isset($validated['berat_anorganik_pilah_kg']) ? (float) $validated['berat_anorganik_pilah_kg'] : null;
+                $residuPilah = isset($validated['berat_residu_pilah_kg']) ? (float) $validated['berat_residu_pilah_kg'] : null;
+
+                if ($weighings->isNotEmpty()) {
+                    $calcOrg = 0.0;
+                    $calcAnorg = 0.0;
+                    $calcResidu = 0.0;
+
+                    foreach ($weighings as $w) {
+                        $pillar = MasterData::resolvePillar($w->jenis_sampah);
+                        if ($pillar === 'organik') {
+                            $calcOrg += (float) $w->berat_kg;
+                        } elseif ($pillar === 'residu') {
+                            $calcResidu += (float) $w->berat_kg;
+                        } else {
+                            $calcAnorg += (float) $w->berat_kg;
+                        }
+                    }
+
+                    $orgPilah = $calcOrg;
+                    $anorgPilah = $calcAnorg;
+                    $residuPilah = $calcResidu;
+                }
+
+                $deposit = Tps3rWasteDeposit::create([
+                    'pengelola_id' => $profile->user_id,
+                    'tps3r_profile_id' => $profile->id,
+                    'petugas_id' => $petugasId,
+                    'nomor_resi' => $nomorResi,
+                    'client_reference_id' => $clientReferenceId,
+                    'route_code' => $validated['route_code'] ?? null,
+                    'sumber_sampah' => $validated['sumber_sampah'],
+                    'jenis_sampah' => $validated['jenis_sampah'],
+                    'berat_kg' => (float) $validated['berat_kg'],
+                    'berat_bruto_kg' => isset($validated['berat_bruto_kg']) ? (float) $validated['berat_bruto_kg'] : null,
+                    'berat_tara_kg' => isset($validated['berat_tara_kg']) ? (float) $validated['berat_tara_kg'] : null,
+                    'berat_organik_pilah_kg' => $orgPilah,
+                    'berat_anorganik_pilah_kg' => $anorgPilah,
+                    'berat_residu_pilah_kg' => $residuPilah,
+                    'status' => $status,
+                    'verified_at' => $verifiedAt,
+                    'tanggal_setor' => $validated['tanggal_setor'],
+                    'catatan' => $validated['catatan'] ?? null,
+                ]);
+
+                // Hubungkan timbangan warga dengan setoran truk ini
+                if ($weighings->isNotEmpty()) {
+                    WasteWeighing::whereIn('id', $weighings->pluck('id')->all())
+                        ->update(['tps3r_waste_deposit_id' => $deposit->id]);
+                }
+
+                return $deposit->load(['pengelola:id,name', 'petugas:id,name', 'tps3rProfile', 'weighings.warga:id,name']);
+            });
+        } catch (UniqueConstraintViolationException|QueryException $exception) {
+            if ($clientReferenceId !== null && (string) $exception->getCode() === '23000') {
+                $replayResponse = $this->findIdempotentDepositResponse(
+                    $petugasId !== null ? (int) $petugasId : null,
+                    (int) $profile->id,
+                    $clientReferenceId
+                );
+                if ($replayResponse !== null) {
+                    return $replayResponse;
                 }
             }
 
-            $validated['berat_organik_pilah_kg'] = $calcOrg;
-            $validated['berat_anorganik_pilah_kg'] = $calcAnorg;
-            $validated['berat_residu_pilah_kg'] = $calcResidu;
+            throw $exception;
         }
 
-        $deposit = Tps3rWasteDeposit::create([
-            'pengelola_id' => $profile->user_id,
-            'tps3r_profile_id' => $profile->id,
-            'petugas_id' => $petugasId,
-            'nomor_resi' => $nomorResi,
-            'client_reference_id' => $clientReferenceId,
-            'route_code' => $validated['route_code'] ?? null,
-            'sumber_sampah' => $validated['sumber_sampah'],
-            'jenis_sampah' => $validated['jenis_sampah'],
-            'berat_kg' => (float) $validated['berat_kg'],
-            'berat_bruto_kg' => isset($validated['berat_bruto_kg']) ? (float) $validated['berat_bruto_kg'] : null,
-            'berat_tara_kg' => isset($validated['berat_tara_kg']) ? (float) $validated['berat_tara_kg'] : null,
-            'berat_organik_pilah_kg' => isset($validated['berat_organik_pilah_kg']) ? (float) $validated['berat_organik_pilah_kg'] : null,
-            'berat_anorganik_pilah_kg' => isset($validated['berat_anorganik_pilah_kg']) ? (float) $validated['berat_anorganik_pilah_kg'] : null,
-            'berat_residu_pilah_kg' => isset($validated['berat_residu_pilah_kg']) ? (float) $validated['berat_residu_pilah_kg'] : null,
-            'status' => $status,
-            'verified_at' => $verifiedAt,
-            'tanggal_setor' => $validated['tanggal_setor'],
-            'catatan' => $validated['catatan'] ?? null,
-        ]);
-
-        // Hubungkan timbangan warga dengan setoran truk ini
-        if (! empty($validated['weighing_ids'])) {
-            WasteWeighing::whereIn('id', $validated['weighing_ids'])
-                ->update(['tps3r_waste_deposit_id' => $deposit->id]);
-        } elseif ($currentUser->isPetugasLapangan()) {
-            WasteWeighing::query()
-                ->where('petugas_id', $currentUser->id)
-                ->whereNull('tps3r_waste_deposit_id')
-                ->whereDate('created_at', now()->toDateString())
-                ->update(['tps3r_waste_deposit_id' => $deposit->id]);
+        if (is_array($deposit) && isset($deposit['replay'])) {
+            return $this->buildIdempotentDepositResponse($deposit['replay']);
         }
-
-        $deposit->load(['pengelola:id,name', 'petugas:id,name', 'tps3rProfile', 'weighings.warga:id,name']);
 
         return response()->json([
             'success' => true,
             'message' => 'Penerimaan setoran sampah di TPS3R berhasil dicatat.',
             'data' => $deposit,
         ], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Find an existing deposit matching an offline sync client reference.
+     */
+    private function findIdempotentDepositModel(?int $petugasId, int $profileId, string $clientReferenceId): ?Tps3rWasteDeposit
+    {
+        $query = Tps3rWasteDeposit::query()
+            ->where('client_reference_id', $clientReferenceId)
+            ->with(['pengelola:id,name', 'petugas:id,name', 'tps3rProfile', 'weighings.warga:id,name']);
+
+        if ($petugasId !== null) {
+            $query->where('petugas_id', $petugasId);
+        } else {
+            $query->whereNull('petugas_id')
+                ->where('tps3r_profile_id', $profileId);
+        }
+
+        return $query->first();
+    }
+
+    /**
+     * Return an idempotent HTTP response if the client_reference_id was already stored.
+     */
+    private function findIdempotentDepositResponse(?int $petugasId, int $profileId, string $clientReferenceId): ?JsonResponse
+    {
+        $existingDeposit = $this->findIdempotentDepositModel($petugasId, $profileId, $clientReferenceId);
+
+        if ($existingDeposit === null) {
+            return null;
+        }
+
+        return $this->buildIdempotentDepositResponse($existingDeposit);
+    }
+
+    /**
+     * Format an idempotent TPS3R deposit replay payload.
+     */
+    private function buildIdempotentDepositResponse(Tps3rWasteDeposit $existingDeposit): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'idempotent_replay' => true,
+            'message' => 'Setoran sampah TPS3R dari sinkronisasi offline sudah tercatat sebelumnya.',
+            'data' => $existingDeposit,
+        ], Response::HTTP_OK);
     }
 
     /**

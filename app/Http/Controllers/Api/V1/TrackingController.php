@@ -22,6 +22,8 @@ use App\Models\User;
 use App\Models\WargaProfile;
 use App\Models\WasteWeighing;
 use App\Services\WeighingProofService;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -389,8 +391,41 @@ class TrackingController extends Controller
         );
 
         $route = RouteAssignment::where('route_code', $routeCode)->firstOrFail();
+
+        abort_if(
+            $currentUser->isPetugasLapangan() && (int) $route->petugas_id !== (int) $currentUser->id,
+            Response::HTTP_FORBIDDEN,
+            'Akses ditolak. Rute ini tidak ditugaskan kepada Anda.'
+        );
+
+        if (! $route->is_active) {
+            throw ValidationException::withMessages([
+                'route_code' => ['Rute penjemputan sudah tidak aktif.'],
+            ]);
+        }
+
         $today = now()->toDateString();
         $nowTime = now()->format('H:i');
+
+        $existingSession = RouteSession::where('route_assignment_id', $route->id)
+            ->whereDate('tanggal', $today)
+            ->first();
+
+        if ($existingSession !== null && $existingSession->status === 'selesai') {
+            throw ValidationException::withMessages([
+                'status' => ['Sesi rute hari ini sudah selesai. Perbarui sesi terlebih dahulu untuk memulai ulang.'],
+            ]);
+        }
+
+        if ($existingSession !== null && $existingSession->status === 'berlangsung') {
+            $existingSession->load('petugas:id,name,phone_number');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sesi penjemputan armada rute '.$route->route_code.' sudah berlangsung.',
+                'data' => $existingSession,
+            ], Response::HTTP_OK);
+        }
 
         $startLat = $route->latitude;
         $startLng = $route->longitude;
@@ -454,6 +489,13 @@ class TrackingController extends Controller
         );
 
         $route = RouteAssignment::where('route_code', $routeCode)->firstOrFail();
+
+        abort_if(
+            $currentUser->isPetugasLapangan() && (int) $route->petugas_id !== (int) $currentUser->id,
+            Response::HTTP_FORBIDDEN,
+            'Akses ditolak. Rute ini tidak ditugaskan kepada Anda.'
+        );
+
         $today = now()->toDateString();
         $nowTime = now()->format('H:i');
 
@@ -462,27 +504,22 @@ class TrackingController extends Controller
             ->first();
 
         if (! $session) {
-            $session = RouteSession::create([
-                'route_assignment_id' => $route->id,
-                'petugas_id' => $currentUser->isPetugasLapangan() ? $currentUser->id : $route->petugas_id,
-                'route_code' => $route->route_code,
-                'tanggal' => $today,
-                'status' => 'selesai',
-                'waktu_mulai' => $route->start_time,
-                'waktu_selesai' => $nowTime,
-                'start_location' => $route->start_location,
-                'end_facility' => $route->end_facility,
-                'start_latitude' => $route->latitude,
-                'start_longitude' => $route->longitude,
-                'catatan' => $request->input('catatan'),
-            ]);
-        } else {
-            $session->update([
-                'status' => 'selesai',
-                'waktu_selesai' => $nowTime,
-                'catatan' => $request->input('catatan') ?? $session->catatan,
+            throw ValidationException::withMessages([
+                'status' => ['Sesi rute belum dimulai. Mulai sesi di depo terlebih dahulu sebelum menyelesaikan rute.'],
             ]);
         }
+
+        if ($session->status !== 'berlangsung') {
+            throw ValidationException::withMessages([
+                'status' => ['Sesi rute hari ini sudah selesai dan tidak dapat diselesaikan ulang.'],
+            ]);
+        }
+
+        $session->update([
+            'status' => 'selesai',
+            'waktu_selesai' => $nowTime,
+            'catatan' => $request->input('catatan') ?? $session->catatan,
+        ]);
 
         $session->load('petugas:id,name,phone_number');
 
@@ -744,43 +781,39 @@ class TrackingController extends Controller
             : null;
 
         if ($clientReferenceId !== null) {
-            $existingWeighing = WasteWeighing::query()
-                ->where('petugas_id', $petugas->id)
-                ->where('client_reference_id', $clientReferenceId)
-                ->with([
-                    'warga:id,name,email,phone_number',
-                    'petugas:id,name,phone_number',
-                    'pickupSchedule',
-                ])
-                ->first();
+            $replayResponse = $this->findIdempotentWeighingResponse($petugas->id, $clientReferenceId);
+            if ($replayResponse !== null) {
+                return $replayResponse;
+            }
+        }
 
-            if ($existingWeighing !== null) {
-                $existingItems = WasteWeighing::query()
-                    ->where('petugas_id', $petugas->id)
-                    ->where(function ($q) use ($clientReferenceId): void {
-                        $q->where('client_reference_id', $clientReferenceId)
-                            ->orWhere('client_reference_id', 'like', $clientReferenceId.'#%');
-                    })
-                    ->with([
-                        'warga:id,name,email,phone_number',
-                        'petugas:id,name,phone_number',
-                        'pickupSchedule',
-                    ])
-                    ->get();
+        $warga = User::find($validated['warga_id']);
+        if ($warga === null || ! $warga->isWarga()) {
+            throw ValidationException::withMessages([
+                'warga_id' => ['Penerima poin penimbangan harus merupakan akun warga yang valid.'],
+            ]);
+        }
 
-                $wargaProfile = WargaProfile::where('user_id', $existingWeighing->warga_id)->first();
+        $pickupScheduleId = $validated['pickup_schedule_id'] ?? null;
+        if (! empty($pickupScheduleId)) {
+            $pickupSchedule = PickupSchedule::findOrFail($pickupScheduleId);
 
-                return response()->json([
-                    'success' => true,
-                    'idempotent_replay' => true,
-                    'message' => 'Data timbangan dari sinkronisasi offline sudah tercatat sebelumnya.',
-                    'data' => [
-                        'timbangan' => $existingWeighing,
-                        'items' => $existingItems,
-                        'poin_didapat' => (int) $existingItems->sum('poin_didapat'),
-                        'total_saldo_poin_warga' => (int) ($wargaProfile?->saldo_poin ?? 0),
-                    ],
-                ], Response::HTTP_OK);
+            abort_if(
+                $petugas->isPetugasLapangan() && (int) $pickupSchedule->petugas_id !== (int) $petugas->id,
+                Response::HTTP_FORBIDDEN,
+                'Akses ditolak. Jadwal penjemputan ini bukan tugas Anda.'
+            );
+
+            if (in_array($pickupSchedule->status, ['selesai', 'batal', 'dibatalkan'], true)) {
+                throw ValidationException::withMessages([
+                    'pickup_schedule_id' => ['Jadwal penjemputan sudah selesai atau dibatalkan sehingga tidak dapat ditimbang ulang.'],
+                ]);
+            }
+
+            if ($pickupSchedule->warga_id !== null && (int) $pickupSchedule->warga_id !== (int) $validated['warga_id']) {
+                throw ValidationException::withMessages([
+                    'warga_id' => ['Akun warga tidak sesuai dengan warga pada jadwal penjemputan.'],
+                ]);
             }
         }
 
@@ -794,89 +827,107 @@ class TrackingController extends Controller
             ],
         ];
 
-        $warga = User::find($validated['warga_id']);
+        try {
+            $result = DB::transaction(function () use ($validated, $petugas, $items, $proofService, $warga, $clientReferenceId, $pickupScheduleId) {
+                $createdWeighings = [];
+                $totalPoinDidapat = 0;
 
-        $result = DB::transaction(function () use ($validated, $petugas, $items, $proofService, $warga, $clientReferenceId) {
-            $createdWeighings = [];
-            $totalPoinDidapat = 0;
+                if (! empty($pickupScheduleId)) {
+                    $lockedSchedule = PickupSchedule::where('id', $pickupScheduleId)->lockForUpdate()->first();
+                    if ($lockedSchedule !== null && in_array($lockedSchedule->status, ['selesai', 'batal', 'dibatalkan'], true)) {
+                        throw ValidationException::withMessages([
+                            'pickup_schedule_id' => ['Jadwal penjemputan sudah selesai atau dibatalkan sehingga tidak dapat ditimbang ulang.'],
+                        ]);
+                    }
+                }
 
-            foreach (array_values($items) as $idx => $item) {
-                $beratKg = (float) $item['berat_kg'];
-                $poinPerKg = (int) (MasterData::query()
-                    ->where('group', 'waste_category')
-                    ->where(function ($q) use ($item) {
-                        $q->where('code', $item['jenis_sampah'])
-                            ->orWhere('name', $item['jenis_sampah']);
-                    })
-                    ->where('is_active', true)
-                    ->value('numeric_value') ?? ($item['poin_per_kg'] ?? 100));
-                $poinDidapat = (int) round($beratKg * $poinPerKg);
-                $totalPoinDidapat += $poinDidapat;
+                foreach (array_values($items) as $idx => $item) {
+                    $beratKg = (float) $item['berat_kg'];
+                    $poinPerKg = (int) (MasterData::query()
+                        ->where('group', 'waste_category')
+                        ->where(function ($q) use ($item) {
+                            $q->where('code', $item['jenis_sampah'])
+                                ->orWhere('name', $item['jenis_sampah']);
+                        })
+                        ->where('is_active', true)
+                        ->value('numeric_value') ?? ($item['poin_per_kg'] ?? 100));
+                    $poinDidapat = (int) round($beratKg * $poinPerKg);
+                    $totalPoinDidapat += $poinDidapat;
 
-                $fotoBukti = $item['foto_bukti'] ?? null;
-                if ($fotoBukti) {
-                    $fotoBukti = $proofService->processProofInput($fotoBukti, [
-                        'berat_kg' => $beratKg,
+                    $fotoBukti = $item['foto_bukti'] ?? null;
+                    if ($fotoBukti) {
+                        $fotoBukti = $proofService->processProofInput($fotoBukti, [
+                            'berat_kg' => $beratKg,
+                            'jenis_sampah' => $item['jenis_sampah'],
+                            'warga_name' => $warga->name,
+                            'petugas_name' => $petugas->name,
+                            'timestamp' => now()->format('d M Y, H:i').' WIB',
+                        ]);
+                    }
+
+                    $itemClientRef = $clientReferenceId === null
+                        ? null
+                        : ($idx === 0 ? $clientReferenceId : $clientReferenceId.'#'.$idx);
+
+                    $weighing = WasteWeighing::create([
+                        'warga_id' => $validated['warga_id'],
+                        'petugas_id' => $petugas->id,
+                        'pickup_schedule_id' => $pickupScheduleId,
+                        'client_reference_id' => $itemClientRef,
                         'jenis_sampah' => $item['jenis_sampah'],
-                        'warga_name' => $warga?->name,
-                        'petugas_name' => $petugas->name,
-                        'timestamp' => now()->format('d M Y, H:i').' WIB',
+                        'berat_kg' => $beratKg,
+                        'poin_per_kg' => $poinPerKg,
+                        'poin_didapat' => $poinDidapat,
+                        'catatan' => $item['catatan'] ?? null,
+                        'foto_bukti' => $fotoBukti,
+                    ]);
+
+                    $createdWeighings[] = $weighing->load([
+                        'warga:id,name,email,phone_number',
+                        'petugas:id,name,phone_number',
+                        'pickupSchedule',
                     ]);
                 }
 
-                $itemClientRef = $clientReferenceId === null
-                    ? null
-                    : ($idx === 0 ? $clientReferenceId : $clientReferenceId.'#'.$idx);
+                // Otomatis update status jadwal penjemputan menjadi selesai
+                if (! empty($pickupScheduleId)) {
+                    PickupSchedule::where('id', $pickupScheduleId)
+                        ->update(['status' => 'selesai']);
+                }
 
-                $weighing = WasteWeighing::create([
-                    'warga_id' => $validated['warga_id'],
-                    'petugas_id' => $petugas->id,
-                    'pickup_schedule_id' => $validated['pickup_schedule_id'] ?? null,
-                    'client_reference_id' => $itemClientRef,
-                    'jenis_sampah' => $item['jenis_sampah'],
-                    'berat_kg' => $beratKg,
-                    'poin_per_kg' => $poinPerKg,
-                    'poin_didapat' => $poinDidapat,
-                    'catatan' => $item['catatan'] ?? null,
-                    'foto_bukti' => $fotoBukti,
-                ]);
-
-                $createdWeighings[] = $weighing->load([
-                    'warga:id,name,email,phone_number',
-                    'petugas:id,name,phone_number',
-                    'pickupSchedule',
-                ]);
-            }
-
-            // Otomatis update status jadwal penjemputan menjadi selesai
-            if (! empty($validated['pickup_schedule_id'])) {
-                PickupSchedule::where('id', $validated['pickup_schedule_id'])
-                    ->update(['status' => 'selesai']);
-            }
-
-            // TRK-F-009 & TRK-F-010: Otomatis menambahkan saldo poin ke profil warga dan buku kas mutasi
-            if ($totalPoinDidapat > 0) {
-                PointLedger::record(
-                    (int) $validated['warga_id'],
-                    'kredit',
-                    'setor_sampah',
-                    $totalPoinDidapat,
-                    "Penerimaan insentif pilah sampah sebesar {$totalPoinDidapat} poin",
-                    $createdWeighings[0] ?? null
+                // TRK-F-009 & TRK-F-010: Otomatis menambahkan saldo poin ke profil warga dan buku kas mutasi
+                if ($totalPoinDidapat > 0) {
+                    PointLedger::record(
+                        (int) $validated['warga_id'],
+                        'kredit',
+                        'setor_sampah',
+                        $totalPoinDidapat,
+                        "Penerimaan insentif pilah sampah sebesar {$totalPoinDidapat} poin",
+                        $createdWeighings[0] ?? null
+                    );
+                }
+                $wargaProfile = WargaProfile::firstOrCreate(
+                    ['user_id' => $validated['warga_id']],
+                    ['saldo_poin' => 0]
                 );
-            }
-            $wargaProfile = WargaProfile::firstOrCreate(
-                ['user_id' => $validated['warga_id']],
-                ['saldo_poin' => 0]
-            );
 
-            return [
-                'weighings' => $createdWeighings,
-                'first_weighing' => $createdWeighings[0] ?? null,
-                'total_poin_didapat' => $totalPoinDidapat,
-                'saldo_poin_terbaru' => $wargaProfile->fresh()->saldo_poin,
-            ];
-        });
+                return [
+                    'weighings' => $createdWeighings,
+                    'first_weighing' => $createdWeighings[0] ?? null,
+                    'total_poin_didapat' => $totalPoinDidapat,
+                    'saldo_poin_terbaru' => $wargaProfile->fresh()->saldo_poin,
+                ];
+            });
+        } catch (UniqueConstraintViolationException|QueryException $exception) {
+            if ($clientReferenceId !== null && (string) $exception->getCode() === '23000') {
+                $replayResponse = $this->findIdempotentWeighingResponse($petugas->id, $clientReferenceId);
+                if ($replayResponse !== null) {
+                    return $replayResponse;
+                }
+            }
+
+            throw $exception;
+        }
 
         return response()->json([
             'success' => true,
@@ -888,6 +939,53 @@ class TrackingController extends Controller
                 'total_saldo_poin_warga' => $result['saldo_poin_terbaru'],
             ],
         ], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Resolve an idempotent response when a client_reference_id has already been recorded.
+     */
+    private function findIdempotentWeighingResponse(int $petugasId, string $clientReferenceId): ?JsonResponse
+    {
+        $existingWeighing = WasteWeighing::query()
+            ->where('petugas_id', $petugasId)
+            ->where('client_reference_id', $clientReferenceId)
+            ->with([
+                'warga:id,name,email,phone_number',
+                'petugas:id,name,phone_number',
+                'pickupSchedule',
+            ])
+            ->first();
+
+        if ($existingWeighing === null) {
+            return null;
+        }
+
+        $existingItems = WasteWeighing::query()
+            ->where('petugas_id', $petugasId)
+            ->where(function ($q) use ($clientReferenceId): void {
+                $q->where('client_reference_id', $clientReferenceId)
+                    ->orWhere('client_reference_id', 'like', $clientReferenceId.'#%');
+            })
+            ->with([
+                'warga:id,name,email,phone_number',
+                'petugas:id,name,phone_number',
+                'pickupSchedule',
+            ])
+            ->get();
+
+        $wargaProfile = WargaProfile::where('user_id', $existingWeighing->warga_id)->first();
+
+        return response()->json([
+            'success' => true,
+            'idempotent_replay' => true,
+            'message' => 'Data timbangan dari sinkronisasi offline sudah tercatat sebelumnya.',
+            'data' => [
+                'timbangan' => $existingWeighing,
+                'items' => $existingItems,
+                'poin_didapat' => (int) $existingItems->sum('poin_didapat'),
+                'total_saldo_poin_warga' => (int) ($wargaProfile?->saldo_poin ?? 0),
+            ],
+        ], Response::HTTP_OK);
     }
 
     /**

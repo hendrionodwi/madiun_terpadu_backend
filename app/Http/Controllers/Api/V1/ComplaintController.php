@@ -198,6 +198,13 @@ class ComplaintController extends Controller
             ], Response::HTTP_FORBIDDEN);
         }
 
+        if (in_array($complaint->status, ['selesai', 'ditolak'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pengaduan yang sudah selesai atau ditolak tidak dapat diverifikasi ulang.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         $result = DB::transaction(function () use ($complaint, $petugas, $validated) {
             $verification = ComplaintVerification::create([
                 'complaint_id' => $complaint->id,

@@ -2,8 +2,8 @@
 **Project:** Sistem Pengelolaan Sampah & Lingkungan Terpadu Kota Madiun  
 **Agents in Sync:** Gemini Antigravity (Laravel backend, API, database) dan ChatGPT / Codex (frontend Laravel & Flutter)
 **Sync Model:** Asinkron melalui file ini; tidak ada koneksi pesan langsung antar-agent.  
-**Last Reviewed:** 2026-11-11 oleh ChatGPT / Codex (Portal Publik dan CMS Admin tersedia; backend hardening serta frontend workspace internal dibagi ke task terpisah agar tidak bertabrakan)
-**Repository Baseline:** Backend commit `0d6a346`; mobile commit `b0c8a53` berada di sibling folder `../madiun_terpadu_mobile`.
+**Last Reviewed:** 2026-11-11 oleh ChatGPT / Codex (checkpoint release candidate tersedia; dua task backend berurutan ditugaskan ke Gemini agar pekerjaan berlanjut tanpa menunggu sesi Codex berikutnya)
+**Repository Baseline:** Backend commit `07c8108`; mobile commit `4d2a2f7` berada di sibling folder `../madiun_terpadu_mobile`.
 
 ---
 
@@ -55,6 +55,7 @@ Gunakan `BLOCKED` jika pekerjaan tidak dapat dilanjutkan tanpa keputusan atau pe
 | `resources/views/dashboard/admin/{broadcasts,complaints,reports}.blade.php`, `resources/views/dashboard/tps3r/{deposits,deposit-detail,products}.blade.php`, `resources/views/dashboard/pemrakarsa/{create-report,reports}.blade.php`, `resources/views/components/admin/**`, `tests/Feature/{UniversalAsyncFilterWebTest.php,OperationalGapWebTest.php,AdminDashboardPagesTest.php}` | Belum dikunci | FREE | `AG-20261111-004` selesai; dapat diklaim kembali melalui task baru |
 | `resources/views/dashboard.blade.php`, `resources/views/dashboard/admin/{activity-logs,complaints,entities,master-data,points,reports,retributions}.blade.php`, `resources/views/dashboard/tps3r/*.blade.php`, `resources/views/dashboard/pemrakarsa/profile.blade.php`, `../madiun_terpadu_mobile/lib/src/**` (non-WIP Codex) | Belum dikunci | FREE | `AG-20261111-007` selesai (`DONE`); seluruh lock dilepas agar Codex bebas mengklaim Vertical Slice Mobile Petugas & kelanjutan UI saat online |
 | `../madiun_terpadu_mobile/lib/src/features/{home/presentation/{role_home_page,petugas_task_center_page}.dart,tracking/presentation/{weighing_form_page,tps3r_deposit_page}.dart}`, `../madiun_terpadu_mobile/test/{petugas_task_center_test,petugas_route_operation_test,operational_pages_test}.dart` | Belum dikunci | FREE | `AG-20261111-008` selesai; dapat diklaim kembali melalui task baru |
+| `app/Http/Controllers/Api/V1/**`, `app/Http/Requests/**`, `app/Http/Resources/**`, `app/Policies/**`, `routes/api.php`, `tests/Feature/**` | Belum dikunci | FREE | `AG-20261111-009` selesai (`DONE`); siap diklaim untuk `AG-20261111-010` |
 
 ---
 
@@ -151,12 +152,111 @@ Required tests:
 - Previous Completed Gemini (`Rule 0`, Opsi 1): `AG-20261111-006` (**`DONE`**) — Penyeragaman desain Civic Emerald v1.1 pada layar lanjutan Mobile Warga & Auth di `../madiun_terpadu_mobile`.
 - Codex `AG-20261111-008` **`DONE`** — Vertical Slice Mobile Petugas kini memakai navigasi kanonik `Beranda`, `Tugas`, `Setoran`, `Riwayat`, `Profil`; form timbang dan setoran mempertahankan input saat API gagal serta menyediakan aksi coba ulang yang jelas.
 - Next pointer bersama: regression pass lintas role dan audit integrasi kontrak backend-mobile tanpa membuka refactor besar baru. Perubahan lokal pra-existing pada `.vscode/launch.json`, `android/gradle.properties`, platform generated files, `pubspec.*`, dan marketplace tetap utuh.
+- Active Gemini: selesai `AG-20261111-009` (**`DONE`**) -> lanjut otomatis ke `AG-20261111-010` (Backend Release Candidate: Regression Lintas 5 Role).
 - Area terlarang bersama: jangan menimpa Portal Publik (`resources/views/{layouts/public,components/public,public}/**`), mesin asinkron terpusat (`resources/js/app.js`, `resources/css/app.css`), kontrak `data-ajax-*`, atau referensi desain kecuali ada handoff baru.
-- Quality gate aktual (2026-11-11): Backend Laravel **`310 / 310 passed (1842 assertions)`** (`pint` clean, Vite `build` + `view:cache` lulus); Mobile Flutter **`57 / 57 passed`** & `flutter analyze` **`0 issues`**.
+- Quality gate aktual (2026-11-11): Backend Laravel **`317 / 317 passed (1968 assertions)`** (`pint` clean, `PetugasOperationalContractTest` `7 / 7 passed`, Vite `build` + `view:cache` lulus); Mobile Flutter **`59 / 59 passed`** & `flutter analyze` **`0 issues`**. Pengujian emulator Petugas berhasil untuk login, buka/mulai tugas, input timbang, setoran TPS3R, dan kegagalan jaringan tanpa kehilangan input.
 
 ---
 
 ## 💬 5. Log Komunikasi Antar-Agen (Agent-to-Agent Thread)
+
+### Task `AG-20261111-009` — Backend Release Candidate: Kontrak Operasional Petugas
+
+**Owner:** Gemini Antigravity
+**Status:** `DONE` (lock dilepas `FREE`; berlanjut ke `AG-20261111-010`)
+**Urutan:** diselesaikan sebelum `AG-20261111-010`.
+
+**Scope eksklusif setelah diklaim:**
+
+- `app/Http/Controllers/Api/V1/**`
+- `app/Http/Requests/**`
+- `app/Http/Resources/**`
+- `app/Policies/**`
+- `routes/api.php`
+- test backend yang relevan di `tests/Feature/**`
+
+**Dilarang disentuh pada task ini:**
+
+- `resources/views/**`, `resources/css/**`, dan `resources/js/**`
+- seluruh `../madiun_terpadu_mobile/**`
+- `docs/design-reference/**`
+- schema/migration dan kontrak payload breaking tanpa mencatat `Contract Change Request` terlebih dahulu
+
+**Goal:** audit dan kuatkan kontrak backend alur Petugas Lapangan yang sudah berhasil diuji manual di emulator, tanpa mengubah tampilan atau merusak payload Flutter saat ini.
+
+**Urutan kerja wajib:**
+
+1. Baca `AGENTS.md`, rules proyek, status Git, task ini, dan baseline commit. Jangan me-reset atau mengambil perubahan milik agent lain.
+2. Jalankan `php artisan route:list --path=api/v1 --except-vendor` dan petakan endpoint nyata untuk daftar rute/tugas petugas, mulai tugas, input hasil timbang, serta setoran TPS3R.
+3. Tambahkan atau perkuat feature test untuk membuktikan:
+   - Petugas hanya melihat rute/tugas yang ditugaskan kepadanya.
+   - Perubahan status mengikuti urutan valid dan tidak dapat dilompati.
+   - Input timbangan hanya boleh dilakukan oleh petugas berwenang pada jadwal terkait.
+   - Retry dengan `client_reference_id` yang sama bersifat idempotent dan tidak menggandakan timbangan/poin.
+   - Setoran TPS3R hanya dapat dibuat oleh role yang benar, memvalidasi fasilitas/berat/jenis sampah, dan tidak menggandakan setoran saat request diulang.
+   - Role lain dan petugas yang tidak ditugaskan menerima `403`; payload invalid menerima `422` yang konsisten.
+   - Respons sukses tetap kompatibel dengan field yang sedang dipakai Flutter; jangan mengganti nama field secara diam-diam.
+4. Perbaiki hanya gap P0/P1 yang benar-benar dibuktikan oleh test. Hindari refactor besar dan dependency baru.
+5. Jalankan targeted tests setelah setiap perubahan, kemudian `vendor/bin/pint --dirty --format agent` dan `php artisan test --compact`.
+6. Commit satu checkpoint dengan pesan deskriptif. Jangan push. Lepas lock dan tulis handoff lengkap di file ini.
+
+**Acceptance criteria:**
+
+- Tidak ada perubahan UI atau mobile.
+- Tidak ada breaking contract yang tidak tercatat.
+- Targeted tests dan full backend suite lulus.
+- Pint bersih, `git diff --check` bersih, dan worktree bersih setelah commit.
+- Handoff menyebut file, kontrak yang diaudit, test yang ditambah, hasil pengujian, hash commit, serta gap yang sengaja ditunda.
+
+**Handoff `AG-20261111-009`:**
+- **Berkas diubah (`AG-20261111-009`):** `app/Http/Controllers/Api/V1/TrackingController.php`, `app/Http/Controllers/Api/V1/Tps3rController.php`, `app/Http/Controllers/Api/V1/ComplaintController.php`, `tests/Feature/PetugasOperationalContractTest.php`, `AI_COLLABORATION.md`. Tidak ada file UI, CSS/JS, migration, ataupun `../madiun_terpadu_mobile/**` yang diubah.
+- **Kontrak & perbaikan P0/P1 yang diaudit (100% kompatibel Flutter payload & `tests/Feature` existing):**
+  - `POST /api/v1/tracking/routes/{routeCode}/session/{start,finish}`: menambahkan guard kepemilikan `403` untuk `petugas_lapangan`, pemeriksaan rute aktif (`422`), larangan `finish` sebelum `start` atau mengulang setelah `selesai` (`422`), serta retry idempoten `start` saat sesi masih `berlangsung` (`200`). Kompatibilitas filter `GET /api/v1/tracking/routes?petugas_id=` dipertahankan sesuai `TrackingApiTest`.
+  - `PATCH /api/v1/tracking/schedules/{pickupSchedule}/status`: diverifikasi menolak lompatan `terjadwal -> selesai`, status terminal, dan petugas asing (`403`/`422`).
+  - `POST /api/v1/tracking/weighings`: menambahkan guard `403` jika `pickup_schedule_id` milik petugas lain, `422` jika jadwal sudah `selesai`/`batal`/`dibatalkan`, `warga_id` tidak cocok dengan jadwal, atau penerima bukan akun `warga`, serta fallback idempotent replay `200` bila terjadi race condition unique constraint `(petugas_id, client_reference_id)` — menjamin poin `PointLedger` dan `WargaProfile.saldo_poin` hanya dikreditkan sekali sambil mempertahankan bentuk `data.{timbangan, items, poin_didapat, total_saldo_poin_warga}`.
+  - `POST /api/v1/tps3r/deposits`: menambahkan guard `403` bila `pengelola_tps3r` mengirim `tps3r_profile_id` milik fasilitas lain dan bila `petugas_lapangan` mengirim `weighing_ids` milik petugas lain; `422` bila fasilitas TPS3R non-aktif, `weighing_ids` sudah tertaut ke setoran lain, atau `petugas_id` yang dipilih admin/pengelola bukan petugas aktif; membungkus penautan `weighing_ids` dalam `DB::transaction` + `lockForUpdate()`; serta memperluas idempotency `client_reference_id` untuk setoran tanpa `petugas_id` (`warga_mandiri`) + race collision fallback.
+  - `POST /api/v1/complaints/{complaint}/verify` & `/environmental-reports/{id}/field-check`: `fieldCheck` sudah terlindungi dari status final di controller (`EnvironmentalReportApiTest`), dan `ComplaintController::verify` kini menolak (`422`) verifikasi ulang pada pengaduan berstatus final `selesai`/`ditolak`.
+- **Test ditambah & hasil verifikasi:** `tests/Feature/PetugasOperationalContractTest.php` (**`7 passed, 116 assertions`**); targeted Petugas API suite (**`60 passed, 318 assertions`**); full backend suite (`php artisan test --compact`) **`317 / 317 passed (1968 assertions)`**; Laravel Pint clean (`{"tool":"pint","result":"passed"}`); `git diff --check` bersih. Commit checkpoint dibuat terpisah sebelum mengklaim `AG-20261111-010`.
+- **Gap ditunda (P2):** delta-sync / ETag pagination khusus cache offline daftar jadwal & rute petugas pada `GET /api/v1/tracking/routes` & `/schedules` (tidak memengaruhi keandalan rilis saat ini).
+
+---
+
+### Task `AG-20261111-010` — Backend Release Candidate: Regression Lintas 5 Role
+
+**Owner:** Gemini Antigravity  
+**Status:** `PROPOSED` — antrean lanjutan; klaim otomatis setelah `AG-20261111-009` berstatus `DONE`.  
+**Scope:** backend Laravel (`app/**`, `routes/**`, `database/factories/**`, `database/seeders/**`, dan `tests/**`) dengan pengecualian semua file frontend. Migration/schema hanya boleh diubah jika gap P0 terbukti dan dicatat sebagai `Contract Change Request`.
+
+**Goal:** membawa backend ke release candidate melalui regression pass berbasis alur bisnis utama, bukan menambah halaman atau fitur dekoratif.
+
+**Matriks alur yang wajib diaudit:**
+
+1. **Warga:** autentikasi/otorisasi API, jadwal penjemputan, riwayat timbang/poin, pengaduan, serta pembelian marketplace.
+2. **Petugas Lapangan:** pastikan hasil `AG-20261111-009` tetap hijau saat full regression.
+3. **Pengelola TPS3R:** penerimaan setoran, verifikasi timbangan, penerbitan poin tepat sekali, produk/pesanan milik toko sendiri, fulfillment, dan pencairan pendapatan.
+4. **Pemrakarsa:** kepemilikan profil/laporan, lifecycle draf → diajukan → verifikasi/perbaikan, serta larangan membaca/mengubah laporan entitas lain.
+5. **Admin DLH:** RBAC, validasi entitas, pengaduan/penugasan, verifikasi laporan, CMS portal, data master, poin/pencairan, dan log aktivitas.
+6. **Marketplace & pembayaran:** total dihitung server-side, single-seller order, signature/nominal webhook Midtrans, callback idempotent, refund poin tepat sekali, dan akses order memakai identifier publik aman.
+7. **Portal publik:** hanya data aktif dan sudah waktunya tayang yang terlihat; file privat tidak membocorkan path storage; download memakai otorisasi/visibility yang benar.
+
+**Cara kerja:**
+
+- Prioritaskan test keamanan, otorisasi, idempotensi, dan integritas saldo/status.
+- Perbaiki hanya gap P0/P1 yang terverifikasi; catat P2 sebagai backlog tanpa memperluas scope.
+- Jangan mengubah copy/layout frontend dan jangan mengedit mobile.
+- Gunakan factory/state yang sudah ada, hindari test bergantung data lokal.
+- Jalankan suite per domain sebelum full suite, lalu Pint, `git diff --check`, dan commit checkpoint terpisah. Jangan push.
+
+**Acceptance criteria:**
+
+- Semua alur kritis memiliki minimal satu happy path dan failure/authorization path yang bermakna.
+- Full `php artisan test --compact` lulus tanpa menghapus atau melemahkan test lama.
+- Pint dan `git diff --check` bersih.
+- Handoff mencantumkan jumlah test/assertion terbaru, hash commit, contract impact, serta backlog P2 yang tersisa.
+
+**Handoff ke Codex:** setelah kedua task selesai, Codex akan menyelaraskan navigasi Petugas agar menu `Tugas` menggabungkan tugas rute penjemputan dan verifikasi lapangan tanpa menduplikasi alur.
+
+---
 
 ### Task `AG-20261111-008` — Vertical Slice Mobile Petugas
 
