@@ -58,6 +58,7 @@ Gunakan `BLOCKED` jika pekerjaan tidak dapat dilanjutkan tanpa keputusan atau pe
 | `app/Http/Controllers/Api/V1/**`, `app/Http/Requests/**`, `app/Http/Resources/**`, `app/Policies/**`, `routes/api.php`, `tests/Feature/**` | Belum dikunci | FREE | `AG-20261111-009` selesai (`DONE`, commit `831bb2f`) |
 | `app/**`, `routes/**`, `database/factories/**`, `database/seeders/**`, `tests/Feature/**` | Belum dikunci | FREE | `AG-20261111-010` selesai (`DONE`, commit `3648e00`); seluruh lock backend dilepas |
 | `../madiun_terpadu_mobile/lib/src/features/home/presentation/{role_home_page,petugas_task_center_page}.dart`, `../madiun_terpadu_mobile/lib/src/features/tracking/presentation/{tracking_page,weighing_form_page,tps3r_deposit_page}.dart`, `../madiun_terpadu_mobile/test/{petugas_task_center_test,petugas_route_operation_test,operational_pages_test}.dart` | Belum dikunci | FREE | `AG-20261111-011` selesai (`DONE`, commit mobile `0abec1e`); seluruh lock dilepas (`FREE`) |
+| `../madiun_terpadu_mobile/lib/src/features/{home/presentation/{role_home_page,warga_home_widgets}.dart,tracking/presentation/tracking_page.dart,marketplace/presentation/marketplace_catalog_page.dart,complaints/presentation/complaint_list_page.dart}`, `../madiun_terpadu_mobile/test/{mobile_warga_flows_test,marketplace_catalog_test,complaints_test,operational_pages_test}.dart` | Belum dikunci | FREE | `AG-20261112-001` (Bagian 2) selesai (`DONE`, commit mobile `69f5ef2`); seluruh lock dilepas (`FREE`) |
 
 ---
 
@@ -154,13 +155,34 @@ Required tests:
 - Previous Completed Gemini (`Rule 0`, Opsi 1): `AG-20261111-006` (**`DONE`**) — Penyeragaman desain Civic Emerald v1.1 pada layar lanjutan Mobile Warga & Auth di `../madiun_terpadu_mobile`.
 - Codex `AG-20261111-008` **`DONE`** — Vertical Slice Mobile Petugas kini memakai navigasi kanonik `Beranda`, `Tugas`, `Setoran`, `Riwayat`, `Profil`; form timbang dan setoran mempertahankan input saat API gagal serta menyediakan aksi coba ulang yang jelas.
 - Next pointer bersama: regression pass lintas role dan audit integrasi kontrak backend-mobile tanpa membuka refactor besar baru. Perubahan lokal pra-existing pada `.vscode/launch.json`, `android/gradle.properties`, platform generated files, `pubspec.*`, dan marketplace tetap utuh.
-- Active Gemini: tidak ada lock aktif (**`AG-20261111-009`, `010`, & `011` `DONE`**); seluruh lock `FREE`. Codex dapat menyelaraskan navigasi terpadu tab `Tugas` Petugas atau melanjutkan Bagian 2 (Mobile Warga).
+- Active Gemini: tidak ada lock aktif (**`AG-20261111-009`, `010`, `011`, & `AG-20261112-001` `DONE`**); seluruh lock `FREE`. Codex dapat melanjutkan integrasi/QA lintas role atau task lain sesuai prioritas.
 - Area terlarang bersama: jangan menimpa Portal Publik (`resources/views/{layouts/public,components/public,public}/**`), mesin asinkron terpusat (`resources/js/app.js`, `resources/css/app.css`), kontrak `data-ajax-*`, atau referensi desain kecuali ada handoff baru.
-- Quality gate aktual (2026-11-11): Backend Laravel **`322 / 322 passed (2047 assertions)`** (`pint` clean, `PetugasOperationalContractTest` `7 / 7 passed`, `CrossRoleReleaseCandidateTest` `5 / 5 passed`, Vite `build` + `view:cache` lulus); Mobile Flutter **`60 / 60 passed`** & `flutter analyze` **`0 issues`**.
+- Quality gate aktual (2026-11-12): Backend Laravel **`322 / 322 passed (2047 assertions)`** (`pint` clean, `PetugasOperationalContractTest` `7 / 7 passed`, `CrossRoleReleaseCandidateTest` `5 / 5 passed`, Vite `build` + `view:cache` lulus); Mobile Flutter **`63 / 63 passed`** & `flutter analyze` **`0 issues`**.
 
 ---
 
 ## 💬 5. Log Komunikasi Antar-Agen (Agent-to-Agent Thread)
+
+### Task `AG-20261112-001` — Penyelarasan Tampilan Mobile Warga (`05`, `09`, `11`, `16`)
+
+**Owner:** Gemini Antigravity (`Rule 0` atas instruksi langsung Pengguna: *"bagian 2"*)
+**Status:** `DONE` (commit mobile `69f5ef2`; seluruh lock dilepas `FREE`)
+**Scope dieksekusi (`../madiun_terpadu_mobile` saja, tanpa mengubah backend/frontend web):**
+- [`lib/src/features/home/presentation/role_home_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/home/presentation/role_home_page.dart)
+- [`lib/src/features/home/presentation/warga_home_widgets.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/home/presentation/warga_home_widgets.dart)
+- [`lib/src/features/tracking/presentation/tracking_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/tracking/presentation/tracking_page.dart)
+- [`lib/src/features/marketplace/presentation/marketplace_catalog_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/marketplace/presentation/marketplace_catalog_page.dart)
+- [`lib/src/features/complaints/presentation/complaint_list_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/complaints/presentation/complaint_list_page.dart)
+- [`test/mobile_warga_flows_test.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/test/mobile_warga_flows_test.dart) & [`test/complaints_test.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/test/complaints_test.dart)
+**Ringkasan implementasi (`05`, `09`, `11`, `16` berbasis payload API real Civic Emerald v1.1):**
+- **Beranda Warga (`05-beranda` — `role_home_page.dart` + `warga_home_widgets.dart`):** Penataan *Layanan Utama Warga* ke grid ringkas **3×2** berikon garis konsisten (`Jadwal Jemput`, `Riwayat Timbang`, `Edukasi pemilahan`, `Lapor Sampah`, `Market TPS3R`, `Tagihan Retribusi` dengan indikator tunggakan + akses lengkap via `Lihat Semua` yang dapat di-scroll), aksen vertikal kiri `4px` pada [`WargaNearestScheduleCard`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/home/presentation/warga_home_widgets.dart) & [`WargaOverdueRetributionCard`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/home/presentation/warga_home_widgets.dart), serta seluruh tombol memenuhi minimum target sentuh `48dp`.
+- **Aktivitas & Penimbangan (`09-daftar-aktivitas` — `tracking_page.dart`):** AppBar permukaan putih bersih (`DLH KOTA MADIUN` / `Aktivitas & Penjemputan`) untuk non-petugas tanpa mengganggu alur Petugas Lapangan (`Bagian 1`), tab terstruktur `Jadwal`/`Rute Armada`/`Penimbangan`, kapsul pencarian kode/rute/petugas, chip filter berpenghitung jumlah item langsung, kartu berstrip status vertikal kiri `4px`, serta kartu ringkasan dan kartu timbangan + tombol `Lihat Bukti Timbang` (`48dp`) pada tab `Penimbangan`.
+- **Katalog Marketplace (`11-katalog-marketplace` — `marketplace_catalog_page.dart`):** AppBar putih bersih `DLH KOTA MADIUN` / `Katalog Marketplace` dengan ikon keranjang & riwayat gelap terbaca jelas, banner `Dukung Ekonomi Sirkular Madiun`, seluruh badge minimum `12px` (tanpa microtext `10px`), chip kategori kapsul yang tetap menjaga horizontal `ListView` pertama untuk selector uji, serta kartu produk 2+ kolom dengan aksi cepat tambah keranjang `48×48dp` sejajar harga/poin.
+- **Daftar Pengaduan (`16-daftar-pengaduan` — `complaint_list_page.dart`):** AppBar putih bersih `Pengaduan Kebersihan`, banner `Layanan Pengaduan Lingkungan` lengkap dengan tombol CTA utama `Buat Aduan` (`minHeight: 48`, menggantikan FAB tumpang tindih), kapsul pencarian tiket/judul/lokasi, chip filter berpenghitung item akurat saat memuat seluruh data, serta kartu tiket berstrip aksen status vertikal kiri `4px` + pratinjau foto aman fallback dan tautan `Lihat Detail`.
+**Verification:** `flutter analyze` **`No issues found!`** (`4.1s`); full `flutter test` **`63 / 63 passed`** (termasuk test baru viewport ponsel `390×844` untuk grid `3×2`, filter pencarian `TrackingPage`, ringkasan penimbangan, dan filter pencarian `ComplaintListPage`); `git -C "../madiun_terpadu_mobile" diff --check` bersih (`69f5ef2`).
+**Handoff:** Seluruh perubahan Mobile Petugas (`0abec1e`) & Mobile Warga (`69f5ef2`) sudah aman, diuji penuh, dan di-commit di `main` sibling repo; seluruh lock dilepas (`FREE`).
+
+---
 
 ### Task `AG-20261111-011` — Penyelarasan Tampilan Mobile Petugas (`01`–`05`)
 
