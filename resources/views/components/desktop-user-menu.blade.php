@@ -6,13 +6,14 @@
     <flux:sidebar.profile
         :name="$name ?? auth()->user()->name"
         :initials="auth()->user()->initials()"
+        :avatar="auth()->user()->avatar_url"
         icon:trailing="chevrons-up-down"
         data-test="sidebar-menu-button"
     />
 
     <flux:menu>
         <div class="flex items-center gap-3 px-2 py-2 text-start">
-            <flux:avatar :name="auth()->user()->name" :initials="auth()->user()->initials()" />
+            <flux:avatar :name="auth()->user()->name" :initials="auth()->user()->initials()" :src="auth()->user()->avatar_url" />
             <div class="grid min-w-0 flex-1 leading-tight">
                 <flux:heading class="truncate font-display text-sm font-bold">{{ auth()->user()->name }}</flux:heading>
                 <span class="mt-1 w-fit rounded-full bg-civic-100 px-2 py-0.5 text-[0.62rem] font-extrabold uppercase tracking-wider text-civic-800 dark:bg-civic-900 dark:text-civic-200">

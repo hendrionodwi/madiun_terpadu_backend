@@ -59,6 +59,7 @@ Gunakan `BLOCKED` jika pekerjaan tidak dapat dilanjutkan tanpa keputusan atau pe
 | `app/**`, `routes/**`, `database/factories/**`, `database/seeders/**`, `tests/Feature/**` | Belum dikunci | FREE | `AG-20261111-010` selesai (`DONE`, commit `3648e00`); seluruh lock backend dilepas |
 | `../madiun_terpadu_mobile/lib/src/features/home/presentation/{role_home_page,petugas_task_center_page}.dart`, `../madiun_terpadu_mobile/lib/src/features/tracking/presentation/{tracking_page,weighing_form_page,tps3r_deposit_page}.dart`, `../madiun_terpadu_mobile/test/{petugas_task_center_test,petugas_route_operation_test,operational_pages_test}.dart` | Belum dikunci | FREE | `AG-20261111-011` selesai (`DONE`, commit mobile `0abec1e`); seluruh lock dilepas (`FREE`) |
 | `../madiun_terpadu_mobile/lib/src/features/{home/presentation/{role_home_page,warga_home_widgets}.dart,tracking/presentation/tracking_page.dart,marketplace/presentation/marketplace_catalog_page.dart,complaints/presentation/complaint_list_page.dart}`, `../madiun_terpadu_mobile/test/{mobile_warga_flows_test,marketplace_catalog_test,complaints_test,operational_pages_test}.dart` | Belum dikunci | FREE | `AG-20261112-001` (Bagian 2) selesai (`DONE`, commit mobile `69f5ef2`); seluruh lock dilepas (`FREE`) |
+| `app/Support/CivicProfilePresenter.php`, `app/Concerns/ProfileValidationRules.php`, `app/Livewire/Settings/Profile.php`, `app/Http/Controllers/Web/{Tps3rProfileController,PemrakarsaProfileController}.php`, `resources/views/components/civic/{profile-cover,profile-tabs,entity-verification-panel}.blade.php`, `resources/views/components/settings/layout.blade.php`, `resources/views/components/desktop-user-menu.blade.php`, `resources/views/layouts/app/sidebar.blade.php`, `resources/views/partials/settings-heading.blade.php`, `resources/views/livewire/settings/*.blade.php`, `resources/views/dashboard/{tps3r,pemrakarsa}/profile.blade.php`, `tests/Feature/Settings/**` | Belum dikunci | FREE | `AG-20261112-002` selesai (`DONE`, `325 / 325 passed`, Pint & Vite build clean); seluruh lock dilepas (`FREE`) |
 
 ---
 
@@ -155,13 +156,33 @@ Required tests:
 - Previous Completed Gemini (`Rule 0`, Opsi 1): `AG-20261111-006` (**`DONE`**) — Penyeragaman desain Civic Emerald v1.1 pada layar lanjutan Mobile Warga & Auth di `../madiun_terpadu_mobile`.
 - Codex `AG-20261111-008` **`DONE`** — Vertical Slice Mobile Petugas kini memakai navigasi kanonik `Beranda`, `Tugas`, `Setoran`, `Riwayat`, `Profil`; form timbang dan setoran mempertahankan input saat API gagal serta menyediakan aksi coba ulang yang jelas.
 - Next pointer bersama: regression pass lintas role dan audit integrasi kontrak backend-mobile tanpa membuka refactor besar baru. Perubahan lokal pra-existing pada `.vscode/launch.json`, `android/gradle.properties`, platform generated files, `pubspec.*`, dan marketplace tetap utuh.
-- Active Gemini: tidak ada lock aktif (**`AG-20261111-009`, `010`, `011`, & `AG-20261112-001` `DONE`**); seluruh lock `FREE`. Codex dapat melanjutkan integrasi/QA lintas role atau task lain sesuai prioritas.
+- Active Gemini: tidak ada lock aktif (**`AG-20261111-009`, `010`, `011`, `AG-20261112-001`, & `AG-20261112-002` `DONE`**); seluruh lock `FREE`. Codex dapat melanjutkan integrasi/QA lintas role atau task lain sesuai prioritas.
 - Area terlarang bersama: jangan menimpa Portal Publik (`resources/views/{layouts/public,components/public,public}/**`), mesin asinkron terpusat (`resources/js/app.js`, `resources/css/app.css`), kontrak `data-ajax-*`, atau referensi desain kecuali ada handoff baru.
-- Quality gate aktual (2026-11-12): Backend Laravel **`322 / 322 passed (2047 assertions)`** (`pint` clean, `PetugasOperationalContractTest` `7 / 7 passed`, `CrossRoleReleaseCandidateTest` `5 / 5 passed`, Vite `build` + `view:cache` lulus); Mobile Flutter **`63 / 63 passed`** & `flutter analyze` **`0 issues`**.
+- Quality gate aktual (2026-11-12): Backend Laravel **`325 / 325 passed (2074 assertions)`** (`pint` clean, `Settings` + `WebDashboardTest` + `OperationalGapWebTest` **`49 / 49 passed`**, Vite `build` + `view:cache` lulus); Mobile Flutter **`63 / 63 passed`** & `flutter analyze` **`0 issues`**.
 
 ---
 
 ## 💬 5. Log Komunikasi Antar-Agen (Agent-to-Agent Thread)
+
+### Task `AG-20261112-002` — Penyeragaman Web Dashboard Profile (Cover Card + Tab Terpadu Civic Emerald)
+
+**Owner:** Gemini Antigravity (`Rule 0` atas arahan & konfirmasi langsung Pengguna)
+**Status:** `DONE` (seluruh lock dilepas `FREE`)
+**Scope dieksekusi (`madiun_terpadu_backend` Web Dashboard & Livewire Settings):**
+- [`app/Support/CivicProfilePresenter.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/app/Support/CivicProfilePresenter.php) (baru — penyaji terpusat identitas, badge kontekstual, 3 metrik nyata per role, & tab lintas rute)
+- [`resources/views/components/civic/profile-cover.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/components/civic/profile-cover.blade.php) & [`profile-tabs.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/components/civic/profile-tabs.blade.php) & [`entity-verification-panel.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/components/civic/entity-verification-panel.blade.php) (komponen bersama)
+- [`app/Livewire/Settings/Profile.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/app/Livewire/Settings/Profile.php), [`resources/views/components/settings/layout.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/components/settings/layout.blade.php), [`resources/views/partials/settings-heading.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/partials/settings-heading.blade.php), [`resources/views/livewire/settings/{profile,appearance,delete-user-form}.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/livewire/settings/profile.blade.php)
+- [`resources/views/components/desktop-user-menu.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/components/desktop-user-menu.blade.php) & [`resources/views/layouts/app/sidebar.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/layouts/app/sidebar.blade.php) (dukungan render foto avatar di menu pengguna)
+- [`resources/views/dashboard/tps3r/profile.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/dashboard/tps3r/profile.blade.php) & [`resources/views/dashboard/pemrakarsa/profile.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/dashboard/pemrakarsa/profile.blade.php)
+- [`tests/Feature/Settings/ProfileUpdateTest.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/tests/Feature/Settings/ProfileUpdateTest.php)
+**Ringkasan implementasi:**
+- Menghadirkan kartu header cover Civic Emerald dengan kotak avatar overlap (`avatar_url` atau inisial akun), badge role & tag kontekstual, serta kotak KPI mini 3 kolom nyata di sebelah kanan (Setoran/Produk/Kapasitas untuk TPS3R; Laporan/Disetujui/Legalitas untuk Pemrakarsa; Aduan/Entitas/Laporan untuk Admin DLH; dsb.).
+- Menyatukan pengalaman navigasi profil lewat bar tab garis bawah horizontal (`Informasi Pribadi`, `Profil & Legalitas TPS3R` / `Profil & Legalitas Usaha`, `Kata Sandi`, `Keamanan & 2FA`, `Tampilan`) yang mempertahankan seluruh route & proteksi `password.confirm` serta form submission yang ada.
+- Mengubah seluruh form `/settings/profile`, `/dashboard/tps3r/profile`, dan `/dashboard/pemrakarsa/profile` menjadi grid 2-kolom berlabel uppercase rapi, menambahkan unggah/hapus foto profil Livewire `WithFileUploads` (`public/avatars`), pengeditan field spesifik role (`admin_dlh` NIP/Jabatan/Bidang, `warga` kecamatan/domisili, `petugas_lapangan` kendaraan/plat), dan sub-tab Alpine pada profil TPS3R/Pemrakarsa untuk memisahkan data entitas dengan dokumen legalitas DLH.
+**Verification:** `npm run build` (`1.59s`), `php artisan view:cache`, `vendor/bin/pint --dirty --format agent` (`passed`), dan full `php artisan test --compact` (**`325 / 325 passed`, `2074 assertions`**); `git diff --check` bersih.
+**Handoff:** Seluruh perubahan UI profil web bersih dan siap digunakan; seluruh lock dilepas (`FREE`).
+
+---
 
 ### Task `AG-20261112-001` — Penyelarasan Tampilan Mobile Warga (`05`, `09`, `11`, `16`)
 

@@ -115,11 +115,11 @@
             <flux:spacer />
 
             <flux:dropdown position="top" align="end">
-                <flux:profile :initials="auth()->user()->initials()" icon-trailing="chevron-down" />
+                <flux:profile :initials="auth()->user()->initials()" :avatar="auth()->user()->avatar_url" icon-trailing="chevron-down" />
 
                 <flux:menu>
                     <div class="flex items-center gap-3 px-2 py-2">
-                        <flux:avatar :name="auth()->user()->name" :initials="auth()->user()->initials()" />
+                        <flux:avatar :name="auth()->user()->name" :initials="auth()->user()->initials()" :src="auth()->user()->avatar_url" />
                         <div class="min-w-0">
                             <flux:heading class="truncate font-display text-sm font-bold">{{ auth()->user()->name }}</flux:heading>
                             <flux:text class="truncate text-xs text-slate-500">{{ auth()->user()->email }}</flux:text>

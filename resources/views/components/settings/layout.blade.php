@@ -1,21 +1,38 @@
-<div class="flex items-start max-md:flex-col">
-    <div class="me-10 w-full pb-4 md:w-[220px]">
-        <flux:navlist aria-label="{{ __('Pengaturan akun') }}">
-            <flux:navlist.item :href="route('profile.edit')" wire:navigate>{{ __('Profil') }}</flux:navlist.item>
-            <flux:navlist.item :href="route('password.edit')" wire:navigate>{{ __('Kata Sandi') }}</flux:navlist.item>
-            <flux:navlist.item :href="route('security.edit')" wire:navigate>{{ __('Keamanan & 2FA') }}</flux:navlist.item>
-            <flux:navlist.item :href="route('appearance.edit')" wire:navigate>{{ __('Tampilan') }}</flux:navlist.item>
-        </flux:navlist>
-    </div>
+@props([
+    'heading' => '',
+    'subheading' => '',
+    'activeTab' => null,
+])
 
-    <flux:separator class="md:hidden" />
+@php
+    $resolvedTab = $activeTab ?? match (true) {
+        request()->routeIs('password.edit') => 'password',
+        request()->routeIs('security.edit') => 'security',
+        request()->routeIs('appearance.edit') => 'appearance',
+        default => 'profile',
+    };
+    $profileData = \App\Support\CivicProfilePresenter::forUser(auth()->user(), $resolvedTab);
+@endphp
 
-    <div class="flex-1 self-stretch max-md:pt-6">
-        <flux:heading>{{ $heading ?? '' }}</flux:heading>
-        <flux:subheading>{{ $subheading ?? '' }}</flux:subheading>
+<div class="civic-page mx-auto w-full max-w-6xl">
+    <x-civic.profile-cover :profile-data="$profileData" />
 
-        <div class="mt-5 w-full max-w-lg">
+    <section class="civic-card overflow-hidden">
+        <x-civic.profile-tabs :tabs="$profileData['tabs']" />
+
+        <div class="p-5 sm:p-7">
+            @if (filled($heading) || filled($subheading))
+                <header class="mb-6 border-b border-slate-100 pb-4 dark:border-slate-800">
+                    @if (filled($heading))
+                        <h2 class="font-display text-lg font-extrabold tracking-tight text-slate-950 dark:text-white">{{ $heading }}</h2>
+                    @endif
+                    @if (filled($subheading))
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $subheading }}</p>
+                    @endif
+                </header>
+            @endif
+
             {{ $slot }}
         </div>
-    </div>
+    </section>
 </div>
