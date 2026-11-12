@@ -38,7 +38,7 @@ Route::prefix('v1')->group(function () {
 
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('/me', [AuthController::class, 'me']);
-            Route::patch('/profile', [AuthController::class, 'updateProfile']);
+            Route::match(['patch', 'post'], '/profile', [AuthController::class, 'updateProfile']);
             Route::patch('/password', [AuthController::class, 'updatePassword']);
             Route::post('/logout', [AuthController::class, 'logout']);
             Route::post('/logout-all', [AuthController::class, 'logoutAll']);

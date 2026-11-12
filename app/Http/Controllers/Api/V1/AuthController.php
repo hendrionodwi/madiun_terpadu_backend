@@ -146,10 +146,11 @@ class AuthController extends Controller
         $avatarPath = $user->avatar;
         if ($request->hasFile('avatar')) {
             $newAvatarPath = $request->file('avatar')->store('avatars', 'public');
-            if ($avatarPath && ! str_starts_with($avatarPath, 'http')) {
-                Storage::disk('public')->delete($avatarPath);
-            }
+            $this->deleteLocalAvatar($avatarPath);
             $avatarPath = $newAvatarPath;
+        } elseif ($request->boolean('remove_avatar')) {
+            $this->deleteLocalAvatar($avatarPath);
+            $avatarPath = null;
         }
 
         DB::transaction(function () use ($user, $validated, $avatarPath): void {
@@ -322,5 +323,15 @@ class AuthController extends Controller
             UserRole::Pemrakarsa => 'pemrakarsaProfile',
             UserRole::AdminDlh => 'adminDlhProfile',
         };
+    }
+
+    /**
+     * Delete a locally stored avatar file when replaced or cleared.
+     */
+    protected function deleteLocalAvatar(?string $avatarPath): void
+    {
+        if ($avatarPath && ! str_starts_with($avatarPath, 'http')) {
+            Storage::disk('public')->delete($avatarPath);
+        }
     }
 }

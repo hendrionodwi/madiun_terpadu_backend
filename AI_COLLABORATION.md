@@ -60,6 +60,7 @@ Gunakan `BLOCKED` jika pekerjaan tidak dapat dilanjutkan tanpa keputusan atau pe
 | `../madiun_terpadu_mobile/lib/src/features/home/presentation/{role_home_page,petugas_task_center_page}.dart`, `../madiun_terpadu_mobile/lib/src/features/tracking/presentation/{tracking_page,weighing_form_page,tps3r_deposit_page}.dart`, `../madiun_terpadu_mobile/test/{petugas_task_center_test,petugas_route_operation_test,operational_pages_test}.dart` | Belum dikunci | FREE | `AG-20261111-011` selesai (`DONE`, commit mobile `0abec1e`); seluruh lock dilepas (`FREE`) |
 | `../madiun_terpadu_mobile/lib/src/features/{home/presentation/{role_home_page,warga_home_widgets}.dart,tracking/presentation/tracking_page.dart,marketplace/presentation/marketplace_catalog_page.dart,complaints/presentation/complaint_list_page.dart}`, `../madiun_terpadu_mobile/test/{mobile_warga_flows_test,marketplace_catalog_test,complaints_test,operational_pages_test}.dart` | Belum dikunci | FREE | `AG-20261112-001` (Bagian 2) selesai (`DONE`, commit mobile `69f5ef2`); seluruh lock dilepas (`FREE`) |
 | `app/Support/CivicProfilePresenter.php`, `app/Concerns/ProfileValidationRules.php`, `app/Livewire/Settings/Profile.php`, `app/Http/Controllers/Web/{Tps3rProfileController,PemrakarsaProfileController}.php`, `resources/views/components/civic/{profile-cover,profile-tabs,entity-verification-panel}.blade.php`, `resources/views/components/settings/layout.blade.php`, `resources/views/components/desktop-user-menu.blade.php`, `resources/views/layouts/app/sidebar.blade.php`, `resources/views/partials/settings-heading.blade.php`, `resources/views/livewire/settings/*.blade.php`, `resources/views/dashboard/{tps3r,pemrakarsa}/profile.blade.php`, `tests/Feature/Settings/**` | Belum dikunci | FREE | `AG-20261112-002` selesai (`DONE`, `325 / 325 passed`, Pint & Vite build clean); seluruh lock dilepas (`FREE`) |
+| `routes/api.php`, `app/Http/Requests/Api/Auth/UpdateProfileRequest.php`, `app/Http/Controllers/Api/V1/AuthController.php`, `tests/Feature/ProfileApiTest.php`, `../madiun_terpadu_mobile/lib/src/core/api_client.dart`, `../madiun_terpadu_mobile/lib/src/features/profile/presentation/profile_page.dart`, `../madiun_terpadu_mobile/test/mobile_warga_flows_test.dart` | Belum dikunci | FREE | `AG-20261112-003` selesai (`DONE`, commit mobile `0f6e5db`, backend `326 / 326 passed`, mobile `64 / 64 passed`); seluruh lock dilepas (`FREE`) |
 
 ---
 
@@ -156,13 +157,30 @@ Required tests:
 - Previous Completed Gemini (`Rule 0`, Opsi 1): `AG-20261111-006` (**`DONE`**) — Penyeragaman desain Civic Emerald v1.1 pada layar lanjutan Mobile Warga & Auth di `../madiun_terpadu_mobile`.
 - Codex `AG-20261111-008` **`DONE`** — Vertical Slice Mobile Petugas kini memakai navigasi kanonik `Beranda`, `Tugas`, `Setoran`, `Riwayat`, `Profil`; form timbang dan setoran mempertahankan input saat API gagal serta menyediakan aksi coba ulang yang jelas.
 - Next pointer bersama: regression pass lintas role dan audit integrasi kontrak backend-mobile tanpa membuka refactor besar baru. Perubahan lokal pra-existing pada `.vscode/launch.json`, `android/gradle.properties`, platform generated files, `pubspec.*`, dan marketplace tetap utuh.
-- Active Gemini: tidak ada lock aktif (**`AG-20261111-009`, `010`, `011`, `AG-20261112-001`, & `AG-20261112-002` `DONE`**); seluruh lock `FREE`. Codex dapat melanjutkan integrasi/QA lintas role atau task lain sesuai prioritas.
+- Active Gemini: tidak ada lock aktif (**`AG-20261111-009`, `010`, `011`, `AG-20261112-001`, `002`, & `003` `DONE`**); seluruh lock `FREE`. Codex dapat melanjutkan integrasi/QA lintas role atau task lain sesuai prioritas.
 - Area terlarang bersama: jangan menimpa Portal Publik (`resources/views/{layouts/public,components/public,public}/**`), mesin asinkron terpusat (`resources/js/app.js`, `resources/css/app.css`), kontrak `data-ajax-*`, atau referensi desain kecuali ada handoff baru.
-- Quality gate aktual (2026-11-12): Backend Laravel **`325 / 325 passed (2074 assertions)`** (`pint` clean, `Settings` + `WebDashboardTest` + `OperationalGapWebTest` **`49 / 49 passed`**, Vite `build` + `view:cache` lulus); Mobile Flutter **`63 / 63 passed`** & `flutter analyze` **`0 issues`**.
+- Quality gate aktual (2026-11-12): Backend Laravel **`326 / 326 passed (2083 assertions)`** (`pint` clean, `ProfileApiTest` + `WorkstreamFoundationApiTest` + `ApiAuthenticationTest` **`21 / 21 passed`**, Vite `build` + `view:cache` lulus); Mobile Flutter **`64 / 64 passed`** & `flutter analyze` **`0 issues`**.
 
 ---
 
 ## 💬 5. Log Komunikasi Antar-Agen (Agent-to-Agent Thread)
+
+### Task `AG-20261112-003` — Fitur Unggah & Hapus Foto Profil Mobile Flutter Selaras Backend API
+
+**Owner:** Gemini Antigravity (`Rule 0` atas instruksi langsung Pengguna: *"oke karena di web ada fitur unggah foto profile maka di mobile tambahkan juga fitur nya"*)
+**Status:** `DONE` (commit mobile `0f6e5db`; seluruh lock dilepas `FREE`)
+**Scope dieksekusi (`madiun_terpadu_backend` API & `../madiun_terpadu_mobile`):**
+- Backend API: [`routes/api.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/routes/api.php), [`UpdateProfileRequest.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/app/Http/Requests/Api/Auth/UpdateProfileRequest.php), [`AuthController.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/app/Http/Controllers/Api/V1/AuthController.php), [`ProfileApiTest.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/tests/Feature/ProfileApiTest.php)
+- Mobile Flutter: [`api_client.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/core/api_client.dart), [`profile_page.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/lib/src/features/profile/presentation/profile_page.dart), [`mobile_warga_flows_test.dart`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_mobile/test/mobile_warga_flows_test.dart)
+**Ringkasan implementasi:**
+- **Backend API (`/api/v1/auth/profile`):** Mendukung `Route::match(['patch', 'post'], '/profile', ...)` agar unggahan multipart `POST` dari `http.MultipartRequest` mobile berjalan mulus di server PHP tanpa memecahkan kontrak JSON `PATCH` eksisting; menambahkan dukungan field `remove_avatar` beserta pembersihan berkas avatar lokal lama melalui `AuthController::deleteLocalAvatar()`.
+- **Mobile Flutter (`ProfilePage` + `ApiClient.resolveMediaUrl`):** Menambahkan modal pemilih foto (*Galeri* / *Kamera* via `image_picker`, validasi batas `2 MB`), pratinjau langsung (`Image.memory` / `Image.network` + fallback inisial aman), opsi `Batal` / `Hapus Foto`, pengiriman multipart `avatar` saat ada foto baru atau `remove_avatar: true` saat dihapus, normalisasi host URL media untuk emulator/perangkat fisik (`ApiClient.resolveMediaUrl`), serta perbaikan *RenderFlex overflow* pada judul bagian di viewport ponsel `390×844`.
+**Verification:**
+- Backend: `vendor\bin\pint --dirty --format agent` (`passed`), full `php artisan test --compact` (**`326 / 326 passed`, `2083 assertions`**), `git diff --check` bersih.
+- Mobile (`../madiun_terpadu_mobile`): `flutter analyze` **`No issues found!`** (`0 issues`), full `flutter test` **`64 / 64 passed`**, `git diff --check` bersih (`0f6e5db`).
+**Handoff:** Upload dan hapus foto profil telah sinkron antara Web (`/settings/profile`) dan Mobile (`/api/v1/auth/profile`, disk `public/avatars`); seluruh lock dilepas (`FREE`).
+
+---
 
 ### Task `AG-20261112-002` — Penyeragaman Web Dashboard Profile (Cover Card + Tab Terpadu Civic Emerald)
 
