@@ -307,7 +307,12 @@ class ComplaintController extends Controller
         $photoUrl = null;
 
         if ($request->hasFile('foto')) {
-            $photoPath = $request->file('foto')->store('complaints', 'public');
+            $storedPhotoPath = $request->file('foto')->store('complaints', 'public');
+            if ($storedPhotoPath === false) {
+                throw new \RuntimeException('Foto pengaduan gagal disimpan.');
+            }
+
+            $photoPath = $storedPhotoPath;
             $photoUrl = Storage::disk('public')->url($photoPath);
 
             if (empty($complaint->foto)) {

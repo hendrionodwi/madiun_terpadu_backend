@@ -116,7 +116,7 @@ class RoleProfileSeeder extends Seeder
             ]
         );
 
-        $tps3rProfile->fill(array_filter([
+        $tps3rProfile->fill([
             'deskripsi' => $tps3rProfile->deskripsi ?: 'Fasilitas pengolahan sampah terpadu yang melayani penerimaan sampah terpilah, pengomposan, dan edukasi lingkungan bagi warga Kartoharjo.',
             'jam_operasional' => $tps3rProfile->jam_operasional ?: '07.00 - 15.30 WIB (Senin - Sabtu)',
             'layanan_tersedia' => $tps3rProfile->layanan_tersedia ?: [
@@ -129,7 +129,7 @@ class RoleProfileSeeder extends Seeder
             'cakupan_wilayah' => $tps3rProfile->cakupan_wilayah ?: 'Kel. Kartanegara & Sekitar Kartoharjo',
             'nama_koordinator' => $tps3rProfile->nama_koordinator ?: 'Ahmad Fauzi',
             'kontak_publik' => $tps3rProfile->kontak_publik ?: '0812-3456-7892',
-        ], static fn (mixed $value): bool => $value !== null));
+        ]);
         $tps3rProfile->save();
 
         // 4. Pemrakarsa

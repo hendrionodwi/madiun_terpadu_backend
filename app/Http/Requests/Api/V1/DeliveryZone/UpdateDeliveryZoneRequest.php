@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\V1\DeliveryZone;
 
 use App\Models\Tps3rDeliveryZone;
+use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -15,11 +16,13 @@ class UpdateDeliveryZoneRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        $user = $this->user();
         $deliveryZone = $this->route('tps3rDeliveryZone');
 
-        return $this->user()?->isPengelolaTps3r() === true
+        return $user instanceof User
+            && $user->isPengelolaTps3r()
             && $deliveryZone instanceof Tps3rDeliveryZone
-            && $deliveryZone->pengelola_tps3r_profile_id === $this->user()?->pengelolaTps3rProfile?->id;
+            && $deliveryZone->pengelola_tps3r_profile_id === $user->pengelolaTps3rProfile?->id;
     }
 
     /**

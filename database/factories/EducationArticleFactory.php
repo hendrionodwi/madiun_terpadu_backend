@@ -27,7 +27,7 @@ class EducationArticleFactory extends Factory
             'slug' => Str::slug($title).'-'.strtolower(Str::random(5)),
             'kategori' => fake()->randomElement(['organik', 'plastik_kertas', 'b3_rumah_tangga', 'ekonomi_sirkular', 'kebijakan']),
             'ringkasan' => fake()->paragraph(),
-            'isi' => implode("\n\n", fake()->paragraphs(4)),
+            'isi' => fake()->paragraphs(4, true),
             'penulis_nama' => 'Tim Penyuluh DLH Kota Madiun',
             'penulis_jabatan' => 'Bidang Pengelolaan Sampah',
             'waktu_baca_menit' => fake()->numberBetween(3, 8),

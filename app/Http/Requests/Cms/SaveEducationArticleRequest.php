@@ -55,7 +55,7 @@ class SaveEducationArticleRequest extends FormRequest
 
                 $status = $this->filled('status')
                     ? (string) $this->input('status')
-                    : ($existingModel?->status ?? 'published');
+                    : ($existingModel->status ?? 'published');
 
                 $publishedAt = $this->exists('published_at')
                     ? ($this->filled('published_at') ? Carbon::parse((string) $this->input('published_at')) : null)

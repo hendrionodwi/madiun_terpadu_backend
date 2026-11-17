@@ -67,11 +67,12 @@ class Tps3rProfileController extends Controller
             ['user_id' => $user->id],
             ['nama_tps3r' => $user->name],
         );
-        $profileData = collect($validated)->only([
+        $profileFields = [
             'nama_tps3r', 'kode_tps3r', 'deskripsi', 'alamat', 'kelurahan', 'kecamatan',
             'kapasitas_harian_kg', 'latitude', 'longitude', 'jam_operasional',
             'fokus_pengolahan', 'cakupan_wilayah', 'nama_koordinator', 'kontak_publik',
-        ])->all();
+        ];
+        $profileData = array_intersect_key($validated, array_flip($profileFields));
         $profileData['layanan_tersedia'] = $this->parsePublicList($validated['layanan_tersedia_text'] ?? null);
         $profileData['kategori_sampah_diterima'] = $this->parsePublicList($validated['kategori_sampah_diterima_text'] ?? null);
 
@@ -108,12 +109,12 @@ class Tps3rProfileController extends Controller
     /** @return list<string> */
     private function parsePublicList(?string $value): array
     {
-        return collect(preg_split('/[\r\n,]+/', (string) $value) ?: [])
+        return array_values(collect(preg_split('/[\r\n,]+/', (string) $value) ?: [])
             ->map(fn (string $item): string => trim($item))
             ->filter()
             ->unique(fn (string $item): string => mb_strtolower($item))
             ->take(12)
             ->values()
-            ->all();
+            ->all());
     }
 }

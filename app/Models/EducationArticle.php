@@ -53,7 +53,7 @@ class EducationArticle extends Model
     /** @use HasFactory<EducationArticleFactory> */
     use HasFactory, HasUlids;
 
-    /** @var array<int, string> */
+    /** @var list<string> */
     protected $appends = [
         'cover_url',
         'thumbnail_url',

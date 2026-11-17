@@ -27,6 +27,8 @@ use Illuminate\Support\Str;
  * @property string $status
  * @property string|null $nomor_bap
  * @property string|null $catatan_verifikasi
+ * @property Carbon|null $assigned_at
+ * @property Carbon|null $inspeksi_at
  * @property Carbon|null $verified_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at

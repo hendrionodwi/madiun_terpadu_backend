@@ -46,7 +46,9 @@ class PemrakarsaProfileController extends Controller
             ['user_id' => $user->id],
             ['nama_instansi' => $user->name],
         );
-        $profile->update(collect($validated)->except('legal_document')->all());
+        $profileData = $validated;
+        unset($profileData['legal_document']);
+        $profile->update($profileData);
 
         if ($request->filled('nib') || $request->hasFile('legal_document')) {
             $verification = EntityVerification::firstOrNew(['user_id' => $user->id]);

@@ -11,7 +11,6 @@ use App\Models\OrderFulfillment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -27,7 +26,7 @@ class CreateMarketplacePointSettlement
         $fulfillments = $this->candidateQuery($seller)
             ->with([
                 'order.items.product',
-                'marketplaceSettlementItems' => fn (HasMany $query) => $query->whereNull('released_at'),
+                'marketplaceSettlementItems' => fn ($query) => $query->whereNull('released_at'),
             ])
             ->oldest('completed_at')
             ->get();
@@ -57,7 +56,7 @@ class CreateMarketplacePointSettlement
             $fulfillments = $this->candidateQuery($seller)
                 ->with([
                     'order.items.product',
-                    'marketplaceSettlementItems' => fn (HasMany $query) => $query
+                    'marketplaceSettlementItems' => fn ($query) => $query
                         ->whereNull('released_at')
                         ->lockForUpdate(),
                 ])

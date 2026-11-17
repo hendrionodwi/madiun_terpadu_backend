@@ -42,7 +42,7 @@ class TrackingController extends Controller
         /** @var User $warga */
         $warga = $request->user();
         $profile = $warga->wargaProfile;
-        $saldoPoin = (int) ($profile?->saldo_poin ?? 0);
+        $saldoPoin = (int) ($profile->saldo_poin ?? 0);
 
         $rate = $pointConversion->currentRate();
 
@@ -165,7 +165,7 @@ class TrackingController extends Controller
                     'nip' => $petugas->petugasLapanganProfile?->nip,
                     'jenis_kendaraan' => $petugas->petugasLapanganProfile?->jenis_kendaraan,
                     'plat_nomor' => $petugas->petugasLapanganProfile?->plat_nomor,
-                    'status_tugas' => $petugas->petugasLapanganProfile?->status_tugas ?? 'standby',
+                    'status_tugas' => $petugas->petugasLapanganProfile->status_tugas ?? 'standby',
                 ],
                 'today_stats' => [
                     'total_tasks' => $todayPickups->count() + $assignedComplaintsCount + $assignedReportsCount,
@@ -429,10 +429,10 @@ class TrackingController extends Controller
         $endLat = $route->latitude;
         $endLng = $route->longitude;
 
-        if (! empty($route->waypoints) && is_array($route->waypoints)) {
-            $waypoints = $route->waypoints;
-            $first = $waypoints[0] ?? null;
-            $last = end($waypoints) ?? null;
+        $waypoints = $route->getAttribute('waypoints');
+        if (is_array($waypoints) && $waypoints !== []) {
+            $first = reset($waypoints);
+            $last = end($waypoints);
             if (is_array($first) && count($first) >= 2) {
                 $startLat = (float) $first[0];
                 $startLng = (float) $first[1];
@@ -659,7 +659,7 @@ class TrackingController extends Controller
             $petugasId = $validated['petugas_id'] ?? null;
             if (! $petugasId) {
                 $assignment = RouteAssignment::where('route_code', $validated['id_wilayah_rute'])->first();
-                $petugasId = $assignment?->petugas_id ?? User::where('role', UserRole::PetugasLapangan)->value('id');
+                $petugasId = $assignment->petugas_id ?? User::where('role', UserRole::PetugasLapangan)->value('id');
             }
             $alamatPenjemputan = $validated['alamat_penjemputan'] ?? $currentUser->wargaProfile?->alamat;
             $latitude = $validated['latitude'] ?? $currentUser->wargaProfile?->latitude;
@@ -784,7 +784,7 @@ class TrackingController extends Controller
             }
         }
 
-        $warga = User::find($validated['warga_id']);
+        $warga = User::find((int) $validated['warga_id']);
         if ($warga === null || ! $warga->isWarga()) {
             throw ValidationException::withMessages([
                 'warga_id' => ['Penerima poin penimbangan harus merupakan akun warga yang valid.'],
@@ -793,7 +793,7 @@ class TrackingController extends Controller
 
         $pickupScheduleId = $validated['pickup_schedule_id'] ?? null;
         if (! empty($pickupScheduleId)) {
-            $pickupSchedule = PickupSchedule::findOrFail($pickupScheduleId);
+            $pickupSchedule = PickupSchedule::findOrFail((int) $pickupScheduleId);
 
             abort_if(
                 $petugas->isPetugasLapangan() && (int) $pickupSchedule->petugas_id !== (int) $petugas->id,
@@ -900,7 +900,7 @@ class TrackingController extends Controller
                         'setor_sampah',
                         $totalPoinDidapat,
                         "Penerimaan insentif pilah sampah sebesar {$totalPoinDidapat} poin",
-                        $createdWeighings[0] ?? null
+                        $createdWeighings[0]
                     );
                 }
                 $wargaProfile = WargaProfile::firstOrCreate(
@@ -980,7 +980,7 @@ class TrackingController extends Controller
                 'timbangan' => $existingWeighing,
                 'items' => $existingItems,
                 'poin_didapat' => (int) $existingItems->sum('poin_didapat'),
-                'total_saldo_poin_warga' => (int) ($wargaProfile?->saldo_poin ?? 0),
+                'total_saldo_poin_warga' => (int) ($wargaProfile->saldo_poin ?? 0),
             ],
         ], Response::HTTP_OK);
     }

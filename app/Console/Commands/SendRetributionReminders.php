@@ -60,8 +60,8 @@ class SendRetributionReminders extends Command
         $tableRows = $bills->take(20)->map(function (RetributionBill $bill) {
             return [
                 'Nomor Tagihan' => $bill->nomor_tagihan,
-                'Warga' => $bill->warga?->name ?? 'N/A',
-                'No. HP' => $bill->warga?->phone_number ?? '-',
+                'Warga' => $bill->warga->name,
+                'No. HP' => $bill->warga->phone_number ?? '-',
                 'Periode' => $bill->periode_label,
                 'Nominal' => 'Rp '.number_format($bill->nominal_tagihan, 0, ',', '.'),
                 'Jatuh Tempo' => $bill->jatuh_tempo->format('d/m/Y'),

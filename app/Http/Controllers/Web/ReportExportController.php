@@ -260,7 +260,7 @@ class ReportExportController extends Controller
         if ($user->isPengelolaTps3r() && $user->pengelolaTps3rProfile !== null) {
             $profile = $user->pengelolaTps3rProfile;
         } elseif (! empty($validated['tps3r_profile_id'])) {
-            $profile = PengelolaTps3rProfile::find($validated['tps3r_profile_id']);
+            $profile = PengelolaTps3rProfile::find((int) $validated['tps3r_profile_id']);
         }
 
         if ($profile === null) {

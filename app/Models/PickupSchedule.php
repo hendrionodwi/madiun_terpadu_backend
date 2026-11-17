@@ -59,8 +59,9 @@ class PickupSchedule extends Model
     {
         static::creating(function (PickupSchedule $schedule): void {
             if (empty($schedule->kode_jadwal)) {
-                $datePart = $schedule->tanggal_penjemputan
-                    ? Carbon::parse($schedule->tanggal_penjemputan)->format('Ymd')
+                $pickupDate = $schedule->getAttribute('tanggal_penjemputan');
+                $datePart = $pickupDate !== null
+                    ? Carbon::parse($pickupDate)->format('Ymd')
                     : date('Ymd');
                 $schedule->kode_jadwal = 'JMP-'.$datePart.'-'.strtoupper(Str::random(6));
             }

@@ -42,7 +42,7 @@ class CancelMarketplaceOrder
             }
 
             foreach ($lockedOrder->items as $item) {
-                $item->product?->increment('stok', $item->jumlah);
+                $item->product->increment('stok', $item->jumlah);
             }
 
             if ($lockedOrder->metode_pembayaran === 'poin_sampah') {

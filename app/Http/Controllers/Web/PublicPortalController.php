@@ -16,7 +16,6 @@ use App\Services\PublicPortalDataService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\View as ViewFacade;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -112,7 +111,7 @@ class PublicPortalController extends Controller
                 ->orderBy('kelurahan'),
         ]);
 
-        abort_unless((bool) $pengelolaTps3rProfile->user?->is_active, Response::HTTP_NOT_FOUND);
+        abort_unless($pengelolaTps3rProfile->user->is_active, Response::HTTP_NOT_FOUND);
 
         $overview = $this->portalData->homeOverview();
 
@@ -171,15 +170,6 @@ class PublicPortalController extends Controller
             ->latest('published_at')
             ->limit(3)
             ->get();
-
-        if (ViewFacade::exists('portal.article-detail')) {
-            return view('portal.article-detail', [
-                ...$overview,
-                'portalSettings' => $overview['settings'],
-                'article' => $educationArticle,
-                'relatedArticles' => $relatedArticles,
-            ]);
-        }
 
         $categories = MasterData::query()
             ->where('group', 'waste_category')

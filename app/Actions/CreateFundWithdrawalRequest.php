@@ -22,68 +22,62 @@ class CreateFundWithdrawalRequest
     {
         return DB::transaction(function () use ($user, $data): FundWithdrawalRequest {
             $source = (string) $data['source'];
-            $pointsUsed = null;
-            $amount = (float) ($data['amount'] ?? 0);
-
-            if ($source === 'points') {
-                if (! $user->isWarga()) {
-                    throw ValidationException::withMessages(['source' => ['Penukaran poin hanya tersedia untuk warga.']]);
-                }
-
-                $profile = WargaProfile::query()->where('user_id', $user->id)->lockForUpdate()->firstOrFail();
-                $pointsUsed = (int) ($data['points_used'] ?? 0);
-
-                $minimumPoints = (int) config('finance.points.minimum_redemption_points');
-                if ($pointsUsed < $minimumPoints || $pointsUsed > $profile->saldo_poin) {
-                    throw ValidationException::withMessages([
-                        'points_used' => ['Jumlah poin minimal '.number_format($minimumPoints, 0, ',', '.').' dan tidak boleh melebihi saldo.'],
-                    ]);
-                }
-
-                $rate = $this->pointConversion->currentRate();
-                $amount = $this->pointConversion->convert($pointsUsed);
-
-                $availableBudget = $this->availableRewardBudget();
-                if ($availableBudget < $amount) {
-                    throw ValidationException::withMessages([
-                        'points_used' => ['Alokasi saldo kas reward DLH saat ini sedang tidak mencukupi (tersedia: Rp '.number_format($availableBudget, 0, ',', '.').'). Silakan hubungi DLH atau coba nominal lebih kecil.'],
-                    ]);
-                }
-
-            } else {
+            if ($source !== 'points') {
                 throw ValidationException::withMessages(['source' => ['Sumber pencairan tidak valid.']]);
+            }
+
+            if (! $user->isWarga()) {
+                throw ValidationException::withMessages(['source' => ['Penukaran poin hanya tersedia untuk warga.']]);
+            }
+
+            $profile = WargaProfile::query()->where('user_id', $user->id)->lockForUpdate()->firstOrFail();
+            $pointsUsed = (int) ($data['points_used'] ?? 0);
+
+            $minimumPoints = (int) config('finance.points.minimum_redemption_points');
+            if ($pointsUsed < $minimumPoints || $pointsUsed > $profile->saldo_poin) {
+                throw ValidationException::withMessages([
+                    'points_used' => ['Jumlah poin minimal '.number_format($minimumPoints, 0, ',', '.').' dan tidak boleh melebihi saldo.'],
+                ]);
+            }
+
+            $rate = $this->pointConversion->currentRate();
+            $amount = $this->pointConversion->convert($pointsUsed);
+
+            $availableBudget = $this->availableRewardBudget();
+            if ($availableBudget < $amount) {
+                throw ValidationException::withMessages([
+                    'points_used' => ['Alokasi saldo kas reward DLH saat ini sedang tidak mencukupi (tersedia: Rp '.number_format($availableBudget, 0, ',', '.').'). Silakan hubungi DLH atau coba nominal lebih kecil.'],
+                ]);
             }
 
             $withdrawal = FundWithdrawalRequest::create([
                 'user_id' => $user->id,
                 'source' => $source,
                 'points_used' => $pointsUsed,
-                'point_conversion_rate' => $source === 'points' ? $rate : null,
+                'point_conversion_rate' => $rate,
                 'amount' => $amount,
                 'destination_type' => $data['destination_type'],
                 'destination_provider' => $data['destination_provider'] ?? null,
                 'destination_account' => $data['destination_account'] ?? null,
                 'destination_account_name' => $data['destination_account_name'] ?? null,
-                'cash_pickup_location' => $source === 'points' && $data['destination_type'] === 'cash'
+                'cash_pickup_location' => $data['destination_type'] === 'cash'
                     ? config('finance.points.cash_pickup_location')
                     : null,
-                'cash_claim_code' => $source === 'points' && $data['destination_type'] === 'cash'
+                'cash_claim_code' => $data['destination_type'] === 'cash'
                     ? $this->generateCashClaimCode()
                     : null,
                 'status' => FundWithdrawalStatus::Pending->value,
                 'requester_note' => $data['requester_note'] ?? null,
             ]);
 
-            if ($source === 'points') {
-                PointLedger::record(
-                    $user->id,
-                    'debit',
-                    'penukaran_poin',
-                    (int) $pointsUsed,
-                    "Reservasi penukaran {$pointsUsed} poin ke saldo tunai/e-wallet",
-                    $withdrawal
-                );
-            }
+            PointLedger::record(
+                $user->id,
+                'debit',
+                'penukaran_poin',
+                $pointsUsed,
+                "Reservasi penukaran {$pointsUsed} poin ke saldo tunai/e-wallet",
+                $withdrawal
+            );
 
             return $withdrawal;
         });

@@ -59,7 +59,7 @@ class CreateMarketplaceOrder
         }
 
         foreach ($quoteProducts as $product) {
-            if (! $product->is_available || ! $product->seller?->is_active) {
+            if (! $product->is_available || ! $product->seller->is_active) {
                 throw ValidationException::withMessages(['items' => 'Salah satu produk atau toko tidak tersedia.']);
             }
         }
@@ -86,7 +86,7 @@ class CreateMarketplaceOrder
                     throw ValidationException::withMessages(['items' => 'Salah satu produk tidak tersedia lagi.']);
                 }
 
-                if (! $product->seller || ! $product->seller->is_active) {
+                if (! $product->seller->is_active) {
                     throw ValidationException::withMessages([
                         'items' => "Toko TPS3R untuk produk '{$product->nama_produk}' sedang tidak aktif.",
                     ]);
@@ -126,12 +126,13 @@ class CreateMarketplaceOrder
             $wargaProfile = null;
             $requiredPoints = 0;
             if ($data['metode_pembayaran'] === 'poin_sampah') {
-                $wargaProfile = WargaProfile::query()->where('user_id', $buyer->id)->lockForUpdate()->first();
+                $wargaProfile = WargaProfile::query()->where('user_id', $buyer->id)->lockForUpdate()->firstOrFail();
                 $requiredPoints = (int) ceil($grandTotal);
+                $availablePoints = $wargaProfile->saldo_poin;
 
-                if (! $wargaProfile || $wargaProfile->saldo_poin < $requiredPoints) {
+                if ($availablePoints < $requiredPoints) {
                     throw ValidationException::withMessages([
-                        'metode_pembayaran' => 'Saldo poin Anda ('.($wargaProfile?->saldo_poin ?? 0)." poin) tidak mencukupi untuk pembayaran sebesar {$requiredPoints} poin.",
+                        'metode_pembayaran' => "Saldo poin Anda ({$availablePoints} poin) tidak mencukupi untuk pembayaran sebesar {$requiredPoints} poin.",
                     ]);
                 }
             }

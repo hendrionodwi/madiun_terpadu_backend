@@ -74,7 +74,7 @@ class PengelolaTps3rProfile extends Model
     /** @use HasFactory<PengelolaTps3rProfileFactory> */
     use HasFactory, HasUlids;
 
-    /** @var array<int, string> */
+    /** @var list<string> */
     protected $appends = [
         'foto_url',
     ];

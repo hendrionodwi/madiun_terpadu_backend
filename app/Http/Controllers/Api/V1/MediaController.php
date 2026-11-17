@@ -28,7 +28,7 @@ class MediaController extends Controller
         }
 
         $fullPath = Storage::disk('public')->path($path);
-        $mimeType = Storage::disk('public')->mimeType($path) ?? 'application/octet-stream';
+        $mimeType = Storage::disk('public')->mimeType($path) ?: 'application/octet-stream';
 
         return response()->file($fullPath, [
             'Content-Type' => $mimeType,

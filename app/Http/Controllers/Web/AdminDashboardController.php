@@ -39,6 +39,7 @@ use App\Services\PortalCmsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -404,7 +405,7 @@ class AdminDashboardController extends Controller
 
         $newRoute = RouteAssignment::create($validated);
 
-        $petugas = User::query()->where('role', UserRole::PetugasLapangan)->findOrFail($validated['petugas_id']);
+        $petugas = User::query()->where('role', UserRole::PetugasLapangan)->findOrFail((int) $validated['petugas_id']);
         $petugas->petugasLapanganProfile()->updateOrCreate(
             ['user_id' => $petugas->id],
             ['id_wilayah_rute' => $validated['route_code'], 'nama_wilayah_tugas' => $validated['route_name']],
@@ -454,7 +455,7 @@ class AdminDashboardController extends Controller
         $route->update($validated);
 
         // Sinkronkan ke profil petugas
-        $petugas = User::query()->where('role', UserRole::PetugasLapangan)->findOrFail($validated['petugas_id']);
+        $petugas = User::query()->where('role', UserRole::PetugasLapangan)->findOrFail((int) $validated['petugas_id']);
         $petugas->petugasLapanganProfile()->updateOrCreate(
             ['user_id' => $petugas->id],
             ['id_wilayah_rute' => $validated['route_code'], 'nama_wilayah_tugas' => $validated['route_name']],
@@ -587,7 +588,7 @@ class AdminDashboardController extends Controller
             'status' => 'ditugaskan',
         ]);
 
-        $petugas = User::findOrFail($validated['petugas_id']);
+        $petugas = User::findOrFail((int) $validated['petugas_id']);
 
         // PPL-F-006: Log notification for pelapor
         ComplaintStatusLog::create([
@@ -928,7 +929,7 @@ class AdminDashboardController extends Controller
 
     public function downloadWithdrawalProof(FundWithdrawalRequest $fundWithdrawalRequest): StreamedResponse
     {
-        $this->authorize('view', $fundWithdrawalRequest);
+        Gate::authorize('view', $fundWithdrawalRequest);
         abort_if($fundWithdrawalRequest->payout_proof_path === null
             || ! Storage::disk('local')->exists($fundWithdrawalRequest->payout_proof_path), Response::HTTP_NOT_FOUND);
 

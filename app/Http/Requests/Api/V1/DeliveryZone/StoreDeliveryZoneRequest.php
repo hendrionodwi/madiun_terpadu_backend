@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\V1\DeliveryZone;
 
+use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -15,8 +16,11 @@ class StoreDeliveryZoneRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->isPengelolaTps3r() === true
-            && $this->user()?->pengelolaTps3rProfile !== null;
+        $user = $this->user();
+
+        return $user instanceof User
+            && $user->isPengelolaTps3r()
+            && $user->pengelolaTps3rProfile !== null;
     }
 
     /**

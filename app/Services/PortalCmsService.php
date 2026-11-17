@@ -7,6 +7,8 @@ use App\Models\EducationArticle;
 use App\Models\PortalSetting;
 use App\Models\PublicDocument;
 use App\Models\User;
+use Closure;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
@@ -14,6 +16,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
+use RuntimeException;
 use Throwable;
 
 class PortalCmsService
@@ -40,12 +44,10 @@ class PortalCmsService
             '_' => '!_',
         ]);
         $pattern = '%'.$escaped.'%';
-        $grammar = $query->getQuery()->getGrammar();
 
-        return $query->where(function (Builder $sub) use ($columns, $pattern, $grammar): void {
+        return $query->where(function (Builder $sub) use ($columns, $pattern): void {
             foreach ($columns as $column) {
-                $wrapped = $grammar->wrap($column);
-                $sub->orWhereRaw("{$wrapped} like ? escape '!'", [$pattern]);
+                $sub->orWhereRaw(self::escapedLikeSql($column), [$pattern]);
             }
         });
     }
@@ -72,13 +74,13 @@ class PortalCmsService
     public function createAnnouncement(User $admin, array $data): BroadcastAnnouncement
     {
         $status = (string) ($data['status'] ?? 'published');
-        $publishedAt = isset($data['published_at']) && $data['published_at'] !== null
+        $publishedAt = isset($data['published_at'])
             ? Carbon::parse((string) $data['published_at'])
             : ($status === 'published' ? now() : null);
 
         $isActive = in_array($status, ['archived', 'draft'], true)
             ? false
-            : (array_key_exists('is_active', $data) && $data['is_active'] !== null
+            : (isset($data['is_active'])
                 ? (bool) $data['is_active']
                 : true);
 
@@ -94,7 +96,7 @@ class PortalCmsService
             'is_active' => $isActive,
             'show_on_portal' => (bool) ($data['show_on_portal'] ?? true),
             'published_at' => $publishedAt,
-            'expires_at' => isset($data['expires_at']) && $data['expires_at'] !== null
+            'expires_at' => isset($data['expires_at'])
                 ? Carbon::parse((string) $data['expires_at'])
                 : null,
         ]);
@@ -144,7 +146,7 @@ class PortalCmsService
     {
         $coverPath = null;
         if ($coverFile !== null) {
-            $coverPath = $coverFile->store('articles', 'public');
+            $coverPath = $this->storeUploadedFile($coverFile, 'articles', 'public');
         }
 
         $status = (string) ($data['status'] ?? 'published');
@@ -165,7 +167,7 @@ class PortalCmsService
             'cover_image' => $coverPath,
             'status' => $status,
             'is_featured' => (bool) ($data['is_featured'] ?? false),
-            'published_at' => isset($data['published_at']) && $data['published_at'] !== null
+            'published_at' => isset($data['published_at'])
                 ? Carbon::parse((string) $data['published_at'])
                 : ($status === 'published' ? now() : null),
         ]));
@@ -175,7 +177,9 @@ class PortalCmsService
     public function updateArticle(EducationArticle $article, array $data, ?UploadedFile $coverFile = null): EducationArticle
     {
         $oldCover = $article->cover_image;
-        $newCover = $coverFile?->store('articles', 'public');
+        $newCover = $coverFile !== null
+            ? $this->storeUploadedFile($coverFile, 'articles', 'public')
+            : null;
         $coverPath = $newCover ?? $oldCover;
         $status = (string) ($data['status'] ?? $article->status);
 
@@ -222,7 +226,7 @@ class PortalCmsService
     /** @param array<string, mixed> $data */
     public function createDocument(User $admin, array $data, UploadedFile $file): PublicDocument
     {
-        $path = $file->store('documents', 'local');
+        $path = $this->storeUploadedFile($file, 'documents', 'local');
         $slug = ! empty($data['slug'])
             ? Str::slug((string) $data['slug'])
             : Str::slug((string) $data['judul']).'-'.strtolower(Str::random(5));
@@ -246,7 +250,9 @@ class PortalCmsService
     public function updateDocument(PublicDocument $document, array $data, ?UploadedFile $file = null): PublicDocument
     {
         $oldPath = $document->file_path;
-        $newPath = $file?->store('documents', 'local');
+        $newPath = $file !== null
+            ? $this->storeUploadedFile($file, 'documents', 'local')
+            : null;
         $path = $newPath ?? $oldPath;
         $format = $file !== null
             ? strtoupper($file->getClientOriginalExtension() ?: 'PDF')
@@ -300,7 +306,7 @@ class PortalCmsService
         $defaults = PortalSetting::defaults();
 
         if (isset($payload['hero_mockup_image']) && $payload['hero_mockup_image'] instanceof UploadedFile) {
-            $path = $payload['hero_mockup_image']->store('portal-settings', 'public');
+            $path = $this->storeUploadedFile($payload['hero_mockup_image'], 'portal-settings', 'public');
             $oldPath = PortalSetting::where('key', 'hero_mockup_image')->value('value');
             if ($oldPath) {
                 $this->deleteLocalPublicFile($oldPath);
@@ -315,7 +321,7 @@ class PortalCmsService
         }
 
         if (isset($payload['hero_background_image']) && $payload['hero_background_image'] instanceof UploadedFile) {
-            $path = $payload['hero_background_image']->store('portal-settings', 'public');
+            $path = $this->storeUploadedFile($payload['hero_background_image'], 'portal-settings', 'public');
             $oldPath = PortalSetting::where('key', 'hero_background_image')->value('value');
             if ($oldPath) {
                 $this->deleteLocalPublicFile($oldPath);
@@ -330,7 +336,7 @@ class PortalCmsService
         }
 
         if (isset($payload['app_qr_custom_image']) && $payload['app_qr_custom_image'] instanceof UploadedFile) {
-            $path = $payload['app_qr_custom_image']->store('portal-settings', 'public');
+            $path = $this->storeUploadedFile($payload['app_qr_custom_image'], 'portal-settings', 'public');
             $oldPath = PortalSetting::where('key', 'app_qr_custom_image')->value('value');
             if ($oldPath) {
                 $this->deleteLocalPublicFile($oldPath);
@@ -388,18 +394,56 @@ class PortalCmsService
      *
      * @template TReturn
      *
-     * @param  callable(): TReturn  $callback
+     * @param  Closure(): TReturn  $callback
      * @return TReturn
      */
-    private function persistWithUploadedFileCleanup(?string $uploadedPath, callable $callback, string $disk = 'public'): mixed
+    private function persistWithUploadedFileCleanup(?string $uploadedPath, Closure $callback, string $disk = 'public'): mixed
     {
         try {
-            return DB::transaction($callback);
+            return DB::transaction(static fn (Connection $connection): mixed => $callback());
         } catch (Throwable $exception) {
             $this->deleteStoredFile($disk, $uploadedPath);
 
             throw $exception;
         }
+    }
+
+    private function storeUploadedFile(UploadedFile $file, string $directory, string $disk): string
+    {
+        $path = $file->store($directory, $disk);
+        if ($path === false) {
+            throw new RuntimeException('Berkas portal gagal disimpan.');
+        }
+
+        return $path;
+    }
+
+    /** @return literal-string */
+    private static function escapedLikeSql(string $column): string
+    {
+        return match ($column) {
+            'title' => "title like ? escape '!'",
+            'summary' => "summary like ? escape '!'",
+            'content' => "content like ? escape '!'",
+            'kategori_sampah_diterima' => "kategori_sampah_diterima like ? escape '!'",
+            'nama_tps3r' => "nama_tps3r like ? escape '!'",
+            'kode_tps3r' => "kode_tps3r like ? escape '!'",
+            'alamat' => "alamat like ? escape '!'",
+            'kelurahan' => "kelurahan like ? escape '!'",
+            'kecamatan' => "kecamatan like ? escape '!'",
+            'deskripsi' => "deskripsi like ? escape '!'",
+            'subdistrict' => "subdistrict like ? escape '!'",
+            'schedule_day' => "schedule_day like ? escape '!'",
+            'route_code' => "route_code like ? escape '!'",
+            'route_name' => "route_name like ? escape '!'",
+            'district' => "district like ? escape '!'",
+            'end_facility' => "end_facility like ? escape '!'",
+            'judul' => "judul like ? escape '!'",
+            'ringkasan' => "ringkasan like ? escape '!'",
+            'isi' => "isi like ? escape '!'",
+            'nama_produk' => "nama_produk like ? escape '!'",
+            default => throw new InvalidArgumentException("Kolom pencarian {$column} tidak diizinkan."),
+        };
     }
 
     private function deleteLocalPublicFile(?string $path): void

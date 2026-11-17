@@ -283,7 +283,7 @@ class CivicProfilePresenter
             ];
         }
 
-        $points = (int) ($user->wargaProfile?->saldo_poin ?? 0);
+        $points = (int) ($user->wargaProfile->saldo_poin ?? 0);
         $schedulesCount = PickupSchedule::query()->where('warga_id', $user->id)->count();
         $complaintsCount = Complaint::query()->where('pelapor_id', $user->id)->count();
 

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\FundWithdrawalStatus;
+use App\Models\FundWithdrawalRequest;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -24,6 +25,10 @@ class UpdateFundWithdrawalReviewRequest extends FormRequest
      */
     public function rules(): array
     {
+        $withdrawal = $this->route('fundWithdrawalRequest');
+        $requiresAllocation = $withdrawal instanceof FundWithdrawalRequest
+            && in_array($withdrawal->source, ['points', 'marketplace_points'], true);
+
         return [
             'status' => ['required', Rule::enum(FundWithdrawalStatus::class)->only([
                 FundWithdrawalStatus::Approved,
@@ -34,7 +39,7 @@ class UpdateFundWithdrawalReviewRequest extends FormRequest
                 'integer',
                 'exists:reward_fund_allocations,id',
                 Rule::requiredIf(fn (): bool => $this->input('status') === FundWithdrawalStatus::Approved->value
-                    && in_array($this->route('fundWithdrawalRequest')?->source, ['points', 'marketplace_points'], true)),
+                    && $requiresAllocation),
             ],
             'admin_note' => ['nullable', 'string', 'max:500', 'required_if:status,rejected'],
         ];

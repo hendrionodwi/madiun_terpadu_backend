@@ -30,6 +30,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $shipping_etd
  * @property int $shipping_weight_grams
  * @property string|null $catatan
+ * @property Carbon|null $paid_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read User $buyer

@@ -225,8 +225,10 @@ final class RajaOngkirService
     }
 
     /**
-     * @param  Closure(): list<array<string, mixed>>  $callback
-     * @return list<array<string, mixed>>
+     * @template T of list<array<string, mixed>>
+     *
+     * @param  Closure(): T  $callback
+     * @return T
      */
     private function remember(string $key, int $seconds, Closure $callback): array
     {

@@ -35,6 +35,8 @@ class MasterData extends Model
 
     /**
      * Resolusi pilar induk neraca sampah (organik, anorganik_daur_ulang, residu).
+     *
+     * @return 'organik'|'anorganik_daur_ulang'|'residu'
      */
     public static function resolvePillar(?string $categoryCode): string
     {
@@ -53,7 +55,7 @@ class MasterData extends Model
             })
             ->first();
 
-        if ($record && ! empty($record->pillar)) {
+        if ($record && in_array($record->pillar, ['organik', 'anorganik_daur_ulang', 'residu'], true)) {
             return $record->pillar;
         }
 

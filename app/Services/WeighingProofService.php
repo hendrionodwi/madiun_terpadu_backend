@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use GdImage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class WeighingProofService
 {
@@ -15,6 +18,7 @@ class WeighingProofService
      * 2. Base64 encoded image string.
      * 3. Simulated filename (e.g. 'bukti_timbangan_20261014_0745_1.jpg') - will auto-generate realistic scale image.
      */
+    /** @param array<string, mixed> $metadata */
     public function processProofInput(mixed $photoInput, array $metadata = []): ?string
     {
         if (blank($photoInput)) {
@@ -23,7 +27,12 @@ class WeighingProofService
 
         // 1. Binary UploadedFile
         if ($photoInput instanceof UploadedFile) {
-            return $photoInput->store('bukti_timbangan', 'public');
+            $storedPath = $photoInput->store('bukti_timbangan', 'public');
+            if ($storedPath === false) {
+                throw new RuntimeException('Foto bukti timbangan gagal disimpan.');
+            }
+
+            return $storedPath;
         }
 
         if (! is_string($photoInput)) {
@@ -52,6 +61,7 @@ class WeighingProofService
      * Ensure the proof image physically exists in the public storage disk.
      * If not found, generates a high-fidelity digital scale verification photo image.
      */
+    /** @param array<string, mixed> $metadata */
     public function ensureProofImage(string $filename, array $metadata = []): string
     {
         $cleanFilename = ltrim(preg_replace('/^(\/?storage\/)/', '', $filename), '/');
@@ -68,26 +78,27 @@ class WeighingProofService
     /**
      * Generate a digital scale certificate image using GD library.
      */
+    /** @param array<string, mixed> $metadata */
     public function generateScaleProofImage(string $filename, array $metadata = []): void
     {
         $width = 800;
         $height = 600;
 
-        $image = imagecreatetruecolor($width, $height);
+        $image = $this->createCanvas($width, $height);
 
         // Colors
-        $darkBg = imagecolorallocate($image, 15, 23, 42);          // Slate 900
-        $panelBg = imagecolorallocate($image, 30, 41, 59);         // Slate 800
-        $cardBg = imagecolorallocate($image, 24, 32, 47);          // Dark Slate
-        $lcdBg = imagecolorallocate($image, 10, 20, 15);           // Very dark green-black LCD
-        $lcdBorder = imagecolorallocate($image, 16, 185, 129);     // Emerald border
-        $lcdText = imagecolorallocate($image, 52, 211, 153);       // Neon emerald LCD text
-        $white = imagecolorallocate($image, 248, 250, 252);        // Slate 50
-        $tealHeader = imagecolorallocate($image, 13, 148, 136);    // Teal 600
-        $textMuted = imagecolorallocate($image, 148, 163, 184);     // Slate 400
-        $badgeBg = imagecolorallocate($image, 6, 78, 59);          // Emerald 900
-        $badgeText = imagecolorallocate($image, 167, 243, 208);     // Emerald 200
-        $borderMuted = imagecolorallocate($image, 51, 65, 85);      // Slate 700
+        $darkBg = $this->allocateColor($image, 15, 23, 42);          // Slate 900
+        $panelBg = $this->allocateColor($image, 30, 41, 59);         // Slate 800
+        $cardBg = $this->allocateColor($image, 24, 32, 47);          // Dark Slate
+        $lcdBg = $this->allocateColor($image, 10, 20, 15);           // Very dark green-black LCD
+        $lcdBorder = $this->allocateColor($image, 16, 185, 129);     // Emerald border
+        $lcdText = $this->allocateColor($image, 52, 211, 153);       // Neon emerald LCD text
+        $white = $this->allocateColor($image, 248, 250, 252);        // Slate 50
+        $tealHeader = $this->allocateColor($image, 13, 148, 136);    // Teal 600
+        $textMuted = $this->allocateColor($image, 148, 163, 184);    // Slate 400
+        $badgeBg = $this->allocateColor($image, 6, 78, 59);          // Emerald 900
+        $badgeText = $this->allocateColor($image, 167, 243, 208);    // Emerald 200
+        $borderMuted = $this->allocateColor($image, 51, 65, 85);     // Slate 700
 
         // Fill background
         imagefill($image, 0, 0, $darkBg);
@@ -156,12 +167,14 @@ class WeighingProofService
 
         // Ensure storage directory exists
         $absolutePath = Storage::disk('public')->path($filename);
-        $directory = dirname($absolutePath);
-        if (! is_dir($directory)) {
-            mkdir($directory, 0755, true);
+        $this->ensureDirectory(dirname($absolutePath));
+
+        if (! imagejpeg($image, $absolutePath, 92)) {
+            imagedestroy($image);
+
+            throw new RuntimeException('Gambar bukti timbangan gagal dibuat.');
         }
 
-        imagejpeg($image, $absolutePath, 92);
         imagedestroy($image);
     }
 
@@ -170,12 +183,19 @@ class WeighingProofService
      */
     protected function saveBase64Image(string $base64String): string
     {
-        $parts = explode(',', $photoInput = $base64String, 2);
+        $parts = explode(',', $base64String, 2);
         $encoded = count($parts) === 2 ? $parts[1] : $parts[0];
-        $binary = base64_decode($encoded);
+        $binary = base64_decode($encoded, true);
+        if ($binary === false) {
+            throw ValidationException::withMessages([
+                'foto_bukti' => ['Format foto bukti timbangan tidak valid.'],
+            ]);
+        }
 
         $filename = 'bukti_timbangan/timbangan_'.now()->format('Ymd_His').'_'.Str::random(6).'.jpg';
-        Storage::disk('public')->put($filename, $binary);
+        if (! Storage::disk('public')->put($filename, $binary)) {
+            throw new RuntimeException('Foto bukti timbangan gagal disimpan.');
+        }
 
         return $filename;
     }
@@ -190,30 +210,72 @@ class WeighingProofService
             return $targetPath;
         }
 
-        $dir = dirname($targetPath);
-        if (! is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
+        $this->ensureDirectory(dirname($targetPath));
 
         $w = 400;
         $h = 300;
-        $im = imagecreatetruecolor($w, $h);
-        $bg = imagecolorallocate($im, 30, 41, 59);
+        $im = $this->createCanvas($w, $h);
+        $bg = $this->allocateColor($im, 30, 41, 59);
         imagefill($im, 0, 0, $bg);
-        $border = imagecolorallocate($im, 51, 65, 85);
+        $border = $this->allocateColor($im, 51, 65, 85);
         imagerectangle($im, 5, 5, $w - 5, $h - 5, $border);
-        $teal = imagecolorallocate($im, 20, 184, 166);
-        $white = imagecolorallocate($im, 248, 250, 252);
-        $muted = imagecolorallocate($im, 148, 163, 184);
+        $teal = $this->allocateColor($im, 20, 184, 166);
+        $white = $this->allocateColor($im, 248, 250, 252);
+        $muted = $this->allocateColor($im, 148, 163, 184);
 
         imagestring($im, 5, 45, 90, 'DLH KOTA MADIUN', $teal);
         imagestring($im, 4, 45, 125, 'Foto Bukti Timbangan', $white);
         imagestring($im, 3, 45, 155, 'Dokumentasi penimbangan armada', $muted);
         imagestring($im, 3, 45, 175, 'sedang diproses oleh petugas.', $muted);
 
-        imagepng($im, $targetPath);
+        if (! imagepng($im, $targetPath)) {
+            imagedestroy($im);
+
+            throw new RuntimeException('Placeholder bukti timbangan gagal dibuat.');
+        }
+
         imagedestroy($im);
 
         return $targetPath;
+    }
+
+    /**
+     * @param  positive-int  $width
+     * @param  positive-int  $height
+     */
+    private function createCanvas(int $width, int $height): GdImage
+    {
+        $image = imagecreatetruecolor($width, $height);
+        if ($image === false) {
+            throw new RuntimeException('Kanvas gambar bukti timbangan gagal dibuat.');
+        }
+
+        return $image;
+    }
+
+    /**
+     * @param  int<0, 255>  $red
+     * @param  int<0, 255>  $green
+     * @param  int<0, 255>  $blue
+     */
+    private function allocateColor(GdImage $image, int $red, int $green, int $blue): int
+    {
+        $color = imagecolorallocate($image, $red, $green, $blue);
+        if ($color === false) {
+            throw new RuntimeException('Warna gambar bukti timbangan gagal dialokasikan.');
+        }
+
+        return $color;
+    }
+
+    private function ensureDirectory(string $directory): void
+    {
+        if (is_dir($directory)) {
+            return;
+        }
+
+        if (! mkdir($directory, 0755, true) && ! is_dir($directory)) {
+            throw new RuntimeException("Direktori {$directory} gagal dibuat.");
+        }
     }
 }

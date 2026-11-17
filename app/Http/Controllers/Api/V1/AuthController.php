@@ -270,10 +270,13 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
-        $currentTokenId = $user->currentAccessToken()?->id;
-        $user->tokens()
-            ->when($currentTokenId !== null, fn ($q) => $q->where('id', '!=', $currentTokenId))
-            ->delete();
+        if ($request->bearerToken() === null) {
+            $user->tokens()->delete();
+        } else {
+            $user->tokens()
+                ->whereKeyNot($user->currentAccessToken()->getKey())
+                ->delete();
+        }
 
         return response()->json([
             'success' => true,

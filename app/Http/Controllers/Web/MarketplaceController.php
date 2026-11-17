@@ -138,13 +138,15 @@ class MarketplaceController extends Controller
 
         /** @var User $buyer */
         $buyer = $request->user();
-        $order = $createMarketplaceOrder->handle($buyer, [
-            ...$request->validated(),
-            'items' => $items->map(fn (array $item): array => [
-                'product_id' => $item['product']->id,
-                'jumlah' => $item['jumlah'],
-            ])->values()->all(),
-        ]);
+        $order = $createMarketplaceOrder->handle(
+            $buyer,
+            $request->orderData(array_values(
+                $items->map(fn (array $item): array => [
+                    'product_id' => $item['product']->id,
+                    'jumlah' => $item['jumlah'],
+                ])->all(),
+            )),
+        );
 
         $request->session()->forget(self::CART_SESSION_KEY);
 
@@ -255,7 +257,10 @@ class MarketplaceController extends Controller
         ];
     }
 
-    /** @param array<string, mixed> $data */
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
     private function viewData(array $data): array
     {
         return [...$data, 'portalSettings' => $this->portalData->homeOverview()['settings']];

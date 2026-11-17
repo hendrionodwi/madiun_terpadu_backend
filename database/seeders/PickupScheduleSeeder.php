@@ -27,12 +27,16 @@ class PickupScheduleSeeder extends Seeder
 
         foreach ($petugasList as $petugas) {
             $route = RouteAssignment::where('petugas_id', $petugas->id)->first()
-                ?? RouteAssignment::first();
+                ?? RouteAssignment::query()->firstOrNew([], [
+                    'route_code' => 'RUTE-KART-01',
+                    'route_name' => 'Rute Kartoharjo Pusat - Oro-Oro Ombo',
+                    'district' => 'Kartoharjo',
+                ]);
 
-            $routeCode = $route?->route_code ?? 'RUTE-KART-01';
-            $routeName = $route?->route_name ?? 'Rute Kartoharjo Pusat - Oro-Oro Ombo';
+            $routeCode = $route->route_code;
+            $routeName = $route->route_name;
 
-            $district = strtolower((string) ($route?->district ?? 'kartoharjo'));
+            $district = strtolower($route->district);
             if (str_contains($district, 'taman')) {
                 $mockPickups = [
                     [

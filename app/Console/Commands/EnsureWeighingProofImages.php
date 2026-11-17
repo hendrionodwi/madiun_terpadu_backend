@@ -26,8 +26,8 @@ class EnsureWeighingProofImages extends Command
                 $service->ensureProofImage($w->foto_bukti, [
                     'berat_kg' => $w->berat_kg,
                     'jenis_sampah' => $w->jenis_sampah,
-                    'warga_name' => $w->warga?->name,
-                    'petugas_name' => $w->petugas?->name,
+                    'warga_name' => $w->warga->name,
+                    'petugas_name' => $w->petugas->name,
                     'timestamp' => $w->created_at?->format('d M Y, H:i').' WIB',
                 ]);
                 $this->info("Generated image for Weighing ID {$w->id}: {$w->foto_bukti}");

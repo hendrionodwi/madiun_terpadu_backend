@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Validator;
 
 class StorePickupScheduleRequest extends FormRequest
 {
@@ -64,9 +65,9 @@ class StorePickupScheduleRequest extends FormRequest
     /**
      * Configure the validator instance.
      */
-    public function withValidator($validator): void
+    public function withValidator(Validator $validator): void
     {
-        $validator->after(function ($validator): void {
+        $validator->after(function (Validator $validator): void {
             /** @var User|null $user */
             $user = $this->user();
             if (! $user || ! $user->isWarga()) {
@@ -88,7 +89,7 @@ class StorePickupScheduleRequest extends FormRequest
             if ($tanggal === $today) {
                 $routeCode = $this->input('id_wilayah_rute');
                 $route = RouteAssignment::where('route_code', $routeCode)->first();
-                $startTimeStr = $route?->start_time ?? $this->input('waktu_mulai');
+                $startTimeStr = $route->start_time ?? $this->input('waktu_mulai');
 
                 if ($startTimeStr) {
                     try {

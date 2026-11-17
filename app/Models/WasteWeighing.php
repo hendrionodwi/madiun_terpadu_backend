@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property int $poin_per_kg
  * @property int $poin_didapat
  * @property string|null $catatan
+ * @property string|null $foto_bukti
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read User $warga

@@ -83,9 +83,7 @@ class TransitionOrderFulfillmentStatus
                     ->get();
 
                 foreach ($orderItems as $item) {
-                    if ($item->product) {
-                        $item->product->increment('stok', $item->jumlah);
-                    }
+                    $item->product->increment('stok', $item->jumlah);
                 }
 
                 // If paid with points, refund points atomically via PointLedger once

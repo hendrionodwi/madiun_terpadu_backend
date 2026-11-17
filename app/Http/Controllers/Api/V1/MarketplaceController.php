@@ -54,32 +54,31 @@ class MarketplaceController extends Controller
         $stores = $query->orderBy('name')->get();
 
         $data = $stores->map(function (User $user) {
-            /** @var PengelolaTps3rProfile|null $profile */
             $profile = $user->pengelolaTps3rProfile;
 
             return [
                 'id' => $user->id,
-                'public_id' => $profile?->public_id,
+                'public_id' => $profile->public_id,
                 'name' => $user->name,
-                'nama_tps3r' => $profile?->nama_tps3r ?? $user->name,
-                'kode_tps3r' => $profile?->kode_tps3r,
-                'alamat' => $profile?->alamat,
-                'kelurahan' => $profile?->kelurahan,
-                'kecamatan' => $profile?->kecamatan,
-                'jenis_fasilitas' => $profile?->jenis_fasilitas,
-                'deskripsi' => $profile?->deskripsi,
-                'jam_operasional' => $profile?->jam_operasional,
-                'layanan_tersedia' => $profile?->layanan_tersedia ?? [],
-                'kategori_sampah_diterima' => $profile?->kategori_sampah_diterima ?? [],
-                'fokus_pengolahan' => $profile?->fokus_pengolahan,
-                'cakupan_wilayah' => $profile?->cakupan_wilayah,
-                'nama_koordinator' => $profile?->nama_koordinator,
-                'kontak_publik' => $profile?->kontak_publik,
-                'foto_url' => $profile?->foto_url,
-                'kapasitas_harian_kg' => $profile?->kapasitas_harian_kg,
-                'latitude' => $profile?->latitude,
-                'longitude' => $profile?->longitude,
-                'is_midtrans_active' => $profile ? $profile->isMidtransConfigured() : false,
+                'nama_tps3r' => $profile->nama_tps3r ?? $user->name,
+                'kode_tps3r' => $profile->kode_tps3r,
+                'alamat' => $profile->alamat,
+                'kelurahan' => $profile->kelurahan,
+                'kecamatan' => $profile->kecamatan,
+                'jenis_fasilitas' => $profile->jenis_fasilitas,
+                'deskripsi' => $profile->deskripsi,
+                'jam_operasional' => $profile->jam_operasional,
+                'layanan_tersedia' => $profile->layanan_tersedia ?? [],
+                'kategori_sampah_diterima' => $profile->kategori_sampah_diterima ?? [],
+                'fokus_pengolahan' => $profile->fokus_pengolahan,
+                'cakupan_wilayah' => $profile->cakupan_wilayah,
+                'nama_koordinator' => $profile->nama_koordinator,
+                'kontak_publik' => $profile->kontak_publik,
+                'foto_url' => $profile->foto_url,
+                'kapasitas_harian_kg' => $profile->kapasitas_harian_kg,
+                'latitude' => $profile->latitude,
+                'longitude' => $profile->longitude,
+                'is_midtrans_active' => $profile->isMidtransConfigured(),
                 'total_products' => (int) ($user->total_products ?? 0),
             ];
         });
@@ -331,7 +330,7 @@ class MarketplaceController extends Controller
     {
         /** @var User $buyer */
         $buyer = $request->user();
-        $order = $createMarketplaceOrder->handle($buyer, $request->validated());
+        $order = $createMarketplaceOrder->handle($buyer, $request->orderData());
 
         return response()->json([
             'success' => true,
@@ -619,9 +618,7 @@ class MarketplaceController extends Controller
 
                 // Kembalikan stok produk hanya sekali saat masih pending
                 foreach ($lockedOrder->items as $item) {
-                    if ($item->product) {
-                        $item->product->increment('stok', $item->jumlah);
-                    }
+                    $item->product->increment('stok', $item->jumlah);
                 }
 
                 $lockedOrder->update(['status' => 'dibatalkan']);

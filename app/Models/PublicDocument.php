@@ -51,7 +51,7 @@ class PublicDocument extends Model
     /** @use HasFactory<PublicDocumentFactory> */
     use HasFactory, HasUlids;
 
-    /** @var array<int, string> */
+    /** @var list<string> */
     protected $appends = [
         'formatted_size',
         'kategori_label',

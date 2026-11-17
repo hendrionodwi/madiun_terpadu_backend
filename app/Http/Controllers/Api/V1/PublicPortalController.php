@@ -155,7 +155,7 @@ class PublicPortalController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Daftar fasilitas TPS3R dan Bank Sampah berhasil diambil.',
-            'data' => PengelolaTps3rProfileResource::collection($facilities->getCollection())->resolve($request),
+            'data' => PengelolaTps3rProfileResource::collection($facilities->items())->resolve($request),
             'meta' => [
                 'current_page' => $facilities->currentPage(),
                 'last_page' => $facilities->lastPage(),
@@ -173,7 +173,7 @@ class PublicPortalController extends Controller
             'deliveryZones' => fn ($q) => $q->approved()->orderBy('kecamatan')->orderBy('kelurahan'),
         ]);
 
-        abort_unless((bool) $pengelolaTps3rProfile->user?->is_active, Response::HTTP_NOT_FOUND);
+        abort_unless($pengelolaTps3rProfile->user->is_active, Response::HTTP_NOT_FOUND);
 
         $facility = (new PengelolaTps3rProfileResource($pengelolaTps3rProfile))->resolve($request);
         $products = $pengelolaTps3rProfile->user->wasteProducts

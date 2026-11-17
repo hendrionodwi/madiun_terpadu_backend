@@ -9,6 +9,20 @@ use App\Models\WasteProduct;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * @phpstan-type ShippingQuote array{
+ *     source: string,
+ *     fee: float,
+ *     seller_id: int,
+ *     destination_kelurahan: string|null,
+ *     destination_kecamatan: string|null,
+ *     rajaongkir_destination_id: int|null,
+ *     courier: string|null,
+ *     service: string|null,
+ *     etd: string|null,
+ *     weight_grams: int
+ * }
+ */
 final class MarketplaceShippingService
 {
     public function __construct(public RajaOngkirService $rajaOngkirService) {}
@@ -17,18 +31,7 @@ final class MarketplaceShippingService
      * @param  Collection<int, WasteProduct>  $products
      * @param  array<int, int>  $quantitiesByProduct
      * @param  array<string, mixed>  $data
-     * @return array{
-     *     source: string,
-     *     fee: float,
-     *     seller_id: int,
-     *     destination_kelurahan: string|null,
-     *     destination_kecamatan: string|null,
-     *     rajaongkir_destination_id: int|null,
-     *     courier: string|null,
-     *     service: string|null,
-     *     etd: string|null,
-     *     weight_grams: int
-     * }
+     * @return ShippingQuote
      */
     public function resolve(Collection $products, array $quantitiesByProduct, array $data): array
     {
@@ -95,7 +98,10 @@ final class MarketplaceShippingService
         return $weightGrams;
     }
 
-    /** @param array<string, mixed> $data */
+    /**
+     * @param  array<string, mixed>  $data
+     * @return ShippingQuote
+     */
     private function resolveLocalDelivery(int $sellerId, int $weightGrams, array $data): array
     {
         $kelurahan = trim((string) ($data['destination_kelurahan'] ?? ''));
@@ -115,14 +121,20 @@ final class MarketplaceShippingService
             ]);
         }
 
-        return [
-            ...$this->result('local_tps3r', $zone->delivery_fee, $sellerId, $weightGrams),
-            'destination_kelurahan' => $zone->kelurahan,
-            'destination_kecamatan' => $zone->kecamatan,
-        ];
+        return $this->result(
+            'local_tps3r',
+            $zone->delivery_fee,
+            $sellerId,
+            $weightGrams,
+            destinationKelurahan: $zone->kelurahan,
+            destinationKecamatan: $zone->kecamatan,
+        );
     }
 
-    /** @param array<string, mixed> $data */
+    /**
+     * @param  array<string, mixed>  $data
+     * @return ShippingQuote
+     */
     private function resolveRajaOngkirDelivery(int $sellerId, int $weightGrams, array $data): array
     {
         $profile = $this->profileForSeller($sellerId);
@@ -153,13 +165,16 @@ final class MarketplaceShippingService
             ]);
         }
 
-        return [
-            ...$this->result('rajaongkir', (float) $selectedQuote['cost'], $sellerId, $weightGrams),
-            'rajaongkir_destination_id' => $destinationId,
-            'courier' => $selectedQuote['courier_code'],
-            'service' => $selectedQuote['service'],
-            'etd' => $selectedQuote['etd'],
-        ];
+        return $this->result(
+            'rajaongkir',
+            (float) $selectedQuote['cost'],
+            $sellerId,
+            $weightGrams,
+            rajaOngkirDestinationId: $destinationId,
+            courier: $selectedQuote['courier_code'],
+            service: $selectedQuote['service'],
+            etd: $selectedQuote['etd'],
+        );
     }
 
     private function profileForSeller(int $sellerId): PengelolaTps3rProfile
@@ -175,31 +190,30 @@ final class MarketplaceShippingService
     }
 
     /**
-     * @return array{
-     *     source: string,
-     *     fee: float,
-     *     seller_id: int,
-     *     destination_kelurahan: string|null,
-     *     destination_kecamatan: string|null,
-     *     rajaongkir_destination_id: int|null,
-     *     courier: string|null,
-     *     service: string|null,
-     *     etd: string|null,
-     *     weight_grams: int
-     * }
+     * @return ShippingQuote
      */
-    private function result(string $source, float $fee, int $sellerId, int $weightGrams): array
-    {
+    private function result(
+        string $source,
+        float $fee,
+        int $sellerId,
+        int $weightGrams,
+        ?string $destinationKelurahan = null,
+        ?string $destinationKecamatan = null,
+        ?int $rajaOngkirDestinationId = null,
+        ?string $courier = null,
+        ?string $service = null,
+        ?string $etd = null,
+    ): array {
         return [
             'source' => $source,
             'fee' => $fee,
             'seller_id' => $sellerId,
-            'destination_kelurahan' => null,
-            'destination_kecamatan' => null,
-            'rajaongkir_destination_id' => null,
-            'courier' => null,
-            'service' => null,
-            'etd' => null,
+            'destination_kelurahan' => $destinationKelurahan,
+            'destination_kecamatan' => $destinationKecamatan,
+            'rajaongkir_destination_id' => $rajaOngkirDestinationId,
+            'courier' => $courier,
+            'service' => $service,
+            'etd' => $etd,
             'weight_grams' => $weightGrams,
         ];
     }

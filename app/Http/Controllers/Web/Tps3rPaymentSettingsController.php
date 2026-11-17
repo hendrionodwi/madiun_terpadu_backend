@@ -102,10 +102,10 @@ class Tps3rPaymentSettingsController extends Controller
         $user = $request->user();
         $profile = $user->pengelolaTps3rProfile;
 
-        $serverKey = $request->input('server_key') ?: ($profile?->midtrans_server_key ?? '');
+        $serverKey = $request->input('server_key') ?: ($profile->midtrans_server_key ?? '');
         $isProduction = $request->has('is_production')
             ? (bool) $request->input('is_production')
-            : (bool) ($profile?->midtrans_is_production ?? false);
+            : (bool) ($profile->midtrans_is_production ?? false);
 
         if (empty($serverKey)) {
             $message = 'Server Key Midtrans belum diisi. Masukkan Server Key terlebih dahulu untuk melakukan pengujian koneksi.';

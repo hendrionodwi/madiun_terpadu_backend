@@ -14,6 +14,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
+use RuntimeException;
 
 #[Title('Informasi Pribadi & Profil')]
 class Profile extends Component
@@ -70,18 +71,18 @@ class Profile extends Component
         $this->existingAvatarUrl = $user->avatar_url;
 
         if ($user->isAdminDlh()) {
-            $this->nip = (string) ($user->adminDlhProfile?->nip ?? '');
-            $this->jabatan = (string) ($user->adminDlhProfile?->jabatan ?? '');
-            $this->bidang = (string) ($user->adminDlhProfile?->bidang ?? '');
+            $this->nip = (string) ($user->adminDlhProfile->nip ?? '');
+            $this->jabatan = (string) ($user->adminDlhProfile->jabatan ?? '');
+            $this->bidang = (string) ($user->adminDlhProfile->bidang ?? '');
         } elseif ($user->isPetugasLapangan()) {
-            $this->jenis_kendaraan = (string) ($user->petugasLapanganProfile?->jenis_kendaraan ?? '');
-            $this->plat_nomor = (string) ($user->petugasLapanganProfile?->plat_nomor ?? '');
+            $this->jenis_kendaraan = (string) ($user->petugasLapanganProfile->jenis_kendaraan ?? '');
+            $this->plat_nomor = (string) ($user->petugasLapanganProfile->plat_nomor ?? '');
         } elseif ($user->isWarga()) {
-            $this->alamat = (string) ($user->wargaProfile?->alamat ?? '');
-            $this->rt = (string) ($user->wargaProfile?->rt ?? '');
-            $this->rw = (string) ($user->wargaProfile?->rw ?? '');
-            $this->kelurahan = (string) ($user->wargaProfile?->kelurahan ?? '');
-            $this->kecamatan = (string) ($user->wargaProfile?->kecamatan ?? '');
+            $this->alamat = (string) ($user->wargaProfile->alamat ?? '');
+            $this->rt = (string) ($user->wargaProfile->rt ?? '');
+            $this->rw = (string) ($user->wargaProfile->rw ?? '');
+            $this->kelurahan = (string) ($user->wargaProfile->kelurahan ?? '');
+            $this->kecamatan = (string) ($user->wargaProfile->kecamatan ?? '');
         }
     }
 
@@ -97,13 +98,14 @@ class Profile extends Component
             return [];
         }
 
-        return MasterData::query()
+        return array_values(MasterData::query()
             ->where('group', 'districts')
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('name')
             ->pluck('name')
-            ->all();
+            ->map(static fn (mixed $district): string => (string) $district)
+            ->all());
     }
 
     /**
@@ -141,6 +143,9 @@ class Profile extends Component
 
         if ($this->avatar instanceof TemporaryUploadedFile) {
             $newAvatarPath = $this->avatar->store('avatars', 'public');
+            if ($newAvatarPath === false) {
+                throw new RuntimeException('Foto profil gagal disimpan.');
+            }
         }
 
         DB::transaction(function () use ($user, $validated, $newAvatarPath): void {
@@ -164,7 +169,7 @@ class Profile extends Component
                 $user->adminDlhProfile()->updateOrCreate([], [
                     'nip' => $validated['nip'] ?: null,
                     'jabatan' => $validated['jabatan'] ?: null,
-                    'bidang' => $validated['bidang'] ?: ($user->adminDlhProfile?->bidang ?? 'Operasional'),
+                    'bidang' => $validated['bidang'] ?: ($user->adminDlhProfile->bidang ?? 'Operasional'),
                 ]);
             } elseif ($user->isPetugasLapangan()) {
                 $user->petugasLapanganProfile()->updateOrCreate([], [

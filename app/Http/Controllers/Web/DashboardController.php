@@ -482,7 +482,7 @@ class DashboardController extends Controller
 
         $seller = $user;
         $order = $this->sellerOrdersQuery($seller->id)
-            ->findOrFail($order->getKey());
+            ->findOrFail((int) $order->getKey());
         $fulfillment = $order->fulfillments->first();
 
         abort_if($fulfillment === null, 404);
@@ -916,9 +916,8 @@ class DashboardController extends Controller
             ]);
         }
 
-        $updateData = collect($validated)
-            ->only(['judul_laporan', 'periode_semester', 'tahun', 'jenis_dokumen', 'timbulan_sampah_kg', 'metode_pengelolaan', 'monitoring_data'])
-            ->all();
+        $updateData = $validated;
+        unset($updateData['file_laporan']);
 
         if ($request->hasFile('file_laporan')) {
             if (! empty($environmentalReport->file_path)) {

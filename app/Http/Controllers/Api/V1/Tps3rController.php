@@ -140,7 +140,10 @@ class Tps3rController extends Controller
                 );
             }
         } else {
-            $profile = PengelolaTps3rProfile::find($validated['tps3r_profile_id'] ?? null);
+            $profileId = $validated['tps3r_profile_id'] ?? null;
+            $profile = $profileId !== null
+                ? PengelolaTps3rProfile::find((int) $profileId)
+                : null;
             if ($profile === null) {
                 throw ValidationException::withMessages([
                     'tps3r_profile_id' => ['Fasilitas TPS3R tujuan wajib dipilih.'],
@@ -149,7 +152,7 @@ class Tps3rController extends Controller
         }
 
         $profile->loadMissing('user');
-        if (! $profile->user || ! $profile->user->is_active) {
+        if (! $profile->user->is_active) {
             throw ValidationException::withMessages([
                 'tps3r_profile_id' => ['Fasilitas TPS3R tujuan sedang tidak aktif.'],
             ]);
@@ -160,7 +163,7 @@ class Tps3rController extends Controller
             : ($validated['petugas_id'] ?? null);
 
         if (! $currentUser->isPetugasLapangan() && $petugasId !== null) {
-            $assignedOfficer = User::find($petugasId);
+            $assignedOfficer = User::find((int) $petugasId);
             if ($assignedOfficer === null || ! $assignedOfficer->isPetugasLapangan() || ! $assignedOfficer->is_active) {
                 throw ValidationException::withMessages([
                     'petugas_id' => ['Petugas pengirim sampah harus merupakan akun petugas lapangan yang aktif.'],
@@ -310,7 +313,7 @@ class Tps3rController extends Controller
             throw $exception;
         }
 
-        if (is_array($deposit) && isset($deposit['replay'])) {
+        if (is_array($deposit)) {
             return $this->buildIdempotentDepositResponse($deposit['replay']);
         }
 
