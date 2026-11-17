@@ -91,11 +91,18 @@
             </div>
             <div class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                 @forelse ($articles as $item)
-                    <a href="{{ route('portal.articles.show', $item) }}" class="portal-interactive-card group flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-civic-canvas">
+                    @php
+                        $cover = $item->cover_url ?: $item->thumbnail_url;
+                    @endphp
+                    <a href="{{ route('portal.articles.show', $item) }}" class="portal-interactive-card group flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-civic-canvas">
                         <div>
-                            @if ($item->cover_url)
-                                <div class="overflow-hidden bg-slate-100">
-                                    <img src="{{ $item->cover_url }}" alt="{{ $item->judul }}" class="h-44 w-full object-cover transition duration-500 ease-out group-hover:scale-[1.03]">
+                            @if ($cover)
+                                <div class="aspect-video w-full overflow-hidden bg-slate-100">
+                                    <img src="{{ $cover }}" alt="{{ $item->judul }}" class="h-full w-full object-cover transition duration-500 ease-out group-hover:scale-[1.03]" loading="lazy">
+                                </div>
+                            @else
+                                <div class="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-civic-50 to-civic-100 text-civic-400">
+                                    <flux:icon.book-open class="size-10 text-civic-500" />
                                 </div>
                             @endif
                             <div class="p-5">
@@ -103,8 +110,8 @@
                                     <span class="rounded-full bg-civic-100 px-2.5 py-1 font-bold text-civic-800">{{ $item->kategori_label }}</span>
                                     <span class="text-slate-500 tabular-nums">{{ $item->waktu_baca_menit }} menit</span>
                                 </div>
-                                <h3 class="mt-4 font-display text-lg font-extrabold leading-6 text-slate-950 group-hover:text-civic-800">{{ $item->judul }}</h3>
-                                <p class="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{{ $item->ringkasan }}</p>
+                                <h3 class="mt-4 line-clamp-2 min-h-[3rem] font-display text-lg font-extrabold leading-6 text-slate-950 group-hover:text-civic-800">{{ $item->judul }}</h3>
+                                <p class="mt-2 line-clamp-3 min-h-[4.5rem] text-sm leading-6 text-slate-600">{{ $item->ringkasan ?: 'Pelajari panduan dan langkah praktis pemilahan sampah terpadu Kota Madiun.' }}</p>
                             </div>
                         </div>
                         <div class="flex items-center justify-between border-t border-slate-200/70 px-5 py-3 text-xs font-semibold text-slate-500">
@@ -145,7 +152,7 @@
         </div>
         <div class="mt-8 grid gap-4 {{ $facilities->count() <= 2 ? 'md:grid-cols-2' : 'md:grid-cols-3' }}">
             @forelse ($facilities as $facility)
-                <a href="{{ route('public.services', array_filter(['district' => $facility->kecamatan, 'search' => $facility->nama_tps3r])) }}" class="portal-interactive-card rounded-2xl border border-slate-200 bg-white p-5">
+                <a href="{{ route('public.facilities.show', $facility) }}" class="portal-interactive-card rounded-2xl border border-slate-200 bg-white p-5">
                     <p class="font-mono text-xs font-bold uppercase tracking-wider text-civic-700">{{ $facility->kode_tps3r ?: 'TPS3R' }}</p>
                     <h3 class="mt-2 font-display text-lg font-extrabold text-slate-950">{{ $facility->nama_tps3r }}</h3>
                     <p class="mt-2 text-sm text-slate-600">{{ $facility->kelurahan }}{{ $facility->kecamatan ? ', Kec. '.$facility->kecamatan : '' }}</p>

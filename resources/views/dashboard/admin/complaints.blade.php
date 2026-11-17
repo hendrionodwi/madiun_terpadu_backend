@@ -46,7 +46,7 @@
                     ->all();
             @endphp
 
-            <div class="civic-card flex flex-col justify-between gap-4 p-4 text-xs md:flex-row md:items-center">
+            <div class="civic-card relative z-30 flex flex-col justify-between gap-4 p-4 text-xs md:flex-row md:items-center">
                 <div id="complaintsStatusTabs" class="civic-filter-rail">
                     <a href="{{ route('dashboard.admin.complaints', ['kecamatan' => $currentDistrict, 'kategori' => $currentCategory]) }}" data-ajax-link class="civic-filter-chip !text-xs {{ ! $currentStatus ? 'civic-filter-chip-active' : '' }}">
                         Semua Status ({{ $statusCounts['all'] }})

@@ -35,7 +35,7 @@ test('admin dlh can update retribution tariff policies, grace period, and notifi
         'standard_due_day' => 25,
         'max_point_discount_percent' => 80,
         'grace_period_days' => 3,
-        'point_conversion_rate' => 15,
+        'point_conversion_rate' => 1.5,
         'reminder_template' => 'Yth. {nama}, tagihan {periode} sebesar Rp {nominal} jatuh tempo pada {jatuh_tempo}. Status: {status_info}.',
     ];
 
@@ -61,7 +61,7 @@ test('admin dlh can update retribution tariff policies, grace period, and notifi
         ->and($config['standard_due_day'])->toBe(25)
         ->and($config['max_point_discount_percent'])->toBe(80.0)
         ->and($config['grace_period_days'])->toBe(3)
-        ->and($config['point_conversion_rate'])->toBe(15.0);
+        ->and($config['point_conversion_rate'])->toBe(1.5);
 });
 
 test('admin dlh can broadcast bulk retribution reminders to warga', function () {

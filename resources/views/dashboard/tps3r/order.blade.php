@@ -4,8 +4,10 @@
             \App\Enums\OrderFulfillmentStatus::Menunggu => 'civic-status-warning',
             \App\Enums\OrderFulfillmentStatus::Diproses => 'civic-status-info',
             \App\Enums\OrderFulfillmentStatus::SiapDikirim => 'civic-status bg-civic-100 text-civic-800 dark:bg-civic-950/60 dark:text-civic-300',
+            \App\Enums\OrderFulfillmentStatus::Dikirim => 'civic-status bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300',
             \App\Enums\OrderFulfillmentStatus::Selesai => 'civic-status-success',
             \App\Enums\OrderFulfillmentStatus::Dibatalkan => 'civic-status-danger',
+            default => 'civic-status-neutral',
         };
     @endphp
 
@@ -235,6 +237,10 @@
                         <li class="flex items-center justify-between">
                             <span class="text-slate-500 dark:text-slate-400">Siap Dikirim</span>
                             <span class="font-medium text-slate-800 dark:text-slate-200">{{ $fulfillment->ready_at ? $fulfillment->ready_at->format('d M Y, H:i') : '-' }}</span>
+                        </li>
+                        <li class="flex items-center justify-between">
+                            <span class="text-slate-500 dark:text-slate-400">Dalam Pengiriman</span>
+                            <span class="font-medium text-slate-800 dark:text-slate-200">{{ $fulfillment->shipped_at ? $fulfillment->shipped_at->format('d M Y, H:i') : '-' }}</span>
                         </li>
                         <li class="flex items-center justify-between">
                             <span class="text-slate-500 dark:text-slate-400">Selesai Diterima</span>

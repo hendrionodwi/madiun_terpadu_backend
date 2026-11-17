@@ -4,6 +4,7 @@ use App\Models\BroadcastAnnouncement;
 use App\Models\FundWithdrawalRequest;
 use App\Models\MasterData;
 use App\Models\PengelolaTps3rProfile;
+use App\Models\RewardFundAllocation;
 use App\Models\Tps3rWasteDeposit;
 use App\Models\User;
 use App\Models\WargaProfile;
@@ -29,26 +30,29 @@ test('warga can request point redemption and rejected points are restored', func
         'group' => 'point_conversion',
         'code' => 'idr',
         'name' => 'Konversi Rupiah',
-        'numeric_value' => 10,
+        'numeric_value' => 1,
         'is_active' => true,
     ]);
     $warga = User::factory()->warga()->create();
-    WargaProfile::factory()->create(['user_id' => $warga->id, 'saldo_poin' => 2000]);
+    WargaProfile::factory()->create(['user_id' => $warga->id, 'saldo_poin' => 20000]);
+    RewardFundAllocation::factory()->create(['amount' => 100000]);
     Sanctum::actingAs($warga);
 
     $this->postJson('/api/v1/fund-withdrawals', [
         'source' => 'points',
-        'points_used' => 1000,
+        'points_used' => 10000,
         'destination_type' => 'e_wallet',
+        'destination_provider' => 'DANA',
         'destination_account' => '081234567890',
+        'destination_account_name' => 'Siti Aminah',
     ])->assertCreated()->assertJsonPath('data.amount', 10000);
 
-    expect($warga->fresh()->wargaProfile?->saldo_poin)->toBe(1000);
+    expect($warga->fresh()->wargaProfile?->saldo_poin)->toBe(10000);
     $this->assertDatabaseHas('point_ledgers', [
         'warga_id' => $warga->id,
         'tipe' => 'debit',
         'kategori' => 'penukaran_poin',
-        'jumlah_poin' => 1000,
+        'jumlah_poin' => 10000,
     ]);
     $withdrawal = FundWithdrawalRequest::query()->firstOrFail();
     $admin = User::factory()->adminDlh()->create();
@@ -57,12 +61,12 @@ test('warga can request point redemption and rejected points are restored', func
         'admin_note' => 'Nomor akun belum valid.',
     ])->assertRedirect();
 
-    expect($warga->fresh()->wargaProfile?->saldo_poin)->toBe(2000);
+    expect($warga->fresh()->wargaProfile?->saldo_poin)->toBe(20000);
     $this->assertDatabaseHas('point_ledgers', [
         'warga_id' => $warga->id,
         'tipe' => 'kredit',
         'kategori' => 'refund_penukaran_poin',
-        'jumlah_poin' => 1000,
+        'jumlah_poin' => 10000,
     ]);
 });
 

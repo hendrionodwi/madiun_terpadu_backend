@@ -1200,3 +1200,203 @@ File ini adalah media koordinasi asinkron. Agar sinkronisasi benar-benar berjala
 3. Pastikan `PublicPortalDataService` hanya menampilkan konten aktif sesuai periode tayang serta setting visibilitas portal.
 4. Jalankan full backend suite setelah workstream backend Gemini selesai dan catat konflik kontrak, bila ada, sebelum Codex melanjutkan implementasi UI berikutnya.
 
+---
+
+## Log Handoff Gemini Antigravity (2026-11-16)
+
+### Task Bugfix & UI Polish: AG-20261116-004 — Resolusi Stacking Context & Dropdown Overlap di Web Dashboard
+- **Owner:** Gemini Antigravity
+- **Status:** `[DONE]`
+- **Target:** Memperbaiki dropdown `<x-public.select-filter />` (seperti dropdown "Pilih TPS3R" pada panel Pengaturan Midtrans Admin DLH) yang tertimpa/terpotong di bawah kartu konten berikutnya (`.civic-stat-card` Fasilitas TPS3R Terkait).
+- **Scope File:**
+  - Backend Blade Components: `resources/views/components/public/select-filter.blade.php`.
+  - Web Dashboard Views:
+    - `resources/views/dashboard/tps3r/payment-settings.blade.php`
+    - `resources/views/dashboard/admin/retributions.blade.php`
+    - `resources/views/dashboard/admin/complaints.blade.php`
+    - `resources/views/dashboard/admin/reports.blade.php`
+    - `resources/views/dashboard/pemrakarsa/reports.blade.php`
+    - `resources/views/dashboard/tps3r/volume-recap.blade.php`
+    - `resources/views/dashboard/admin/routes/create.blade.php`
+    - `resources/views/dashboard/admin/routes/edit.blade.php`
+- **Implementasi:**
+  1. **Dynamic Ancestor Stacking Context Elevation (`select-filter.blade.php`):**
+     - Menambahkan Alpine watcher pada state `open` di komponen `<x-public.select-filter />`.
+     - Saat dropdown terbuka (`open: true`), watcher secara otomatis menelusuri elemen leluhur (`.civic-card`, `form`, `section`, `[data-ajax-zone]`) dan menaikkan level stacking context (`position: relative; z-index: 30;`) dengan pelacak `selectFilterOpenCount`.
+     - Saat dropdown tertutup (`open: false`), elevasi dibersihkan secara bersih tanpa efek samping ke elemen lain.
+  2. **Static Layout Elevation:**
+     - Menambahkan kelas `relative z-30` pada kartu monitoring admin di `payment-settings.blade.php` dan seluruh kontainer filter di dashboard admin, pemrakarsa, serta tps3r.
+     - Memastikan menu mengambang (`z-50`) tidak akan pernah tertimpa oleh kartu stat bertumpuk (`relative isolate overflow-hidden`).
+  3. **Vite Build Asset Sync:**
+     - Menjalankan `cmd.exe /c npm run build` untuk sinkronisasi CSS/JS manifest.
+- **Hasil Quality Gate:**
+  - `php artisan test tests/Feature/AdminDashboardPagesTest.php` → **`15 / 15 passed (99 assertions)`**.
+  - `php artisan test --filter=payment` → **`20 / 20 passed (126 assertions)`**.
+  - `vendor/bin/pint --dirty --format agent` → **`passed`**.
+  - `cmd.exe /c npm run build` → **`passed (0 errors)`**.
+
+---
+
+### Task Feature & UI Overhaul: AG-20261116-005 — Redesign Portal Publik Ala Smart City (Inspirasi JAKI), Dynamic Showcase CMS & Banner Carousel
+- **Owner:** Gemini Antigravity
+- **Status:** `[DONE]`
+- **Target:** Merombak tampilan beranda portal publik Kota Madiun dari kesan kaku/"AI slop" menjadi portal Smart City berkelas dunia terinspirasi dari JAKI (Jakarta Smart City), mempertahankan palet Civic Emerald, menambahkan showcase mockup smartphone dinamis, banner slider pengumuman & edukasi, strip counter data ramping, serta CMS dinamis untuk Admin DLH.
+- **Scope File:**
+  - Backend Models & CMS Services:
+    - `app/Models/PortalSetting.php`
+    - `app/Http/Requests/Cms/UpdatePortalSettingsRequest.php`
+    - `app/Services/PortalCmsService.php`
+    - `app/Http/Controllers/Web/AdminContentController.php`
+  - Blade Views & Layouts:
+    - `resources/views/public/home.blade.php`
+    - `resources/views/dashboard/admin/portal-settings.blade.php`
+    - `resources/views/layouts/public.blade.php`
+  - Feature Tests:
+    - `tests/Feature/PortalCmsTest.php`
+- **Implementasi:**
+  1. **Hero Section Redesign (Inspirasi JAKI × Civic Emerald):**
+     - Sisi Kiri: Headline manusiawi dan membumi (*"Pilah dari Rumah, Pantau Truk Sampah Sampai Depan Pagar"*), quick search box rute/TPS3R, tag shortcut kecamatan, serta tombol CTA primer (*"Unduh Aplikasi Warga"*) dan sekunder (*"Jadwal & Peta Armada"*).
+     - Sisi Kanan: Frame Mockup Smartphone Titanium modern (resolusi tinggi dengan top dynamic island notch) menampilkan antarmuka live Flutter app Madiun Terpadu (Live GPS tracking truk #02, rute map polyline, jadwal organik harian, poin timbangan, dan 5 bottom nav tabs).
+     - Floating badge mengambang di sekitar HP (*"Tersedia di Android"*, *"Live GPS Tracking Armada DLH"*).
+  2. **Stat Counter Strip Ramping (Satu Data Indonesia):**
+     - Memindahkan 4 metrik transparansi (Fasilitas TPS3R, Rute Armada, Produk Daur Ulang, Warga Terhubung) dari kotak tabel kaku lama ke strip horizontal yang ramping, bersih, dan elegan di bawah hero.
+  3. **Banner Slider / Carousel Dinamis (Pengumuman & Edukasi Warga):**
+     - Slider carousel interaktif berbasis Alpine.js dengan autoplay 6 detik, jeda saat kursor diarahkan (pause on hover), navigasi panah kiri/kanan, dan indikator titik (*dot indicators*).
+     - Menampilkan pengumuman resmi DLH (`BroadcastAnnouncement`) dan artikel edukasi (`EducationArticle`) secara dinamis langsung dari database, dengan fallback program unggulan kota.
+  4. **Section Unduh Aplikasi Mobile Warga (`#unduh-aplikasi`):**
+     - Bagian khusus untuk edukasi dan ajakan memasang aplikasi mobile Android warga Kota Madiun, dilengkapi tombol unduh file APK langsung, QR Code scan via kamera ponsel, dan 3 kartu fitur unggulan (Live Tracking GPS, Pengingat Jadwal, Poin Jadi Rupiah).
+     - Ditambahkan atribut `scroll-smooth` pada `layouts/public.blade.php` sehingga klik tombol unduh di hero meluncur mulus ke bagian unduh aplikasi.
+  5. **Pengembangan CMS Tampilan Portal Admin DLH (`/dashboard/admin/portal-settings`):**
+     - Mendukung pengunggahan gambar mockup kustom (PNG/JPG/WebP maks 4MB) dengan pembersihan file lama otomatis di disk storage publik.
+     - Ditambahkan checkbox opsi *"Hapus gambar kustom & kembalikan ke mockup bawaan sistem"*.
+     - Pengaturan teks dan tautan tombol utama CTA, tombol sekunder, badge mengambang, serta toggle visibilitas banner slider.
+- **Hasil Quality Gate:**
+  - `php artisan test tests/Feature/PortalCmsTest.php` → **`7 / 7 passed (83 assertions)`**.
+  - `php artisan test tests/Feature/PublicPortalPageTest.php` → **`9 / 9 passed (50 assertions)`**.
+  - `php artisan test tests/Feature/AdminDashboardPagesTest.php` → **`15 / 15 passed (99 assertions)`**.
+  - `vendor/bin/pint --dirty --format agent` → **`passed`**.
+  - `cmd.exe /c npm run build` → **`passed (0 errors)`**.
+  - `git diff --check` → **`clean`**.
+
+
+#### Task `AG-20261116-006`: Standardisasi Navbar Minimalis & Elegan Terinspirasi JAKI Smart City
+- **Owner:** Gemini Antigravity
+- **Status:** `[DONE]`
+- **Target:** Mengubah navbar portal publik (`x-public.header`) dari gaya boxy pill menjadi desain minimalis, elegan, dan lapang terinspirasi dari navbar resmi Jakarta Smart City (JAKI). Menghilangkan bilah hitam/gelap atas, menggunakan tipografi bersih, indikator aktif garis bawah (*underline bar indicator*) flush di batas bawah navbar, tombol aksesibilitas Smart City di kiri, ikon pencarian cepat terhubung form hero, serta pemilih bahasa `EN | ID`.
+- **Scope File:**
+  - `resources/views/components/public/header.blade.php`
+  - `resources/views/public/home.blade.php`
+- **Implementasi:**
+  1. **Layout Bersih & Minimalis:**
+     - Menghilangkan bilah gelap atas (`bg-civic-950`) sehingga navbar putih transparan (`bg-white/95 backdrop-blur-md`) langsung berada di paling atas halaman dengan tinggi lapang (`h-18 lg:h-20`).
+  2. **Indikator Aktif Garis Bawah (*Underline Bar Indicator*):**
+     - Mengganti tombol pil kotak kaku (`rounded-lg bg-civic-50 ring-1`) dengan tautan teks bersih berjarak lega (`gap-6 xl:gap-8`).
+     - Tautan aktif memiliki garis bawah solid tebal 3px melengkung (`bg-civic-600 rounded-t-full`) yang menempel presisi di garis batas bawah header, persis seperti pada menu JAKI.
+     - Submenu dropdown ringan (`Jadwal & Peta`, `Edukasi & Regulasi`) dengan chevron halus yang berotasi saat dibuka.
+  3. **Tombol Aksesibilitas Smart City & Logo Kota Madiun:**
+     - Menambahkan tombol aksesibilitas berwarna biru khas smart city dengan ikon universal access di sisi kiri sebelum logo.
+  4. **Utilitas Kanan:**
+     - Ikon pencarian cepat (`<svg>`) yang otomatis melakukan *smooth scroll* dan memberikan fokus kursor pada form pencarian hero di Beranda.
+     - Pemilih bahasa `EN | ID` dengan indikator aktif khas portal smart city.
+     - Tombol aksi `Masuk` (teks halus) dan `Daftar Warga` (tombol pill ramping `bg-civic-700`) / `Dashboard` saat login.
+- **Hasil Quality Gate:**
+  - `php artisan test tests/Feature/PublicPortalPageTest.php` → **`9 / 9 passed (50 assertions)`**.
+  - `php artisan test tests/Feature/PortalCmsTest.php` → **`7 / 7 passed (83 assertions)`**.
+  - `cmd.exe /c npm run build` → **`passed (2.58s)`**.
+  - `vendor/bin/pint --dirty --format agent` → **`passed`**.
+  - `git diff --check` → **`clean`**.
+
+#### Task `AG-20261116-007`: Background Foto Hero Dinamis dengan Efek Fade / Blur Transisi Bawah & Pembersihan Logo Biru
+- **Owner:** Gemini Antigravity
+- **Status:** `[DONE]`
+- **Target:** Menjawab pertanyaan pengguna terkait logo biru (tombol aksesibilitas bawaan referensi) dan menghapusnya dari navbar agar hanya menyisakan logo resmi Kota Madiun. Menerapkan fitur background foto penuh pada Hero section yang dapat diganti secara dinamis via CMS Admin DLH, dilengkapi efek gradasi atmosferik, blur bawah (*backdrop-blur*), dan pudar (*fade-out*) ke palet website (`civic-canvas` / putih) agar menyatu mulus ke lajur counter & slider di bawahnya.
+- **Scope File:**
+  - `resources/views/components/public/header.blade.php`
+  - `app/Models/PortalSetting.php`
+  - `app/Http/Requests/Cms/UpdatePortalSettingsRequest.php`
+  - `app/Services/PortalCmsService.php`
+  - `app/Http/Controllers/Web/AdminContentController.php`
+  - `resources/views/dashboard/admin/portal-settings.blade.php`
+  - `resources/views/public/home.blade.php`
+  - `tests/Feature/PortalCmsTest.php`
+- **Implementasi:**
+  1. **Pembersihan Logo Biru di Header:**
+     - Menghapus tombol kotak biru aksesibilitas dari [`header.blade.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/components/public/header.blade.php) sehingga navbar bersih hanya menyajikan logo resmi Kota Madiun · Madiun Terpadu.
+  2. **Background Foto Hero Dinamis via CMS (`hero_background_image`):**
+     - Mendukung pengunggahan foto lanskap/aktivitas Kota Madiun melalui dashboard admin CMS dengan pembersihan file lama otomatis di disk publik.
+     - Disediakan checkbox *"Hapus foto latar kustom & gunakan latar bawaan Kota Madiun"*.
+  3. **Efek Visual Fade-Out & Backdrop Blur di Bagian Bawah Hero:**
+     - Layer foto diletakkan di background hero (`absolute inset-0 z-0`) dengan overlay gradasi elegan untuk menjaga ketajaman & kontras teks di sisi kiri serta mockup HP di sisi kanan.
+     - Di bagian bawah section hero (150-190px), dipasang gradasi pudar (`bg-gradient-to-b from-transparent via-white/80 to-white`) dan efek blur (`backdrop-blur-[2px]`) yang membuat foto berangsur-angsur menghilang dan melebur mulus dengan warna palet di bawahnya tanpa garis potong tajam.
+- **Hasil Quality Gate:**
+  - `php artisan test tests/Feature/PortalCmsTest.php` → **`7 / 7 passed (88 assertions)`**.
+  - `php artisan test tests/Feature/PublicPortalPageTest.php` → **`9 / 9 passed (50 assertions)`**.
+  - `php artisan test tests/Feature/AdminDashboardPagesTest.php` → **`15 / 15 passed (99 assertions)`**.
+  - `cmd.exe /c npm run build` → **`passed in 3.04s`**.
+  - `vendor/bin/pint --dirty --format agent` → **`passed`**.
+  - `git diff --check` → **`clean`**.
+
+#### Task `AG-20261117-001`: Penghapusan Mockup HP Hero, QR Code Vektor Dinamis (BaconQrCode), & Konfigurasi CMS Unduh Aplikasi
+- **Owner:** Gemini Antigravity
+- **Status:** `[DONE]`
+- **Target:** Memenuhi arahan pengguna:
+  1. Menghapus frame mockup smartphone pada Hero Section Beranda agar foto latar (dengan efek blur & transisi pudar ke bawah) menjadi fokus visual utama yang lapang dan elegan.
+  2. Mengubah QR Code statis menjadi **100% dinamis dan scannable** (dapat dipindai langsung oleh kamera smartphone asli), di-generate sebagai SVG vektor murni via service `QrCodeService` memanfaatkan pustaka `bacon/bacon-qr-code` yang sudah tersedia di proyek tanpa dependensi eksternal tambahan.
+  3. Menyediakan kontrol CMS penuh pada Dashboard Admin DLH (`/dashboard/admin/portal-settings`) untuk seluruh bagian promosi aplikasi mobile warga: judul, deskripsi, teks tombol CTA, tautan unduh APK (otomatis mengubah isi QR Code), badge status versi, opsi upload gambar QR kustom, dan sakelar visibilitas bagian.
+- **Scope File:**
+  - `app/Services/QrCodeService.php`
+  - `app/Models/PortalSetting.php`
+  - `app/Http/Requests/Cms/UpdatePortalSettingsRequest.php`
+  - `app/Services/PortalCmsService.php`
+  - `app/Http/Controllers/Web/AdminContentController.php`
+  - `resources/views/dashboard/admin/portal-settings.blade.php`
+  - `resources/views/public/home.blade.php`
+  - `tests/Feature/PortalCmsTest.php`
+- **Implementasi:**
+  1. **Penataan Ulang Hero Section (Fokus Latar & Konten Bersih):**
+     - Menghapus frame mockup HP di kolom kanan hero pada `home.blade.php`.
+     - Layout hero kini memusatkan perhatian pada judul yang ramah warga, kotak pencarian cepat layanan, pintasan kecamatan, dan tombol aksi langsung dengan latar belakang foto dinamis Kota Madiun yang bergradasi pudar ke bawah.
+  2. **Service Pembangkit QR Code Dinamis (`app/Services/QrCodeService.php`):**
+     - Menggunakan `BaconQrCode\Writer` dengan renderer `SvgImageBackEnd` dan `SquareModule` untuk menghasilkan output SVG vektor tajam, ringan, tanpa ketergantungan koneksi internet/API pihak ketiga.
+     - Resolusi link APK otomatis ditransformasikan menjadi URL absolut (`url($downloadUrl)`) agar kamera smartphone dapat langsung membuka/mengunduh saat dipindai.
+  3. **Section Unduh Aplikasi Warga (`#unduh-aplikasi`):**
+     - Merender SVG QR Code dinamis sesuai URL APK yang dikonfigurasi, dengan fallback gambar QR kustom jika admin memilih mengunggah QR khusus (misal dari Google Play Store).
+     - Menampilkan teks dinamis CMS (judul, deskripsi, tombol unduh, badge).
+  4. **Panel Manajemen CMS Admin DLH:**
+     - Ditambahkan grup formulir *"Aplikasi Mobile & QR Code Warga"* pada halaman pengaturan portal admin lengkap dengan live preview gambar QR kustom, penghapusan file lama, dan penyesuaian tautan unduh.
+- **Hasil Quality Gate:**
+  - `php artisan test tests/Feature/PortalCmsTest.php` → **`7 / 7 passed (92 assertions)`**.
+  - `php artisan test tests/Feature/PublicPortalPageTest.php` → **`9 / 9 passed (50 assertions)`**.
+  - `php artisan test tests/Feature/AdminDashboardPagesTest.php` → **`15 / 15 passed (99 assertions)`**.
+  - `vendor/bin/pint --dirty --format agent` → **`passed`**.
+  - `cmd.exe /c npm run build` → **`passed (0 errors)`**.
+  - `git diff --check` → **`clean`**.
+
+#### Task `AG-20261117-002`: Perbaikan Bug Jumping Banner Slider Edukasi & Pemunculan Foto Artikel Panduan Warga
+- **Owner:** Gemini Antigravity
+- **Status:** `[DONE]`
+- **Target:** Memperbaiki dua masalah visual yang dilaporkan pengguna melalui rekaman video:
+  1. *Banner Slider Edukasi & Tips Jumping/Stacked Bug:* Saat berpindah slide, slide baru dan lama bertumpuk vertikal (dobel tombol dan tinggi melompat naik-turun karena perbedaan panjang teks antara artikel `qpppppp` dan artikel panjang).
+  2. *Foto Informasi/Panduan Praktis Warga Tidak Muncul:* Gambar sampul artikel edukasi yang sudah diunggah oleh admin (seperti artikel "qpppppp") tidak tampil di beranda karena pemanggilan atribut `thumbnail_url` tidak sinkron dengan accessor `cover_url` pada model `EducationArticle`.
+- **Scope File:**
+  - `app/Models/EducationArticle.php`
+  - `resources/views/public/home.blade.php`
+  - `resources/views/public/education.blade.php`
+  - `tests/Feature/PublicPortalPageTest.php`
+- **Implementasi:**
+  1. **Solusi CSS Grid Stack pada Banner Slider (`home.blade.php`):**
+     - Mengubah container slider menggunakan CSS Grid dengan koordinat sel bertumpuk: `grid grid-cols-1 items-center min-h-[88px] sm:min-h-[76px]`.
+     - Setiap slide diberikan kelas `col-start-1 row-start-1` sehingga saat transisi keluar (`leave`) dan masuk (`enter`), kedua elemen berada pada posisi koordinat yang persis sama tanpa saling mendorong ke bawah.
+     - Membatasi baris teks secara konsisten: `line-clamp-1` pada judul artikel/pengumuman dan `line-clamp-1 sm:line-clamp-2` pada deskripsi, serta menambahkan kotak ikon visual terpadu (`megaphone`, `book-open`, `sparkles`).
+     - Hasil: Pergantian slide kini 100% mulus (smooth cross-fade), tinggi container stabil tidak melompat (0 layout shift).
+  2. **Sinkronisasi Cover Image & Pemunculan Foto Panduan Praktis Warga:**
+     - Pada [`EducationArticle.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/app/Models/EducationArticle.php), menambahkan accessor `getThumbnailUrlAttribute(): ?string { return $this->cover_url; }` dan mendaftarkan `thumbnail_url` ke `$appends`.
+     - Pada [home.blade.php](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/public/home.blade.php) bagian *Panduan praktis warga*, menggunakan `$article->cover_url ?: $article->thumbnail_url` untuk merender foto artikel yang telah diunggah dalam aspect ratio 16:9 (`aspect-video`).
+     - Menstandardisasi tinggi judul (`min-h-[3rem] line-clamp-2`) dan ringkasan (`min-h-[2.5rem] line-clamp-2`) pada seluruh card edukasi, sehingga kartu sejajar dan simetris secara sempurna.
+     - Menambahkan fallback ilustrasi buku yang seragam pada [education.blade.php](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/resources/views/public/education.blade.php) jika ada artikel yang belum memiliki foto sampul.
+- **Hasil Quality Gate:**
+  - `php artisan test tests/Feature/PublicPortalPageTest.php` → **`10 / 10 passed (56 assertions)`**.
+  - `php artisan test tests/Feature/PortalCmsTest.php` → **`7 / 7 passed (92 assertions)`**.
+  - `vendor/bin/pint --dirty --format agent` → **`passed`**.
+  - `cmd.exe /c npm run build` → **`passed in 4.06s`**.
+  - `git diff --check` → **`clean`**.

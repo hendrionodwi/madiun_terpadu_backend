@@ -2,9 +2,11 @@
 
 use App\Models\Order;
 use App\Models\PengelolaTps3rProfile;
+use App\Models\Tps3rDeliveryZone;
 use App\Models\User;
 use App\Models\WargaProfile;
 use App\Models\WasteProduct;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 
 test('users can browse recycled product catalog (MKT-F-001)', function () {
@@ -84,6 +86,129 @@ test('buyer can checkout cart and product stock is deducted (MKT-F-003)', functi
 
     expect($product1->fresh()->stok)->toBe(8);
     expect($product2->fresh()->stok)->toBe(4);
+});
+
+test('approved tps3r delivery zone uses its authoritative fee and permits point payment', function () {
+    $buyer = User::factory()->warga()->create();
+    WargaProfile::factory()->create(['user_id' => $buyer->id, 'saldo_poin' => 100000]);
+    $seller = User::factory()->pengelolaTps3r()->create();
+    $profile = PengelolaTps3rProfile::factory()->create(['user_id' => $seller->id]);
+    Tps3rDeliveryZone::factory()->approved()->create([
+        'pengelola_tps3r_profile_id' => $profile->id,
+        'kelurahan' => 'Oro-Oro Ombo',
+        'kecamatan' => 'Kartoharjo',
+        'delivery_fee' => 6000,
+    ]);
+    $product = WasteProduct::factory()->create([
+        'seller_id' => $seller->id,
+        'harga' => 20000,
+        'stok' => 5,
+        'weight_grams' => 1000,
+    ]);
+    Sanctum::actingAs($buyer, ['role:warga']);
+
+    $response = $this->postJson('/api/v1/marketplace/checkout', [
+        'items' => [['product_id' => $product->id, 'jumlah' => 1]],
+        'metode_pengiriman' => 'diantar',
+        'alamat_pengiriman' => 'Jl. Merpati No. 14, Kota Madiun',
+        'shipping_source' => 'local_tps3r',
+        'destination_kelurahan' => 'Oro-Oro Ombo',
+        'destination_kecamatan' => 'Kartoharjo',
+        'metode_pembayaran' => 'poin_sampah',
+    ]);
+
+    $response->assertCreated()
+        ->assertJsonPath('data.total_harga', 26000)
+        ->assertJsonPath('data.biaya_pengiriman', 6000)
+        ->assertJsonPath('data.shipping_source', 'local_tps3r')
+        ->assertJsonPath('data.destination_kelurahan', 'Oro-Oro Ombo');
+    $this->assertDatabaseHas('orders', [
+        'buyer_id' => $buyer->id,
+        'shipping_source' => 'local_tps3r',
+        'biaya_pengiriman' => 6000,
+    ]);
+});
+
+test('rajaongkir delivery recalculates the selected service and requires money payment', function () {
+    config()->set([
+        'services.rajaongkir.enabled' => true,
+        'services.rajaongkir.api_key' => 'test-api-key',
+        'services.rajaongkir.base_url' => 'https://rajaongkir.test/api/v1',
+        'services.rajaongkir.cost_cache_seconds' => 0,
+    ]);
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://rajaongkir.test/api/v1/calculate/domestic-cost' => Http::response([
+            'data' => [[
+                'name' => 'Jalur Nugraha Ekakurir',
+                'code' => 'jne',
+                'service' => 'REG',
+                'description' => 'Layanan Reguler',
+                'cost' => 18000,
+                'etd' => '2-3 hari',
+            ]],
+        ]),
+    ]);
+
+    $buyer = User::factory()->warga()->create();
+    $seller = User::factory()->pengelolaTps3r()->create();
+    PengelolaTps3rProfile::factory()->create([
+        'user_id' => $seller->id,
+        'rajaongkir_origin_id' => 501,
+    ]);
+    $product = WasteProduct::factory()->create([
+        'seller_id' => $seller->id,
+        'harga' => 20000,
+        'stok' => 5,
+        'weight_grams' => 1500,
+    ]);
+    Sanctum::actingAs($buyer, ['role:warga']);
+
+    $response = $this->postJson('/api/v1/marketplace/checkout', [
+        'items' => [['product_id' => $product->id, 'jumlah' => 1]],
+        'metode_pengiriman' => 'diantar',
+        'alamat_pengiriman' => 'Jl. Gajah Mada, Ponorogo',
+        'shipping_source' => 'rajaongkir',
+        'rajaongkir_destination_id' => 1200,
+        'shipping_courier' => 'jne',
+        'shipping_service' => 'REG',
+        'metode_pembayaran' => 'transfer_bank',
+    ]);
+
+    $response->assertCreated()
+        ->assertJsonPath('data.total_harga', 38000)
+        ->assertJsonPath('data.biaya_pengiriman', 18000)
+        ->assertJsonPath('data.shipping_source', 'rajaongkir')
+        ->assertJsonPath('data.shipping_courier', 'jne')
+        ->assertJsonPath('data.shipping_service', 'REG')
+        ->assertJsonPath('data.shipping_etd', '2-3 hari');
+});
+
+test('rajaongkir delivery rejects point payment before contacting the provider', function () {
+    Http::preventStrayRequests();
+    Http::fake([]);
+    $buyer = User::factory()->warga()->create();
+    WargaProfile::factory()->create(['user_id' => $buyer->id, 'saldo_poin' => 100000]);
+    $seller = User::factory()->pengelolaTps3r()->create();
+    PengelolaTps3rProfile::factory()->create(['user_id' => $seller->id, 'rajaongkir_origin_id' => 501]);
+    $product = WasteProduct::factory()->create(['seller_id' => $seller->id]);
+    Sanctum::actingAs($buyer, ['role:warga']);
+
+    $response = $this->postJson('/api/v1/marketplace/checkout', [
+        'items' => [['product_id' => $product->id, 'jumlah' => 1]],
+        'metode_pengiriman' => 'diantar',
+        'alamat_pengiriman' => 'Jl. Gajah Mada, Ponorogo',
+        'shipping_source' => 'rajaongkir',
+        'rajaongkir_destination_id' => 1200,
+        'shipping_courier' => 'jne',
+        'shipping_service' => 'REG',
+        'metode_pembayaran' => 'poin_sampah',
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertInvalid(['metode_pembayaran' => 'Poin hanya dapat digunakan']);
+    Http::assertNothingSent();
+    $this->assertDatabaseCount('orders', 0);
 });
 
 test('checkout rejects products from different tps3r stores for every payment method', function (string $paymentMethod) {
@@ -321,7 +446,11 @@ test('buyer cannot cancel order if already shipped or completed', function () {
 
     $orderId = $checkoutResponse->json('data.id');
     $orderNumber = $checkoutResponse->json('data.nomor_pesanan');
-    Order::where('id', $orderId)->update(['status' => 'siap_dikirim']);
+    Order::where('id', $orderId)->update(['status' => 'dikirim']);
+    Order::findOrFail($orderId)->fulfillments()->update([
+        'status' => 'dikirim',
+        'shipped_at' => now(),
+    ]);
 
     $cancelResponse = $this->patchJson("/api/v1/marketplace/orders/{$orderNumber}/cancel");
 
@@ -345,7 +474,11 @@ test('buyer can confirm order received and order status becomes selesai', functi
 
     $orderId = $checkoutResponse->json('data.id');
     $orderNumber = $checkoutResponse->json('data.nomor_pesanan');
-    Order::where('id', $orderId)->update(['status' => 'siap_dikirim']);
+    Order::where('id', $orderId)->update(['status' => 'dikirim']);
+    Order::findOrFail($orderId)->fulfillments()->update([
+        'status' => 'dikirim',
+        'shipped_at' => now(),
+    ]);
 
     $confirmResponse = $this->patchJson("/api/v1/marketplace/orders/{$orderNumber}/confirm-received");
 
@@ -410,10 +543,16 @@ test('users can browse list of tps3r stores with available product counts', func
 });
 
 test('users can view tps3r store detail and its active products', function () {
-    $seller = User::factory()->pengelolaTps3r()->create(['name' => 'TPS3R Winongo Berseri']);
+    $seller = User::factory()->pengelolaTps3r()->create([
+        'name' => 'TPS3R Winongo Berseri',
+        'phone_number' => '081234567890',
+    ]);
     $profile = PengelolaTps3rProfile::factory()->create([
         'user_id' => $seller->id,
         'nama_tps3r' => 'TPS3R Winongo Asri',
+        'deskripsi' => 'Fasilitas pengolahan organik dan anorganik warga.',
+        'kontak_publik' => '0351-400001',
+        'layanan_tersedia' => ['Penerimaan sampah pilah'],
     ]);
 
     $product = WasteProduct::factory()->create([
@@ -431,6 +570,9 @@ test('users can view tps3r store detail and its active products', function () {
             'data' => [
                 'id' => $seller->id,
                 'nama_tps3r' => 'TPS3R Winongo Asri',
+                'deskripsi' => 'Fasilitas pengolahan organik dan anorganik warga.',
+                'kontak_publik' => '0351-400001',
+                'layanan_tersedia' => ['Penerimaan sampah pilah'],
                 'total_products' => 1,
                 'products' => [
                     [
@@ -443,7 +585,8 @@ test('users can view tps3r store detail and its active products', function () {
                     ],
                 ],
             ],
-        ]);
+        ])
+        ->assertJsonMissingPath('data.phone_number');
 });
 
 test('users can filter product catalog by seller_id', function () {

@@ -23,7 +23,7 @@
                 </a>
                 <a href="{{ route('dashboard.tps3r.withdrawals.index') }}" class="civic-button-primary !min-h-10 !py-2 !text-xs">
                     <flux:icon.banknotes class="size-4" />
-                    Pencairan Toko
+                    Settlement Poin
                 </a>
             </x-slot:actions>
         </x-civic.subpage-header>

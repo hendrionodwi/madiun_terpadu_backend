@@ -63,3 +63,81 @@ test('seller receives not found when updating another seller fulfillment from we
     $response->assertNotFound();
     expect($fulfillment->fresh()->status)->toBe(OrderFulfillmentStatus::Menunggu);
 });
+
+test('seller can view order detail across all fulfillment statuses without unhandled match error', function () {
+    $seller = User::factory()->pengelolaTps3r()->create();
+    $product = WasteProduct::factory()->create(['seller_id' => $seller->id]);
+
+    foreach (OrderFulfillmentStatus::cases() as $case) {
+        $order = Order::factory()->create();
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'jumlah' => 2,
+            'harga_satuan' => 25000,
+            'subtotal' => 50000,
+        ]);
+        OrderFulfillment::factory()->create([
+            'order_id' => $order->id,
+            'seller_id' => $seller->id,
+            'status' => $case,
+            'shipped_at' => $case === OrderFulfillmentStatus::Dikirim ? now() : null,
+        ]);
+
+        $response = $this->actingAs($seller)->get(route('dashboard.tps3r.orders.show', $order));
+
+        $response->assertOk()
+            ->assertSee($case->label());
+    }
+});
+
+test('admin dlh can view order monitoring across all fulfillment statuses without unhandled match error', function () {
+    $admin = User::factory()->adminDlh()->create();
+    $seller = User::factory()->pengelolaTps3r()->create();
+    $product = WasteProduct::factory()->create(['seller_id' => $seller->id]);
+
+    foreach (OrderFulfillmentStatus::cases() as $case) {
+        $order = Order::factory()->create();
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'jumlah' => 1,
+            'harga_satuan' => 15000,
+            'subtotal' => 15000,
+        ]);
+        OrderFulfillment::factory()->create([
+            'order_id' => $order->id,
+            'seller_id' => $seller->id,
+            'status' => $case,
+            'shipped_at' => $case === OrderFulfillmentStatus::Dikirim ? now() : null,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('dashboard.tps3r.orders.show', $order));
+
+        $response->assertOk()
+            ->assertSee($case->label());
+    }
+});
+
+test('tps3r orders index supports dikirim tab filter', function () {
+    $seller = User::factory()->pengelolaTps3r()->create();
+    $product = WasteProduct::factory()->create(['seller_id' => $seller->id]);
+
+    $order = Order::factory()->create();
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $product->id,
+    ]);
+    OrderFulfillment::factory()->create([
+        'order_id' => $order->id,
+        'seller_id' => $seller->id,
+        'status' => OrderFulfillmentStatus::Dikirim,
+        'shipped_at' => now(),
+    ]);
+
+    $response = $this->actingAs($seller)->get(route('dashboard.tps3r.orders', ['status' => 'dikirim']));
+
+    $response->assertOk()
+        ->assertSee('Dalam Pengiriman')
+        ->assertSee($order->nomor_pesanan);
+});

@@ -11,8 +11,8 @@
             href="{{ $tab['route'] }}"
             wire:navigate
             @if ($isActive) aria-current="page" @endif
-            class="inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3.5 py-3 text-sm transition whitespace-nowrap {{ $isActive
-                ? 'border-civic-700 font-bold text-civic-700 dark:border-civic-400 dark:text-civic-300'
+            class="inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm transition whitespace-nowrap {{ $isActive
+                ? 'border-[#c6892e] font-bold text-[#b0741c] dark:border-amber-400 dark:text-amber-300'
                 : 'border-transparent font-medium text-slate-500 hover:border-slate-300 hover:text-slate-800 dark:text-slate-400 dark:hover:border-slate-700 dark:hover:text-slate-200' }}"
         >
             @if (! empty($tab['icon']))

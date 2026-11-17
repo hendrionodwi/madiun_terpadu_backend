@@ -10,6 +10,7 @@ use App\Models\OrderFulfillment;
 use App\Models\OrderItem;
 use App\Models\PemrakarsaProfile;
 use App\Models\PengelolaTps3rProfile;
+use App\Models\RewardFundAllocation;
 use App\Models\Tps3rWasteDeposit;
 use App\Models\User;
 use App\Models\WasteProcessingRecord;
@@ -121,11 +122,16 @@ test('pemrakarsa can submit company legality and admin can approve the entity', 
     expect($verification->fresh()->status)->toBe('approved');
 });
 
-test('tps3r store revenue can be requested and approved by admin', function () {
+test('tps3r marketplace point settlement can be requested and approved by admin', function () {
     $manager = User::factory()->pengelolaTps3r()->create();
     PengelolaTps3rProfile::factory()->create(['user_id' => $manager->id]);
+    $admin = User::factory()->adminDlh()->create();
+    $allocation = RewardFundAllocation::factory()->create(['created_by' => $admin->id, 'amount' => 100000]);
     $product = WasteProduct::factory()->create(['seller_id' => $manager->id]);
-    $order = Order::factory()->create();
+    $order = Order::factory()->create([
+        'metode_pembayaran' => 'poin_sampah',
+        'status' => 'selesai',
+    ]);
     OrderItem::factory()->create(['order_id' => $order->id, 'product_id' => $product->id, 'subtotal' => 50000]);
     OrderFulfillment::factory()->create([
         'order_id' => $order->id,
@@ -135,19 +141,22 @@ test('tps3r store revenue can be requested and approved by admin', function () {
     ]);
 
     $this->actingAs($manager)->post(route('dashboard.tps3r.withdrawals.store'), [
-        'amount' => 30000,
+        'amount' => 50000,
         'destination_type' => 'bank_transfer',
+        'destination_provider' => 'Bank Jatim',
         'destination_account' => '1234567890',
+        'destination_account_name' => 'TPS3R Madiun',
     ])->assertRedirect();
 
     $withdrawal = FundWithdrawalRequest::query()->firstOrFail();
-    $admin = User::factory()->adminDlh()->create();
     $this->actingAs($admin)->patch(route('dashboard.admin.points.update', $withdrawal), [
         'status' => 'approved',
+        'reward_fund_allocation_id' => $allocation->id,
         'admin_note' => 'Transfer diproses.',
     ])->assertRedirect();
 
     expect($withdrawal->fresh()->status)->toBe('approved');
+    expect($withdrawal->fresh()->source)->toBe('marketplace_points');
 });
 
 test('admin can manage master data and publish a role targeted announcement', function () {

@@ -1,5 +1,8 @@
 @props([
     'name' => null,
+    'settingsRoute' => 'profile.edit',
+    'settingsLabel' => 'Pengaturan akun',
+    'showSettingsLink' => true,
 ])
 
 <flux:dropdown position="bottom" align="start" {{ $attributes->class('rounded-2xl border border-slate-200 bg-slate-50/80 p-1.5 dark:border-slate-800 dark:bg-slate-900/70') }}>
@@ -26,9 +29,11 @@
         <flux:menu.separator />
 
         <flux:menu.radio.group>
-            <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>
-                {{ __('Pengaturan akun') }}
-            </flux:menu.item>
+            @if ($showSettingsLink)
+                <flux:menu.item :href="route($settingsRoute)" icon="cog" wire:navigate data-test="account-settings-menu-item">
+                    {{ __($settingsLabel) }}
+                </flux:menu.item>
+            @endif
             <flux:menu.item x-data icon="moon" x-show="$flux.appearance !== 'dark'" x-on:click="$flux.appearance = 'dark'" class="cursor-pointer">
                 {{ __('Mode gelap') }}
             </flux:menu.item>

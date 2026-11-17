@@ -2,19 +2,21 @@
 
 namespace App\Actions;
 
-use App\Enums\OrderFulfillmentStatus;
+use App\Enums\FundWithdrawalStatus;
 use App\Models\FundWithdrawalRequest;
-use App\Models\MasterData;
-use App\Models\OrderItem;
 use App\Models\PointLedger;
 use App\Models\RewardFundAllocation;
 use App\Models\User;
 use App\Models\WargaProfile;
+use App\Services\PointConversionService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CreateFundWithdrawalRequest
 {
+    public function __construct(private PointConversionService $pointConversion) {}
+
     /** @param array<string, mixed> $data */
     public function handle(User $user, array $data): FundWithdrawalRequest
     {
@@ -31,16 +33,15 @@ class CreateFundWithdrawalRequest
                 $profile = WargaProfile::query()->where('user_id', $user->id)->lockForUpdate()->firstOrFail();
                 $pointsUsed = (int) ($data['points_used'] ?? 0);
 
-                if ($pointsUsed < 100 || $pointsUsed > $profile->saldo_poin) {
-                    throw ValidationException::withMessages(['points_used' => ['Jumlah poin minimal 100 dan tidak boleh melebihi saldo.']]);
+                $minimumPoints = (int) config('finance.points.minimum_redemption_points');
+                if ($pointsUsed < $minimumPoints || $pointsUsed > $profile->saldo_poin) {
+                    throw ValidationException::withMessages([
+                        'points_used' => ['Jumlah poin minimal '.number_format($minimumPoints, 0, ',', '.').' dan tidak boleh melebihi saldo.'],
+                    ]);
                 }
 
-                $rate = (float) (MasterData::query()
-                    ->whereIn('group', ['point_conversion', 'point_conversions'])
-                    ->where('is_active', true)
-                    ->orderBy('sort_order')
-                    ->value('numeric_value') ?? 10);
-                $amount = $pointsUsed * $rate;
+                $rate = $this->pointConversion->currentRate();
+                $amount = $this->pointConversion->convert($pointsUsed);
 
                 $availableBudget = $this->availableRewardBudget();
                 if ($availableBudget < $amount) {
@@ -49,16 +50,6 @@ class CreateFundWithdrawalRequest
                     ]);
                 }
 
-            } elseif ($source === 'store') {
-                if (! $user->isPengelolaTps3r()) {
-                    throw ValidationException::withMessages(['source' => ['Pencairan pendapatan toko hanya tersedia untuk pengelola TPS3R.']]);
-                }
-
-                User::query()->whereKey($user->id)->lockForUpdate()->first();
-
-                if ($amount < 10000 || $amount > $this->availableStoreBalance($user)) {
-                    throw ValidationException::withMessages(['amount' => ['Nominal minimal Rp10.000 dan tidak boleh melebihi saldo toko tersedia.']]);
-                }
             } else {
                 throw ValidationException::withMessages(['source' => ['Sumber pencairan tidak valid.']]);
             }
@@ -67,10 +58,19 @@ class CreateFundWithdrawalRequest
                 'user_id' => $user->id,
                 'source' => $source,
                 'points_used' => $pointsUsed,
+                'point_conversion_rate' => $source === 'points' ? $rate : null,
                 'amount' => $amount,
                 'destination_type' => $data['destination_type'],
+                'destination_provider' => $data['destination_provider'] ?? null,
                 'destination_account' => $data['destination_account'] ?? null,
-                'status' => 'pending',
+                'destination_account_name' => $data['destination_account_name'] ?? null,
+                'cash_pickup_location' => $source === 'points' && $data['destination_type'] === 'cash'
+                    ? config('finance.points.cash_pickup_location')
+                    : null,
+                'cash_claim_code' => $source === 'points' && $data['destination_type'] === 'cash'
+                    ? $this->generateCashClaimCode()
+                    : null,
+                'status' => FundWithdrawalStatus::Pending->value,
                 'requester_note' => $data['requester_note'] ?? null,
             ]);
 
@@ -89,39 +89,25 @@ class CreateFundWithdrawalRequest
         });
     }
 
-    public function availableStoreBalance(User $user): float
+    private function generateCashClaimCode(): string
     {
-        $grossRevenue = (float) OrderItem::query()
-            ->whereHas('product', fn ($query) => $query->where('seller_id', $user->id))
-            ->whereHas('order', fn ($query) => $query
-                ->where('status', '!=', 'dibatalkan')
-                ->where(fn ($paidQuery) => $paidQuery
-                    ->where('metode_pembayaran', '!=', 'midtrans')
-                    ->orWhere('status', '!=', 'pending')))
-            ->whereHas('order.fulfillments', fn ($query) => $query
-                ->where('seller_id', $user->id)
-                ->where('status', OrderFulfillmentStatus::Selesai->value))
-            ->sum('subtotal');
+        do {
+            $code = 'TUN-'.Str::upper(Str::random(5)).'-'.Str::upper(Str::random(5));
+        } while (FundWithdrawalRequest::query()->where('cash_claim_code', $code)->exists());
 
-        $reserved = (float) FundWithdrawalRequest::query()
-            ->where('user_id', $user->id)
-            ->where('source', 'store')
-            ->whereIn('status', ['pending', 'approved'])
-            ->sum('amount');
-
-        return max(0, $grossRevenue - $reserved);
+        return $code;
     }
 
     public function availableRewardBudget(): float
     {
         $totalAllocated = (float) RewardFundAllocation::sum('amount');
         if ($totalAllocated <= 0) {
-            return PHP_FLOAT_MAX;
+            return 0.0;
         }
 
         $reserved = (float) FundWithdrawalRequest::query()
-            ->where('source', 'points')
-            ->whereIn('status', ['pending', 'approved'])
+            ->whereIn('source', ['points', 'marketplace_points'])
+            ->whereIn('status', ['pending', 'approved', 'processing', 'paid'])
             ->sum('amount');
 
         return max(0.0, $totalAllocated - $reserved);

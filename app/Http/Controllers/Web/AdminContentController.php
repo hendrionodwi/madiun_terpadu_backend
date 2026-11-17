@@ -197,7 +197,27 @@ class AdminContentController extends Controller
 
         /** @var User $admin */
         $admin = $request->user();
-        $this->cms->updateSettings($admin, $request->validated());
+        $payload = $request->validated();
+        if ($request->hasFile('hero_mockup_image')) {
+            $payload['hero_mockup_image'] = $request->file('hero_mockup_image');
+        }
+        if ($request->boolean('remove_hero_mockup_image')) {
+            $payload['remove_hero_mockup_image'] = true;
+        }
+        if ($request->hasFile('hero_background_image')) {
+            $payload['hero_background_image'] = $request->file('hero_background_image');
+        }
+        if ($request->boolean('remove_hero_background_image')) {
+            $payload['remove_hero_background_image'] = true;
+        }
+        if ($request->hasFile('app_qr_custom_image')) {
+            $payload['app_qr_custom_image'] = $request->file('app_qr_custom_image');
+        }
+        if ($request->boolean('remove_app_qr_custom_image')) {
+            $payload['remove_app_qr_custom_image'] = true;
+        }
+
+        $this->cms->updateSettings($admin, $payload);
 
         return back()->with('status', 'Pengaturan tampilan portal publik berhasil diperbarui.');
     }

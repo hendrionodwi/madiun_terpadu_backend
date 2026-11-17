@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\BroadcastAnnouncementResource;
 use App\Http\Resources\Api\EducationArticleResource;
+use App\Http\Resources\Api\PengelolaTps3rProfileResource;
 use App\Http\Resources\Api\PublicDocumentResource;
 use App\Models\EducationArticle;
 use App\Models\PengelolaTps3rProfile;
@@ -154,7 +155,7 @@ class PublicPortalController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Daftar fasilitas TPS3R dan Bank Sampah berhasil diambil.',
-            'data' => $facilities->items(),
+            'data' => PengelolaTps3rProfileResource::collection($facilities->getCollection())->resolve($request),
             'meta' => [
                 'current_page' => $facilities->currentPage(),
                 'last_page' => $facilities->lastPage(),
@@ -164,19 +165,44 @@ class PublicPortalController extends Controller
         ], Response::HTTP_OK);
     }
 
-    public function showFacility(PengelolaTps3rProfile $pengelolaTps3rProfile): JsonResponse
+    public function showFacility(Request $request, PengelolaTps3rProfile $pengelolaTps3rProfile): JsonResponse
     {
         $pengelolaTps3rProfile->load([
-            'user:id,name,phone_number,is_active',
+            'user:id,name,is_active',
             'user.wasteProducts' => fn ($q) => $q->where('is_available', true)->where('stok', '>', 0)->latest(),
+            'deliveryZones' => fn ($q) => $q->approved()->orderBy('kecamatan')->orderBy('kelurahan'),
         ]);
 
         abort_unless((bool) $pengelolaTps3rProfile->user?->is_active, Response::HTTP_NOT_FOUND);
 
+        $facility = (new PengelolaTps3rProfileResource($pengelolaTps3rProfile))->resolve($request);
+        $products = $pengelolaTps3rProfile->user->wasteProducts
+            ->map(fn ($product): array => [
+                'public_id' => $product->public_id,
+                'nama_produk' => $product->nama_produk,
+                'kategori' => $product->kategori,
+                'harga' => $product->harga,
+                'stok' => $product->stok,
+                'foto_url' => $product->foto_url,
+            ])
+            ->values();
+        $deliveryZones = $pengelolaTps3rProfile->deliveryZones
+            ->map(fn ($zone): array => [
+                'kelurahan' => $zone->kelurahan,
+                'kecamatan' => $zone->kecamatan,
+                'delivery_fee' => $zone->delivery_fee,
+            ])
+            ->values();
+
         return response()->json([
             'success' => true,
             'message' => 'Detail fasilitas TPS3R berhasil diambil.',
-            'data' => $pengelolaTps3rProfile,
+            'data' => [
+                ...$facility,
+                'total_products' => $products->count(),
+                'products' => $products,
+                'wilayah_pengiriman' => $deliveryZones,
+            ],
         ], Response::HTTP_OK);
     }
 

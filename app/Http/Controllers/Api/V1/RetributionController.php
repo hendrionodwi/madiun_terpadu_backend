@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\MasterData;
 use App\Models\PointLedger;
 use App\Models\RetributionBill;
 use App\Models\User;
 use App\Models\WargaProfile;
 use App\Services\MidtransService;
+use App\Services\PointConversionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -24,7 +24,7 @@ class RetributionController extends Controller
      * List retribution bills (TRK-F-013).
      * Warga gets their bills; Admin DLH can view city-wide bills with filters.
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, PointConversionService $pointConversion): JsonResponse
     {
         /** @var User $currentUser */
         $currentUser = $request->user();
@@ -74,11 +74,7 @@ class RetributionController extends Controller
 
         $bills = $query->latest('jatuh_tempo')->paginate((int) ($request->per_page ?? 15));
 
-        $rate = (float) (MasterData::query()
-            ->whereIn('group', ['point_conversion', 'point_conversions'])
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->value('numeric_value') ?? 10);
+        $rate = $pointConversion->currentRate();
 
         return response()->json([
             'success' => true,
@@ -101,8 +97,11 @@ class RetributionController extends Controller
     /**
      * Get single retribution bill details.
      */
-    public function show(Request $request, RetributionBill $retributionBill): JsonResponse
-    {
+    public function show(
+        Request $request,
+        RetributionBill $retributionBill,
+        PointConversionService $pointConversion
+    ): JsonResponse {
         /** @var User $currentUser */
         $currentUser = $request->user();
 
@@ -115,11 +114,7 @@ class RetributionController extends Controller
 
         $retributionBill->loadMissing('warga:id,name,email,phone_number');
 
-        $rate = (float) (MasterData::query()
-            ->whereIn('group', ['point_conversion', 'point_conversions'])
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->value('numeric_value') ?? 10);
+        $rate = $pointConversion->currentRate();
 
         return response()->json([
             'success' => true,
@@ -143,8 +138,12 @@ class RetributionController extends Controller
      * 2. 100% Midtrans (QRIS/E-Wallet/Bank Transfer)
      * 3. Hybrid (Partial points deduction + remaining via Midtrans)
      */
-    public function pay(Request $request, RetributionBill $retributionBill, MidtransService $midtransService): JsonResponse
-    {
+    public function pay(
+        Request $request,
+        RetributionBill $retributionBill,
+        MidtransService $midtransService,
+        PointConversionService $pointConversion
+    ): JsonResponse {
         /** @var User $currentUser */
         $currentUser = $request->user();
 
@@ -161,11 +160,7 @@ class RetributionController extends Controller
         ]);
 
         $usePoints = (bool) ($validated['use_points'] ?? false);
-        $rate = max(0.01, (float) (MasterData::query()
-            ->whereIn('group', ['point_conversion', 'point_conversions'])
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->value('numeric_value') ?? 10));
+        $rate = $pointConversion->currentRate();
         $maxPointDiscountPercent = min(100.0, max(0.0, (float) RetributionBill::getConfig('max_point_discount_percent', 100)));
 
         $payment = DB::transaction(function () use ($retributionBill, $currentUser, $validated, $usePoints, $rate, $maxPointDiscountPercent): array {

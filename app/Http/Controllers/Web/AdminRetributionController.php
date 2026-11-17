@@ -211,7 +211,7 @@ class AdminRetributionController extends Controller
             'standard_due_day' => ['required', 'integer', 'min:1', 'max:28'],
             'max_point_discount_percent' => ['required', 'numeric', 'min:0', 'max:100'],
             'grace_period_days' => ['required', 'integer', 'min:0', 'max:30'],
-            'point_conversion_rate' => ['required', 'numeric', 'min:1'],
+            'point_conversion_rate' => ['required', 'numeric', 'min:0.1', 'max:10'],
             'reminder_template' => ['required', 'string', 'max:1000'],
         ]);
 

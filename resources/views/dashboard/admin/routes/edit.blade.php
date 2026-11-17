@@ -100,7 +100,7 @@
                                 <label class="mb-1 flex items-center gap-1.5 font-semibold text-zinc-700 dark:text-zinc-300"><flux:icon.flag class="size-4" /> Depo Awal</label>
                                 <input type="text" name="start_location" value="{{ old('start_location', $route->start_location) }}" placeholder="Contoh: Depo Truk Kartoharjo Dr3" class="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
                             </div>
-                            <div class="relative" x-data="{
+                            <div class="relative" :class="{ 'z-40': open, 'z-10': !open }" x-data="{
                                 open: false,
                                 search: {{ \Illuminate\Support\Js::from(old('end_facility', $route->end_facility ?? '')) }},
                                 facilities: {{ \Illuminate\Support\Js::from($tps3rFacilities ?? []) }},

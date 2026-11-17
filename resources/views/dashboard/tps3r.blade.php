@@ -50,7 +50,7 @@
                     <x-slot:icon><svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 3h1.39c.51 0 .96.34 1.1.83l.38 1.42m0 0L6.75 12h10.88l1.87-6.75H5.12ZM6.75 12l-1.5 1.5h13.5m-11.63 4.88a.38.38 0 1 1-.75 0 .38.38 0 0 1 .75 0Zm10.5 0a.38.38 0 1 1-.75 0 .38.38 0 0 1 .75 0Z" /></svg></x-slot:icon>
                 </x-civic.stat-card>
 
-                <x-civic.stat-card label="Total transaksi" :value="'Rp '.number_format($marketplace['total_pendapatan'], 0, ',', '.')" description="Pendapatan marketplace sirkular" tone="violet" :href="route('dashboard.tps3r.withdrawals.index')">
+                <x-civic.stat-card label="Total transaksi" :value="'Rp '.number_format($marketplace['total_pendapatan'], 0, ',', '.')" description="Nilai seluruh pesanan marketplace" tone="violet" :href="route('dashboard.tps3r.orders')">
                     <x-slot:icon><svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 8.25h19.5M3.75 5.25h16.5A1.5 1.5 0 0 1 21.75 6.75v10.5a1.5 1.5 0 0 1-1.5 1.5H3.75a1.5 1.5 0 0 1-1.5-1.5V6.75a1.5 1.5 0 0 1 1.5-1.5ZM6.75 15h2.25" /></svg></x-slot:icon>
                 </x-civic.stat-card>
             </div>
@@ -73,7 +73,7 @@
                 <x-civic.module-link :href="route('dashboard.tps3r.orders')" title="Pesanan Marketplace" description="Proses pesanan masuk, pengemasan, pengiriman, dan serah terima." meta="Order fulfillment" tone="sky">
                     <x-slot:icon><svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 8.25-9-5.25-9 5.25m18 0-9 5.25m9-5.25v7.5L12 21m0-7.5L3 8.25m9 5.25V21M3 8.25v7.5L12 21" /></svg></x-slot:icon>
                 </x-civic.module-link>
-                <x-civic.module-link :href="route('dashboard.tps3r.withdrawals.index')" title="Pendapatan Toko" description="Pantau saldo tersedia dan ajukan pencairan pendapatan produk." meta="Keuangan fasilitas">
+                <x-civic.module-link :href="route('dashboard.tps3r.withdrawals.index')" title="Settlement Poin Marketplace" description="Ajukan pembayaran untuk pesanan poin yang telah selesai." meta="Keuangan fasilitas">
                     <x-slot:icon><svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 18.75a60.07 60.07 0 0 1 15.8 2.1c.98.27 1.95-.47 1.95-1.49V4.64c0-1.02-.97-1.76-1.95-1.49a60.1 60.1 0 0 1-15.8 2.1v13.5ZM8.25 6.75v10.5" /></svg></x-slot:icon>
                 </x-civic.module-link>
             </div>

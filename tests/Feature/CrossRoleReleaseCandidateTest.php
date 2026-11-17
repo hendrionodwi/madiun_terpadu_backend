@@ -11,6 +11,7 @@ use App\Models\OrderItem;
 use App\Models\PengelolaTps3rProfile;
 use App\Models\PointLedger;
 use App\Models\PublicDocument;
+use App\Models\RewardFundAllocation;
 use App\Models\User;
 use App\Models\WargaProfile;
 use App\Models\WasteProduct;
@@ -155,14 +156,16 @@ test('tps3r fulfillment prevents unpaid midtrans advance, duplicate cancel point
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['status']);
 
-    // Saldo toko tetap 0 -> penarikan store ditolak 422
+    // Penarikan store manual sudah ditutup; settlement poin dibuat otomatis dari web TPS3R
     $this->postJson('/api/v1/fund-withdrawals', [
         'source' => 'store',
         'amount' => 15000,
         'destination_type' => 'bank_transfer',
+        'destination_provider' => 'Bank Jatim',
         'destination_account' => '987654321',
+        'destination_account_name' => 'TPS3R Madiun',
     ])->assertUnprocessable()
-        ->assertJsonValidationErrors(['amount']);
+        ->assertJsonValidationErrors(['source']);
 
     // Pembeli juga dilarang confirm-received pada order Midtrans yang masih pending
     Sanctum::actingAs($buyer, ['role:warga']);
@@ -174,7 +177,9 @@ test('tps3r fulfillment prevents unpaid midtrans advance, duplicate cancel point
         'source' => 'store',
         'amount' => 15000,
         'destination_type' => 'bank_transfer',
+        'destination_provider' => 'Bank Jatim',
         'destination_account' => '987654321',
+        'destination_account_name' => 'Warga Uji',
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['source']);
 });
@@ -341,6 +346,10 @@ test('admin rbac isolates private entity documents, prevents double withdrawal r
     Storage::disk('local')->put('documents/public-valid.pdf', '%PDF-1.4 public');
 
     $admin = User::factory()->adminDlh()->create();
+    $allocation = RewardFundAllocation::factory()->create([
+        'created_by' => $admin->id,
+        'amount' => 100000,
+    ]);
     $warga = User::factory()->warga()->create();
     WargaProfile::factory()->create(['user_id' => $warga->id, 'saldo_poin' => 1000]);
     $pemrakarsa = User::factory()->pemrakarsa()->create();
@@ -382,6 +391,7 @@ test('admin rbac isolates private entity documents, prevents double withdrawal r
 
     $this->actingAs($admin)->patch(route('dashboard.admin.points.update', $withdrawal), [
         'status' => 'approved',
+        'reward_fund_allocation_id' => $allocation->id,
     ])->assertSessionHasErrors('status');
     expect($withdrawal->fresh()->status)->toBe('rejected');
 

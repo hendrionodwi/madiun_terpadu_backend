@@ -3,6 +3,20 @@
     <head>
         @include('partials.head')
     </head>
+    @php
+        $accountSettingsRoute = match (true) {
+            auth()->user()->isPengelolaTps3r() => 'dashboard.tps3r.profile.edit',
+            auth()->user()->isPemrakarsa() => 'dashboard.pemrakarsa.profile.edit',
+            default => 'profile.edit',
+        };
+        $accountSettingsLabel = match (true) {
+            auth()->user()->isPengelolaTps3r() => 'Profil & Kapasitas',
+            auth()->user()->isPemrakarsa() => 'Profil & Legalitas',
+            default => 'Pengaturan akun',
+        };
+        $showAccountSettingsInUserMenu = ! auth()->user()->isPengelolaTps3r()
+            && ! auth()->user()->isPemrakarsa();
+    @endphp
     <body class="min-h-dvh bg-civic-canvas text-slate-950 antialiased dark:bg-slate-950 dark:text-slate-100">
         <flux:sidebar sticky collapsible="mobile" class="civic-sidebar-shell border-e border-civic-100/90 backdrop-blur-xl dark:border-civic-950/80">
             <flux:sidebar.header class="civic-sidebar-header border-b border-civic-100/80 pb-4 dark:border-civic-900/70">
@@ -36,9 +50,10 @@
                         <flux:sidebar.item icon="document-text" :href="route('dashboard.admin.reports')" :current="request()->routeIs('dashboard.admin.reports*')" wire:navigate>{{ __('Laporan Lingkungan') }}</flux:sidebar.item>
                     </flux:sidebar.group>
 
-                    <flux:sidebar.group :heading="__('Pengguna & Entitas')" expandable :expanded="request()->routeIs('dashboard.admin.users*', 'dashboard.admin.entities*')" class="grid">
+                    <flux:sidebar.group :heading="__('Pengguna & Entitas')" expandable :expanded="request()->routeIs('dashboard.admin.users*', 'dashboard.admin.entities*', 'dashboard.admin.tps3r-delivery-zones*')" class="grid">
                         <flux:sidebar.item icon="users" :href="route('dashboard.admin.users')" :current="request()->routeIs('dashboard.admin.users*')" wire:navigate>{{ __('Akun & Hak Akses') }}</flux:sidebar.item>
                         <flux:sidebar.item icon="building-office-2" :href="route('dashboard.admin.entities')" :current="request()->routeIs('dashboard.admin.entities*')" wire:navigate>{{ __('Validasi Entitas') }}</flux:sidebar.item>
+                        <flux:sidebar.item icon="map-pin" :href="route('dashboard.admin.tps3r-delivery-zones.index')" :current="request()->routeIs('dashboard.admin.tps3r-delivery-zones*')" wire:navigate>{{ __('Wilayah TPS3R') }}</flux:sidebar.item>
                     </flux:sidebar.group>
 
                     <flux:sidebar.group :heading="__('Konten Publik')" expandable :expanded="request()->routeIs('dashboard.admin.broadcasts*', 'dashboard.admin.articles*', 'dashboard.admin.documents*', 'dashboard.admin.portal-settings*')" class="grid">
@@ -63,14 +78,18 @@
                         <flux:sidebar.item icon="arrow-path" :href="route('dashboard.tps3r.processing.index')" :current="request()->routeIs('dashboard.tps3r.processing.*')" wire:navigate>{{ __('Pengolahan Sampah') }}</flux:sidebar.item>
                     </flux:sidebar.group>
 
-                    <flux:sidebar.group :heading="__('Marketplace')" expandable :expanded="request()->routeIs('dashboard.tps3r.products*', 'dashboard.tps3r.orders*', 'dashboard.tps3r.withdrawals.*')" class="grid">
+                    <flux:sidebar.group :heading="__('Marketplace')" expandable :expanded="request()->routeIs('dashboard.tps3r.products*', 'dashboard.tps3r.orders*')" class="grid">
                         <flux:sidebar.item icon="shopping-bag" :href="route('dashboard.tps3r.products')" :current="request()->routeIs('dashboard.tps3r.products*')" wire:navigate>{{ __('Katalog Produk') }}</flux:sidebar.item>
                         <flux:sidebar.item icon="clipboard-document-list" :href="route('dashboard.tps3r.orders')" :current="request()->routeIs('dashboard.tps3r.orders*')" wire:navigate>{{ __('Pesanan Masuk') }}</flux:sidebar.item>
-                        <flux:sidebar.item icon="banknotes" :href="route('dashboard.tps3r.withdrawals.index')" :current="request()->routeIs('dashboard.tps3r.withdrawals.*')" wire:navigate>{{ __('Pendapatan Toko') }}</flux:sidebar.item>
                     </flux:sidebar.group>
 
-                    <flux:sidebar.group :heading="__('Pengaturan')" expandable :expanded="request()->routeIs('dashboard.tps3r.profile.*', 'dashboard.tps3r.payment-settings*')" class="grid">
-                        <flux:sidebar.item icon="cog-6-tooth" :href="route('dashboard.tps3r.profile.edit')" :current="request()->routeIs('dashboard.tps3r.profile.*')" wire:navigate>{{ __('Profil & Kapasitas') }}</flux:sidebar.item>
+                    <flux:sidebar.group :heading="__('Keuangan')" expandable :expanded="request()->routeIs('dashboard.tps3r.withdrawals.*')" class="grid">
+                        <flux:sidebar.item icon="banknotes" :href="route('dashboard.tps3r.withdrawals.index')" :current="request()->routeIs('dashboard.tps3r.withdrawals.*')" wire:navigate>{{ __('Settlement Poin') }}</flux:sidebar.item>
+                    </flux:sidebar.group>
+
+                    <flux:sidebar.group :heading="__('Pengaturan')" expandable :expanded="request()->routeIs('profile.edit', 'password.edit', 'security.edit', 'appearance.edit', 'dashboard.tps3r.profile.*', 'dashboard.tps3r.delivery-zones.*', 'dashboard.tps3r.payment-settings*')" class="grid">
+                        <flux:sidebar.item icon="cog-6-tooth" :href="route('profile.edit')" :current="request()->routeIs('profile.edit', 'password.edit', 'security.edit', 'appearance.edit', 'dashboard.tps3r.profile.*')" wire:navigate data-test="tps3r-profile-settings-navigation">{{ __('Profil & Kapasitas') }}</flux:sidebar.item>
+                        <flux:sidebar.item icon="map-pin" :href="route('dashboard.tps3r.delivery-zones.index')" :current="request()->routeIs('dashboard.tps3r.delivery-zones.*')" wire:navigate>{{ __('Wilayah Pengiriman') }}</flux:sidebar.item>
                         <flux:sidebar.item icon="credit-card" :href="route('dashboard.tps3r.payment-settings')" :current="request()->routeIs('dashboard.tps3r.payment-settings*')" wire:navigate>{{ __('Pembayaran Midtrans') }}</flux:sidebar.item>
                     </flux:sidebar.group>
                 @elseif (auth()->user()->isPemrakarsa())
@@ -96,7 +115,13 @@
                 @endif
             </flux:sidebar.nav>
 
-            <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
+            <x-desktop-user-menu
+                class="hidden lg:block"
+                :name="auth()->user()->name"
+                :settings-route="$accountSettingsRoute"
+                :settings-label="$accountSettingsLabel"
+                :show-settings-link="$showAccountSettingsInUserMenu"
+            />
         </flux:sidebar>
 
         <flux:header class="border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur lg:hidden dark:border-slate-800 dark:bg-slate-950/95">
@@ -128,7 +153,9 @@
 
                     <flux:menu.separator />
 
-                    <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>{{ __('Pengaturan akun') }}</flux:menu.item>
+                    @if ($showAccountSettingsInUserMenu)
+                        <flux:menu.item :href="route($accountSettingsRoute)" icon="cog" wire:navigate data-test="account-settings-menu-item">{{ __($accountSettingsLabel) }}</flux:menu.item>
+                    @endif
                     <flux:menu.item x-data icon="moon" x-show="$flux.appearance !== 'dark'" x-on:click="$flux.appearance = 'dark'" class="cursor-pointer">{{ __('Mode gelap') }}</flux:menu.item>
                     <flux:menu.item x-data icon="sun" x-show="$flux.appearance === 'dark'" x-on:click="$flux.appearance = 'light'" class="cursor-pointer">{{ __('Mode terang') }}</flux:menu.item>
 

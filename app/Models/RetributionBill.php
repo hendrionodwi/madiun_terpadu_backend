@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\PointConversionService;
 use Database\Factories\RetributionBillFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -154,17 +155,13 @@ class RetributionBill extends Model
             ->get()
             ->keyBy('code');
 
-        $pointConversion = MasterData::where('group', 'point_conversion')
-            ->where('code', 'idr')
-            ->first();
-
         return [
             'monthly_tariff' => (float) ($items['monthly_tariff']->numeric_value ?? 10000),
             'standard_due_day' => (int) ($items['standard_due_day']->numeric_value ?? 20),
             'max_point_discount_percent' => (float) ($items['max_point_discount_percent']->numeric_value ?? 100),
             'grace_period_days' => (int) ($items['grace_period_days']->numeric_value ?? 0),
             'reminder_template' => (string) ($items['reminder_template']->description ?? 'Yth. Bapak/Ibu {nama}, tagihan retribusi kebersihan Kota Madiun periode {periode} sebesar Rp {nominal} (Jatuh Tempo: {jatuh_tempo}) {status_info}. Silakan lakukan pelunasan via aplikasi Madiun Terpadu (bisa menggunakan Poin Bank Sampah atau QRIS/E-Wallet). Terima kasih - DLH Kota Madiun.'),
-            'point_conversion_rate' => (float) ($pointConversion->numeric_value ?? 10),
+            'point_conversion_rate' => app(PointConversionService::class)->currentRate(),
         ];
     }
 

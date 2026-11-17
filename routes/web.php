@@ -1,14 +1,19 @@
 <?php
 
+use App\Http\Controllers\Api\V1\ShippingController as ApiShippingController;
 use App\Http\Controllers\Web\AdminContentController;
 use App\Http\Controllers\Web\AdminDashboardController;
 use App\Http\Controllers\Web\AdminRetributionController;
+use App\Http\Controllers\Web\AdminTps3rDeliveryZoneController;
+use App\Http\Controllers\Web\CashPointRedemptionController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\FundWithdrawalController;
+use App\Http\Controllers\Web\MarketplaceController;
 use App\Http\Controllers\Web\OrderFulfillmentController;
 use App\Http\Controllers\Web\PemrakarsaProfileController;
 use App\Http\Controllers\Web\PublicPortalController;
 use App\Http\Controllers\Web\ReportExportController;
+use App\Http\Controllers\Web\Tps3rDeliveryZoneController;
 use App\Http\Controllers\Web\Tps3rPaymentSettingsController;
 use App\Http\Controllers\Web\Tps3rProfileController;
 use App\Http\Controllers\Web\WasteProcessingController;
@@ -16,16 +21,35 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PublicPortalController::class, 'index'])->name('home');
 Route::get('layanan', [PublicPortalController::class, 'services'])->name('public.services');
+Route::get('fasilitas/{pengelolaTps3rProfile}', [PublicPortalController::class, 'showFacility'])->name('public.facilities.show');
 Route::get('jadwal-peta', [PublicPortalController::class, 'services'])->name('portal.jadwal-peta');
 Route::get('edukasi', [PublicPortalController::class, 'education'])->name('public.education');
 Route::get('edukasi/{educationArticle}', [PublicPortalController::class, 'showArticle'])->name('portal.articles.show');
 Route::get('dokumen/{publicDocument}/unduh', [PublicPortalController::class, 'downloadDocument'])->name('portal.documents.download');
 Route::get('marketplace', [PublicPortalController::class, 'marketplace'])->name('public.marketplace');
+Route::get('marketplace/produk/{product}', [MarketplaceController::class, 'showProduct'])->name('marketplace.products.show');
 Route::view('payment/return', 'payment-return')->name('payment.return');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Primary dynamic dashboard router
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::prefix('marketplace')->name('marketplace.')->middleware('role:warga')->group(function () {
+        Route::get('keranjang', [MarketplaceController::class, 'cart'])->name('cart');
+        Route::post('keranjang/{product}', [MarketplaceController::class, 'addToCart'])->name('cart.store');
+        Route::patch('keranjang/{product}', [MarketplaceController::class, 'updateCart'])->name('cart.update');
+        Route::delete('keranjang/{product}', [MarketplaceController::class, 'removeFromCart'])->name('cart.destroy');
+        Route::get('checkout', [MarketplaceController::class, 'checkout'])->name('checkout');
+        Route::post('checkout', [MarketplaceController::class, 'storeCheckout'])->name('checkout.store');
+        Route::middleware('throttle:20,1')->group(function () {
+            Route::get('pengiriman/tujuan', [ApiShippingController::class, 'destinations'])->name('shipping.destinations');
+            Route::post('pengiriman/ongkir', [ApiShippingController::class, 'quotes'])->name('shipping.quotes');
+        });
+        Route::get('pesanan', [MarketplaceController::class, 'orders'])->name('orders');
+        Route::get('pesanan/{order}', [MarketplaceController::class, 'showOrder'])->name('orders.show');
+        Route::patch('pesanan/{order}/batal', [MarketplaceController::class, 'cancelOrder'])->name('orders.cancel');
+        Route::patch('pesanan/{order}/diterima', [MarketplaceController::class, 'confirmReceived'])->name('orders.confirm');
+    });
 
     // ==========================================================
     // DSH-F-004: Portofolio Lengkap Admin DLH (10 Dedicated Pages)
@@ -63,9 +87,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('dashboard/admin/entities/{entityVerification}', [AdminDashboardController::class, 'reviewEntity'])->name('dashboard.admin.entities.update');
         Route::get('dashboard/admin/entities/{entityVerification}/document', [AdminDashboardController::class, 'downloadEntityDocument'])->name('dashboard.admin.entities.download');
 
+        Route::get('dashboard/admin/tps3r-delivery-zones', [AdminTps3rDeliveryZoneController::class, 'index'])
+            ->name('dashboard.admin.tps3r-delivery-zones.index');
+        Route::patch('dashboard/admin/tps3r-delivery-zones/{tps3rDeliveryZone}', [AdminTps3rDeliveryZoneController::class, 'review'])
+            ->name('dashboard.admin.tps3r-delivery-zones.review');
+
         // 7. Manajemen Persetujuan Pencairan Dana / Poin Warga
         Route::get('dashboard/admin/points', [AdminDashboardController::class, 'points'])->name('dashboard.admin.points');
+        Route::post('dashboard/admin/points/cash-disbursements', [CashPointRedemptionController::class, 'store'])->name('dashboard.admin.points.cash-disbursements.store');
         Route::patch('dashboard/admin/points/{fundWithdrawalRequest}/update', [AdminDashboardController::class, 'updateWithdrawalStatus'])->name('dashboard.admin.points.update');
+        Route::patch('dashboard/admin/points/{fundWithdrawalRequest}/payout', [AdminDashboardController::class, 'recordWithdrawalPayout'])->name('dashboard.admin.points.payout');
+        Route::get('dashboard/admin/points/{fundWithdrawalRequest}/proof', [AdminDashboardController::class, 'downloadWithdrawalProof'])->name('dashboard.admin.points.proof');
         Route::post('dashboard/admin/points/allocations', [AdminDashboardController::class, 'storeRewardAllocation'])->name('dashboard.admin.points.allocations.store');
 
         // 8. Kelola Data Master
@@ -157,6 +189,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('dashboard/tps3r/profile', [Tps3rProfileController::class, 'update'])
         ->name('dashboard.tps3r.profile.update')
         ->middleware('role:pengelola_tps3r');
+    Route::get('dashboard/tps3r/delivery-zones', [Tps3rDeliveryZoneController::class, 'index'])
+        ->name('dashboard.tps3r.delivery-zones.index')
+        ->middleware('role:pengelola_tps3r');
+    Route::post('dashboard/tps3r/delivery-zones', [Tps3rDeliveryZoneController::class, 'store'])
+        ->name('dashboard.tps3r.delivery-zones.store')
+        ->middleware('role:pengelola_tps3r');
+    Route::patch('dashboard/tps3r/delivery-zones/{tps3rDeliveryZone}', [Tps3rDeliveryZoneController::class, 'update'])
+        ->name('dashboard.tps3r.delivery-zones.update')
+        ->middleware('role:pengelola_tps3r');
+    Route::delete('dashboard/tps3r/delivery-zones/{tps3rDeliveryZone}', [Tps3rDeliveryZoneController::class, 'destroy'])
+        ->name('dashboard.tps3r.delivery-zones.destroy')
+        ->middleware('role:pengelola_tps3r');
     Route::get('dashboard/tps3r/payment-settings', [Tps3rPaymentSettingsController::class, 'index'])
         ->name('dashboard.tps3r.payment-settings')
         ->middleware('role:pengelola_tps3r,admin_dlh');
@@ -181,7 +225,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('dashboard/tps3r/withdrawals', [FundWithdrawalController::class, 'store'])
         ->name('dashboard.tps3r.withdrawals.store')
         ->middleware('role:pengelola_tps3r');
-
     // PPL-F-008: Dashboard & Form Unggah Laporan Semester Pemrakarsa Kegiatan
     Route::get('dashboard/pemrakarsa', [DashboardController::class, 'pemrakarsa'])
         ->name('dashboard.pemrakarsa')

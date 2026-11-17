@@ -47,11 +47,19 @@
                     <span class="text-sm text-slate-500">{{ $facilities->total() }} lokasi</span>
                 </div>
                 @forelse ($facilities as $facility)
-                    <article class="portal-interactive-card rounded-2xl border border-slate-200 bg-white p-4">
+                    <article class="portal-interactive-card overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                        @if ($facility->foto_url)
+                            <a href="{{ route('public.facilities.show', $facility) }}" class="block aspect-[16/8] overflow-hidden bg-slate-100">
+                                <img src="{{ $facility->foto_url }}" alt="{{ $facility->nama_tps3r }}" class="h-full w-full object-cover transition duration-300 hover:scale-[1.03]">
+                            </a>
+                        @endif
+                        <div class="p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <p class="text-xs font-bold uppercase tracking-wider text-civic-700">{{ $facility->kode_tps3r ?: 'Fasilitas TPS3R' }}</p>
-                                <h3 class="mt-1 font-display text-base font-extrabold text-slate-950">{{ $facility->nama_tps3r }}</h3>
+                                <h3 class="mt-1 font-display text-base font-extrabold text-slate-950">
+                                    <a href="{{ route('public.facilities.show', $facility) }}" class="hover:text-civic-700">{{ $facility->nama_tps3r }}</a>
+                                </h3>
                             </div>
                             @if ($facility->latitude && $facility->longitude)
                                 <button type="button" data-focus-facility="{{ $facility->id }}" class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-civic-100 text-civic-700 hover:bg-civic-200" aria-label="Tampilkan {{ $facility->nama_tps3r }} di peta">
@@ -59,10 +67,12 @@
                                 </button>
                             @endif
                         </div>
-                        <p class="mt-3 text-sm leading-6 text-slate-500">{{ $facility->alamat ?: 'Alamat belum dilengkapi.' }}</p>
+                        <p class="mt-3 line-clamp-2 text-sm leading-6 text-slate-500">{{ $facility->deskripsi ?: ($facility->alamat ?: 'Informasi fasilitas sedang dilengkapi.') }}</p>
                         <div class="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
                             @if ($facility->kecamatan)<span class="rounded-full bg-slate-100 px-2.5 py-1">Kec. {{ $facility->kecamatan }}</span>@endif
                             @if ($facility->kapasitas_harian_kg)<span class="rounded-full bg-civic-50 px-2.5 py-1 text-civic-700">{{ number_format($facility->kapasitas_harian_kg, 0, ',', '.') }} kg/hari</span>@endif
+                        </div>
+                        <a href="{{ route('public.facilities.show', $facility) }}" class="mt-4 inline-flex min-h-10 items-center text-sm font-bold text-civic-700 hover:text-civic-900">Lihat profil fasilitas →</a>
                         </div>
                     </article>
                 @empty

@@ -38,6 +38,7 @@ class ClearOperationalData extends Command
             'complaint_verifications',
             'complaints',
             'environmental_reports',
+            'marketplace_settlement_items',
             'fund_withdrawal_requests',
             'activity_logs',
             'order_fulfillments',

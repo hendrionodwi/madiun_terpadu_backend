@@ -60,6 +60,35 @@
             }
         }
     }"
+    x-init="$watch('open', (isOpen) => {
+        let el = $el.parentElement;
+        while (el && el !== document.body) {
+            if (el.classList.contains('civic-card') || el.classList.contains('civic-stat-card') || el.tagName === 'FORM' || el.tagName === 'SECTION' || el.hasAttribute('data-ajax-zone') || el.hasAttribute('data-ajax-region')) {
+                const count = parseInt(el.dataset.selectFilterOpenCount || '0', 10);
+                if (isOpen) {
+                    el.dataset.selectFilterOpenCount = String(count + 1);
+                    if (!el.style.zIndex || parseInt(el.style.zIndex, 10) < 30) {
+                        el.style.zIndex = '30';
+                    }
+                    if (window.getComputedStyle(el).position === 'static') {
+                        el.style.position = 'relative';
+                    }
+                } else {
+                    const newCount = Math.max(0, count - 1);
+                    el.dataset.selectFilterOpenCount = String(newCount);
+                    if (newCount === 0) {
+                        if (el.style.zIndex === '30') {
+                            el.style.zIndex = '';
+                        }
+                        if (el.style.position === 'relative' && !el.classList.contains('relative')) {
+                            el.style.position = '';
+                        }
+                    }
+                }
+            }
+            el = el.parentElement;
+        }
+    })"
     x-on:select-filter-sync.window="if ($event.detail && $event.detail.name === @js($name)) { selected = String($event.detail.value ?? ''); }"
     x-on:click.outside="open = false"
     x-on:keydown.escape.window="open = false"

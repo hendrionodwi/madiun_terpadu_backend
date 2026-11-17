@@ -25,7 +25,7 @@
 
         <!-- Filter Bar -->
         <div data-ajax-zone="admin-reports" data-ajax-targets="#reportsStatusTabs,#reportsResults" class="space-y-6">
-            <div class="civic-card flex flex-col justify-between gap-4 p-4 text-xs md:flex-row md:items-center">
+            <div class="civic-card relative z-30 flex flex-col justify-between gap-4 p-4 text-xs md:flex-row md:items-center">
                 <div id="reportsStatusTabs" class="civic-filter-rail">
                     <a href="{{ route('dashboard.admin.reports', ['jenis_dokumen' => $currentJenis]) }}" data-ajax-link class="civic-filter-chip !text-xs {{ ! $currentStatus ? 'civic-filter-chip-active' : '' }}">
                         Semua ({{ $reportCounts['all'] }})

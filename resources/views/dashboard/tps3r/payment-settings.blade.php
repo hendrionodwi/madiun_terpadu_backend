@@ -80,7 +80,7 @@
 
         {{-- Admin DLH Inspector Selector --}}
         @if ($isAdmin)
-            <div class="civic-card border-amber-200 bg-amber-50/80 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
+            <div class="civic-card relative z-30 border-amber-200 bg-amber-50/80 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <span class="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">Mode Monitoring Admin DLH</span>
@@ -91,7 +91,7 @@
                             (string) $tpsItem->user_id => $tpsItem->nama_tps3r . ' (' . ($tpsItem->user?->name ?? 'User') . ')',
                         ])->all();
                     @endphp
-                    <form method="GET" action="{{ route('dashboard.tps3r.payment-settings') }}" data-ajax-form data-ajax-targets="#tps3rPaymentConfigPanel" class="flex w-full items-center gap-2 sm:w-72">
+                    <form method="GET" action="{{ route('dashboard.tps3r.payment-settings') }}" data-ajax-form data-ajax-targets="#tps3rPaymentConfigPanel" class="relative z-30 flex w-full items-center gap-2 sm:w-72">
                         <x-public.select-filter
                             name="tps3r_user_id"
                             :value="(string) ($profile?->user_id ?? '')"

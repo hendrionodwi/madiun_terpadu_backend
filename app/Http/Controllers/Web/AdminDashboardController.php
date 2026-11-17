@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Actions\ExecuteFundWithdrawalPayout;
 use App\Actions\ReviewFundWithdrawalRequest;
+use App\Enums\FundWithdrawalStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RecordFundWithdrawalPayoutRequest;
+use App\Http\Requests\UpdateFundWithdrawalReviewRequest;
 use App\Models\ActivityLog;
 use App\Models\AdminDlhProfile;
 use App\Models\BroadcastAnnouncement;
@@ -30,6 +34,7 @@ use App\Models\User;
 use App\Models\WargaProfile;
 use App\Models\WasteProduct;
 use App\Models\WasteWeighing;
+use App\Services\PointConversionService;
 use App\Services\PortalCmsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,6 +43,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -768,17 +774,19 @@ class AdminDashboardController extends Controller
     /**
      * 7. Halaman Manajemen Persetujuan Pencairan Dana / Poin Warga.
      */
-    public function points(Request $request): View
+    public function points(Request $request, PointConversionService $pointConversion): View
     {
+        $settlementSources = ['points', 'marketplace_points'];
         $statusFilter = $request->query('status');
         $search = $request->query('q');
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
 
-        $query = FundWithdrawalRequest::with(['user', 'reviewer'])
-            ->where('source', 'points');
+        $query = FundWithdrawalRequest::with(['user', 'reviewer', 'processor', 'cashClaimedBy', 'fundAllocation'])
+            ->withCount('marketplaceSettlementItems')
+            ->whereIn('source', $settlementSources);
 
-        if ($statusFilter && in_array($statusFilter, ['pending', 'approved', 'rejected'], true)) {
+        if ($statusFilter && in_array($statusFilter, FundWithdrawalStatus::values(), true)) {
             $query->where('status', $statusFilter);
         }
 
@@ -800,8 +808,14 @@ class AdminDashboardController extends Controller
         $withdrawals = $query->latest()->paginate(10)->withQueryString();
 
         $totalAnggaranMasuk = (float) RewardFundAllocation::sum('amount');
-        $totalPencairanSukses = (float) FundWithdrawalRequest::where('status', 'approved')->where('source', 'points')->sum('amount');
-        $totalPendingAmount = (float) FundWithdrawalRequest::where('status', 'pending')->where('source', 'points')->sum('amount');
+        $totalPencairanSukses = (float) FundWithdrawalRequest::where('status', FundWithdrawalStatus::Paid->value)->whereIn('source', $settlementSources)->sum('amount');
+        $totalPendingAmount = (float) FundWithdrawalRequest::whereIn('source', $settlementSources)
+            ->whereIn('status', [
+                FundWithdrawalStatus::Pending->value,
+                FundWithdrawalStatus::Approved->value,
+                FundWithdrawalStatus::Processing->value,
+            ])
+            ->sum('amount');
         $saldoAnggaranTersedia = max(0.0, $totalAnggaranMasuk - ($totalPencairanSukses + $totalPendingAmount));
 
         $stats = [
@@ -809,23 +823,22 @@ class AdminDashboardController extends Controller
             'total_poin_diberikan' => (int) WasteWeighing::sum('poin_didapat'),
             'total_anggaran_masuk' => $totalAnggaranMasuk,
             'total_pencairan_sukses' => $totalPencairanSukses,
-            'pending_requests' => FundWithdrawalRequest::where('status', 'pending')->where('source', 'points')->count(),
+            'pending_requests' => FundWithdrawalRequest::where('status', FundWithdrawalStatus::Pending->value)->whereIn('source', $settlementSources)->count(),
             'total_pending_amount' => $totalPendingAmount,
             'saldo_anggaran_tersedia' => $saldoAnggaranTersedia,
         ];
 
         $statusCounts = [
-            'all' => FundWithdrawalRequest::where('source', 'points')->count(),
-            'pending' => FundWithdrawalRequest::where('source', 'points')->where('status', 'pending')->count(),
-            'approved' => FundWithdrawalRequest::where('source', 'points')->where('status', 'approved')->count(),
-            'rejected' => FundWithdrawalRequest::where('source', 'points')->where('status', 'rejected')->count(),
+            'all' => FundWithdrawalRequest::whereIn('source', $settlementSources)->count(),
+            'pending' => FundWithdrawalRequest::whereIn('source', $settlementSources)->where('status', FundWithdrawalStatus::Pending->value)->count(),
+            'approved' => FundWithdrawalRequest::whereIn('source', $settlementSources)->where('status', FundWithdrawalStatus::Approved->value)->count(),
+            'processing' => FundWithdrawalRequest::whereIn('source', $settlementSources)->where('status', FundWithdrawalStatus::Processing->value)->count(),
+            'paid' => FundWithdrawalRequest::whereIn('source', $settlementSources)->where('status', FundWithdrawalStatus::Paid->value)->count(),
+            'rejected' => FundWithdrawalRequest::whereIn('source', $settlementSources)->where('status', FundWithdrawalStatus::Rejected->value)->count(),
+            'failed' => FundWithdrawalRequest::whereIn('source', $settlementSources)->where('status', FundWithdrawalStatus::Failed->value)->count(),
         ];
 
-        $pointRate = (float) (MasterData::query()
-            ->whereIn('group', ['point_conversion', 'point_conversions'])
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->value('numeric_value') ?? 10);
+        $pointRate = $pointConversion->currentRate();
 
         $topWarga = WargaProfile::with('user')
             ->orderByDesc('saldo_poin')
@@ -833,6 +846,11 @@ class AdminDashboardController extends Controller
             ->get();
 
         $allocations = RewardFundAllocation::with('creator')
+            ->withSum(['withdrawals as committed_amount' => fn ($query) => $query->whereIn('status', [
+                FundWithdrawalStatus::Approved->value,
+                FundWithdrawalStatus::Processing->value,
+                FundWithdrawalStatus::Paid->value,
+            ])], 'amount')
             ->latest('allocated_at')
             ->take(10)
             ->get();
@@ -858,11 +876,13 @@ class AdminDashboardController extends Controller
     {
         $validated = $request->validate([
             'source_type' => ['required', 'string', 'in:apbd,penjualan_daur_ulang,csr_kemitraan,retribusi,lainnya'],
-            'amount' => ['required', 'numeric', 'min:1000'],
+            'amount' => ['required', 'numeric', 'min:1000', 'max:9999999999999.99'],
             'fiscal_year' => ['required', 'integer', 'min:2020', 'max:2099'],
             'allocated_at' => ['required', 'date'],
             'reference_number' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:500'],
+        ], [
+            'amount.max' => 'Nominal anggaran melebihi batas penyimpanan. Masukkan nilai maksimal Rp9.999.999.999.999,99.',
         ]);
 
         RewardFundAllocation::create([
@@ -877,18 +897,42 @@ class AdminDashboardController extends Controller
      * Update status pencairan saldo / dana poin.
      */
     public function updateWithdrawalStatus(
-        Request $request,
+        UpdateFundWithdrawalReviewRequest $request,
         FundWithdrawalRequest $fundWithdrawalRequest,
         ReviewFundWithdrawalRequest $action,
     ): RedirectResponse {
-        $validated = $request->validate([
-            'status' => ['required', 'in:approved,rejected'],
-            'admin_note' => ['nullable', 'string', 'max:500'],
-        ]);
+        $validated = $request->validated();
 
-        $action->handle($request->user(), $fundWithdrawalRequest, $validated['status'], $validated['admin_note'] ?? null);
+        $action->handle(
+            $request->user(),
+            $fundWithdrawalRequest,
+            FundWithdrawalStatus::from($validated['status']),
+            $validated['admin_note'] ?? null,
+            isset($validated['reward_fund_allocation_id']) ? (int) $validated['reward_fund_allocation_id'] : null,
+        );
 
-        return back()->with('status', 'Permohonan pencairan #'.$fundWithdrawalRequest->id.' berhasil diperbarui: '.$validated['status']);
+        return back()->with('status', $validated['status'] === FundWithdrawalStatus::Approved->value
+            ? 'Permohonan telah disetujui dan masuk antrean pembayaran.'
+            : 'Permohonan ditolak dan poin warga telah dikembalikan.');
+    }
+
+    public function recordWithdrawalPayout(
+        RecordFundWithdrawalPayoutRequest $request,
+        FundWithdrawalRequest $fundWithdrawalRequest,
+        ExecuteFundWithdrawalPayout $action,
+    ): RedirectResponse {
+        $withdrawal = $action->handle($request->user(), $fundWithdrawalRequest, $request->validated());
+
+        return back()->with('status', 'Status pembayaran diperbarui menjadi: '.FundWithdrawalStatus::from($withdrawal->status)->label().'.');
+    }
+
+    public function downloadWithdrawalProof(FundWithdrawalRequest $fundWithdrawalRequest): StreamedResponse
+    {
+        $this->authorize('view', $fundWithdrawalRequest);
+        abort_if($fundWithdrawalRequest->payout_proof_path === null
+            || ! Storage::disk('local')->exists($fundWithdrawalRequest->payout_proof_path), Response::HTTP_NOT_FOUND);
+
+        return Storage::disk('local')->download($fundWithdrawalRequest->payout_proof_path);
     }
 
     /**
@@ -944,6 +988,8 @@ class AdminDashboardController extends Controller
             $validated['group'] = 'point_conversion';
         }
 
+        $this->ensureValidPointConversionRate($validated);
+
         if ($validated['group'] === 'waste_category' && empty($validated['pillar'])) {
             $validated['pillar'] = MasterData::resolvePillar($validated['code']);
         }
@@ -978,6 +1024,8 @@ class AdminDashboardController extends Controller
         } elseif ($validated['group'] === 'point_rates') {
             $validated['group'] = 'point_conversion';
         }
+
+        $this->ensureValidPointConversionRate($validated);
 
         if ($validated['group'] === 'waste_category' && empty($validated['pillar'])) {
             $validated['pillar'] = MasterData::resolvePillar($validated['code']);
@@ -1088,5 +1136,25 @@ class AdminDashboardController extends Controller
             UserRole::Pemrakarsa => PemrakarsaProfile::firstOrCreate(['user_id' => $user->id], ['nama_instansi' => $user->name]),
             UserRole::AdminDlh => AdminDlhProfile::firstOrCreate(['user_id' => $user->id], ['bidang' => 'Belum ditentukan']),
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $masterData
+     */
+    private function ensureValidPointConversionRate(array $masterData): void
+    {
+        if ($masterData['group'] !== 'point_conversion') {
+            return;
+        }
+
+        $rate = $masterData['numeric_value'] ?? null;
+        $minimum = (float) config('finance.points.minimum_conversion_rate');
+        $maximum = (float) config('finance.points.maximum_conversion_rate');
+
+        if (! is_numeric($rate) || (float) $rate < $minimum || (float) $rate > $maximum) {
+            throw ValidationException::withMessages([
+                'numeric_value' => ["Kurs poin harus berada di antara Rp {$minimum} dan Rp {$maximum} per poin."],
+            ]);
+        }
     }
 }

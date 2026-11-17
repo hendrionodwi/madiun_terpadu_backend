@@ -118,6 +118,82 @@
                             <label for="tps3r_alamat" class="{{ $labelClass }}">Alamat Lengkap Fasilitas</label>
                             <textarea id="tps3r_alamat" name="alamat" rows="3" placeholder="Tuliskan alamat lengkap lokasi TPS3R..." class="{{ $inputClass }}">{{ old('alamat', $profile->alamat) }}</textarea>
                         </div>
+
+                        <div class="md:col-span-2 mt-2 rounded-2xl border border-civic-200/80 bg-civic-50/60 p-4 sm:p-5 dark:border-civic-900 dark:bg-civic-950/40">
+                            <div class="flex items-start gap-3">
+                                <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-civic-700 text-white">
+                                    <flux:icon.building-storefront class="size-5" />
+                                </span>
+                                <div>
+                                    <h2 class="font-display text-base font-extrabold text-slate-950 dark:text-white">Profil publik fasilitas</h2>
+                                    <p class="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">Informasi ini tampil pada portal layanan, marketplace, dan aplikasi mobile.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2 grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-[14rem_1fr] sm:p-5 dark:border-slate-800 dark:bg-slate-900">
+                            <div class="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-950">
+                                @if ($profile->foto_url)
+                                    <img src="{{ $profile->foto_url }}" alt="Foto {{ $profile->nama_tps3r }}" class="aspect-[4/3] h-full w-full object-cover">
+                                @else
+                                    <div class="flex aspect-[4/3] items-center justify-center text-slate-400">
+                                    <flux:icon.photo class="size-10" />
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="self-center">
+                                <label for="tps3r_foto" class="{{ $labelClass }}">Foto utama fasilitas</label>
+                                <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Rekomendasi 1200 × 800 px (rasio 3:2, lanskap). Pastikan objek utama berada di tengah. JPG, PNG, atau WebP, maksimal 4 MB.</p>
+                                <input
+                                    id="tps3r_foto"
+                                    type="file"
+                                    name="foto_fasilitas"
+                                    accept=".jpg,.jpeg,.png,.webp"
+                                    class="mt-3 block w-full text-xs text-slate-700 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-civic-100 file:px-3.5 file:py-2 file:text-xs file:font-bold file:text-civic-800 hover:file:bg-civic-200 dark:text-slate-300 dark:file:bg-civic-900 dark:file:text-civic-200"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label for="tps3r_deskripsi" class="{{ $labelClass }}">Deskripsi fasilitas</label>
+                            <textarea id="tps3r_deskripsi" name="deskripsi" rows="4" maxlength="1500" placeholder="Ceritakan layanan utama, proses pengolahan, dan manfaat fasilitas bagi warga." class="{{ $inputClass }}">{{ old('deskripsi', $profile->deskripsi) }}</textarea>
+                        </div>
+
+                        <div>
+                            <label for="tps3r_jam" class="{{ $labelClass }}">Jam operasional</label>
+                            <input id="tps3r_jam" name="jam_operasional" value="{{ old('jam_operasional', $profile->jam_operasional) }}" placeholder="Senin–Sabtu, 08.00–15.00 WIB" class="{{ $inputClass }}">
+                        </div>
+
+                        <div>
+                            <label for="tps3r_fokus" class="{{ $labelClass }}">Fokus pengolahan</label>
+                            <input id="tps3r_fokus" name="fokus_pengolahan" value="{{ old('fokus_pengolahan', $profile->fokus_pengolahan) }}" placeholder="Komposting dan pemilahan anorganik" class="{{ $inputClass }}">
+                        </div>
+
+                        <div>
+                            <label for="tps3r_koordinator" class="{{ $labelClass }}">Nama koordinator</label>
+                            <input id="tps3r_koordinator" name="nama_koordinator" value="{{ old('nama_koordinator', $profile->nama_koordinator) }}" placeholder="Nama penanggung jawab fasilitas" class="{{ $inputClass }}">
+                        </div>
+
+                        <div>
+                            <label for="tps3r_kontak" class="{{ $labelClass }}">Kontak publik</label>
+                            <input id="tps3r_kontak" name="kontak_publik" value="{{ old('kontak_publik', $profile->kontak_publik) }}" placeholder="Nomor layanan yang boleh dilihat warga" class="{{ $inputClass }}">
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label for="tps3r_cakupan" class="{{ $labelClass }}">Ringkasan cakupan wilayah</label>
+                            <input id="tps3r_cakupan" name="cakupan_wilayah" value="{{ old('cakupan_wilayah', $profile->cakupan_wilayah) }}" placeholder="Contoh: Kartoharjo dan kelurahan sekitar" class="{{ $inputClass }}">
+                            <p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400">Wilayah pengiriman marketplace tetap dikelola melalui menu Wilayah Pengiriman.</p>
+                        </div>
+
+                        <div>
+                            <label for="tps3r_layanan" class="{{ $labelClass }}">Layanan tersedia</label>
+                            <textarea id="tps3r_layanan" name="layanan_tersedia_text" rows="5" placeholder="Tulis satu layanan per baris&#10;Penerimaan sampah pilah&#10;Pengomposan&#10;Edukasi lingkungan" class="{{ $inputClass }}">{{ old('layanan_tersedia_text', collect($profile->layanan_tersedia ?? [])->implode("\n")) }}</textarea>
+                        </div>
+
+                        <div>
+                            <label for="tps3r_kategori" class="{{ $labelClass }}">Sampah yang diterima</label>
+                            <textarea id="tps3r_kategori" name="kategori_sampah_diterima_text" rows="5" placeholder="Tulis satu kategori per baris&#10;Sampah organik&#10;Plastik PET&#10;Kertas dan karton" class="{{ $inputClass }}">{{ old('kategori_sampah_diterima_text', collect($profile->kategori_sampah_diterima ?? [])->implode("\n")) }}</textarea>
+                        </div>
                     </div>
 
                     <div x-show="subTab === 'legalitas'" x-cloak class="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,1fr)]">

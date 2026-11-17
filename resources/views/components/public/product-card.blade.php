@@ -36,20 +36,24 @@
     </div>
 
     <div class="flex items-center gap-2 border-t border-slate-100 bg-slate-50/60 p-3">
-        @if ($product->seller->pengelolaTps3rProfile)
-            <a href="{{ route('public.marketplace', ['store' => $product->seller->pengelolaTps3rProfile->public_id]) }}" class="inline-flex min-h-9 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:border-civic-300 hover:text-civic-800">
-                Lihat Toko
-            </a>
-        @else
-            <a href="{{ route('public.marketplace') }}" class="inline-flex min-h-9 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:border-civic-300 hover:text-civic-800">
-                Detail
-            </a>
-        @endif
+        <a href="{{ route('marketplace.products.show', $product) }}" class="inline-flex min-h-9 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:border-civic-300 hover:text-civic-800">
+            Detail
+        </a>
 
         @auth
-            <a href="{{ route('dashboard') }}" class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-civic-700 text-white hover:bg-civic-800" aria-label="Buka marketplace" title="Beli di dashboard">
-                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 8h14l-1 13H6L5 8Z" /><path d="M9 9V6a3 3 0 0 1 6 0v3" /></svg>
-            </a>
+            @if (auth()->user()->isWarga())
+                <form method="POST" action="{{ route('marketplace.cart.store', $product) }}">
+                    @csrf
+                    <input type="hidden" name="jumlah" value="1">
+                    <button type="submit" class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-civic-700 text-white hover:bg-civic-800" aria-label="Tambah ke keranjang" title="Tambah ke keranjang">
+                        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 8h14l-1 13H6L5 8Z" /><path d="M9 9V6a3 3 0 0 1 6 0v3" /></svg>
+                    </button>
+                </form>
+            @else
+                <a href="{{ route('marketplace.products.show', $product) }}" class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300" aria-label="Lihat detail produk" title="Lihat detail produk">
+                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                </a>
+            @endif
         @else
             <a href="{{ route('login') }}" class="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg bg-civic-700 px-3 text-xs font-bold text-white hover:bg-civic-800" title="Masuk untuk membeli">
                 <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 8h14l-1 13H6L5 8Z" /><path d="M9 9V6a3 3 0 0 1 6 0v3" /></svg>

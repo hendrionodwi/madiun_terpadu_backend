@@ -7,6 +7,7 @@ enum OrderFulfillmentStatus: string
     case Menunggu = 'menunggu';
     case Diproses = 'diproses';
     case SiapDikirim = 'siap_dikirim';
+    case Dikirim = 'dikirim';
     case Selesai = 'selesai';
     case Dibatalkan = 'dibatalkan';
 
@@ -16,6 +17,7 @@ enum OrderFulfillmentStatus: string
             self::Menunggu => 'Menunggu diproses',
             self::Diproses => 'Sedang diproses',
             self::SiapDikirim => 'Siap dikirim',
+            self::Dikirim => 'Dalam pengiriman',
             self::Selesai => 'Selesai',
             self::Dibatalkan => 'Dibatalkan',
         };
@@ -27,7 +29,8 @@ enum OrderFulfillmentStatus: string
         return match ($this) {
             self::Menunggu => [self::Diproses, self::Dibatalkan],
             self::Diproses => [self::SiapDikirim, self::Dibatalkan],
-            self::SiapDikirim => [self::Selesai],
+            self::SiapDikirim => [self::Dikirim],
+            self::Dikirim => [self::Selesai],
             self::Selesai, self::Dibatalkan => [],
         };
     }
@@ -43,6 +46,7 @@ enum OrderFulfillmentStatus: string
             self::Menunggu => null,
             self::Diproses => 'processed_at',
             self::SiapDikirim => 'ready_at',
+            self::Dikirim => 'shipped_at',
             self::Selesai => 'completed_at',
             self::Dibatalkan => 'cancelled_at',
         };

@@ -5,10 +5,12 @@ namespace App\Models;
 use Database\Factories\PengelolaTps3rProfileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -17,12 +19,15 @@ use Illuminate\Support\Carbon;
  * @property int $user_id
  * @property string $nama_tps3r
  * @property string|null $kode_tps3r
+ * @property string|null $deskripsi
  * @property string|null $alamat
  * @property string|null $kelurahan
  * @property string|null $kecamatan
  * @property float|null $kapasitas_harian_kg
  * @property float|null $latitude
  * @property float|null $longitude
+ * @property string|null $kontak_publik
+ * @property int|null $rajaongkir_origin_id
  * @property string|null $midtrans_merchant_id
  * @property string|null $midtrans_client_key
  * @property string|null $midtrans_server_key
@@ -32,12 +37,14 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read User $user
+ * @property-read Collection<int, Tps3rDeliveryZone> $deliveryZones
  */
 #[Fillable([
     'user_id',
     'nama_tps3r',
     'kode_tps3r',
     'jenis_fasilitas',
+    'deskripsi',
     'alamat',
     'kelurahan',
     'kecamatan',
@@ -47,11 +54,13 @@ use Illuminate\Support\Carbon;
     'fokus_pengolahan',
     'cakupan_wilayah',
     'nama_koordinator',
+    'kontak_publik',
     'foto_fasilitas',
     'is_featured_portal',
     'kapasitas_harian_kg',
     'latitude',
     'longitude',
+    'rajaongkir_origin_id',
     'midtrans_merchant_id',
     'midtrans_client_key',
     'midtrans_server_key',
@@ -92,6 +101,7 @@ class PengelolaTps3rProfile extends Model
             'kapasitas_harian_kg' => 'float',
             'latitude' => 'float',
             'longitude' => 'float',
+            'rajaongkir_origin_id' => 'integer',
             'layanan_tersedia' => 'array',
             'kategori_sampah_diterima' => 'array',
             'is_featured_portal' => 'boolean',
@@ -146,5 +156,11 @@ class PengelolaTps3rProfile extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** @return HasMany<Tps3rDeliveryZone, $this> */
+    public function deliveryZones(): HasMany
+    {
+        return $this->hasMany(Tps3rDeliveryZone::class, 'pengelola_tps3r_profile_id');
     }
 }

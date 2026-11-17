@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property string $kategori
  * @property float $harga
  * @property int $stok
+ * @property int $weight_grams
  * @property string|null $foto
  * @property-read string|null $foto_url
  * @property bool $is_available
@@ -34,6 +35,7 @@ use Illuminate\Support\Carbon;
     'kategori',
     'harga',
     'stok',
+    'weight_grams',
     'foto',
     'is_available',
     'is_featured',
@@ -89,6 +91,7 @@ class WasteProduct extends Model
         return [
             'harga' => 'float',
             'stok' => 'integer',
+            'weight_grams' => 'integer',
             'is_available' => 'boolean',
             'is_featured' => 'boolean',
         ];

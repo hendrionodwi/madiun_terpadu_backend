@@ -35,7 +35,7 @@
         @endif
 
         <!-- Filter Tabs & Pencarian -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="relative z-30 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <!-- Filter Status Tabs -->
             <div id="pemrakarsaReportsTabs" data-ajax-targets="#pemrakarsaReportsTabs,#pemrakarsaReportsTableCard" class="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
                 @php

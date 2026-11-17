@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Marketplace\CancelMarketplaceOrder;
+use App\Actions\Marketplace\CreateMarketplaceOrder;
 use App\Enums\OrderFulfillmentStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\Marketplace\CancelOrderRequest;
 use App\Http\Requests\Api\Marketplace\CheckoutRequest;
 use App\Http\Requests\Api\Marketplace\StoreProductRequest;
 use App\Models\Order;
-use App\Models\OrderItem;
 use App\Models\PengelolaTps3rProfile;
-use App\Models\PointLedger;
 use App\Models\User;
-use App\Models\WargaProfile;
 use App\Models\WasteProduct;
 use App\Services\MidtransService;
 use Illuminate\Http\JsonResponse;
@@ -20,7 +20,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -67,7 +66,17 @@ class MarketplaceController extends Controller
                 'alamat' => $profile?->alamat,
                 'kelurahan' => $profile?->kelurahan,
                 'kecamatan' => $profile?->kecamatan,
-                'phone_number' => $user->phone_number,
+                'jenis_fasilitas' => $profile?->jenis_fasilitas,
+                'deskripsi' => $profile?->deskripsi,
+                'jam_operasional' => $profile?->jam_operasional,
+                'layanan_tersedia' => $profile?->layanan_tersedia ?? [],
+                'kategori_sampah_diterima' => $profile?->kategori_sampah_diterima ?? [],
+                'fokus_pengolahan' => $profile?->fokus_pengolahan,
+                'cakupan_wilayah' => $profile?->cakupan_wilayah,
+                'nama_koordinator' => $profile?->nama_koordinator,
+                'kontak_publik' => $profile?->kontak_publik,
+                'foto_url' => $profile?->foto_url,
+                'kapasitas_harian_kg' => $profile?->kapasitas_harian_kg,
                 'latitude' => $profile?->latitude,
                 'longitude' => $profile?->longitude,
                 'is_midtrans_active' => $profile ? $profile->isMidtransConfigured() : false,
@@ -87,7 +96,10 @@ class MarketplaceController extends Controller
      */
     public function showStore(PengelolaTps3rProfile $store): JsonResponse
     {
-        $store->load('user');
+        $store->load([
+            'user',
+            'deliveryZones' => fn ($query) => $query->approved()->orderBy('kecamatan')->orderBy('kelurahan'),
+        ]);
         $seller = $store->user;
 
         if ($seller->role !== UserRole::PengelolaTps3r || ! $seller->is_active) {
@@ -117,12 +129,27 @@ class MarketplaceController extends Controller
                 'alamat' => $store->alamat,
                 'kelurahan' => $store->kelurahan,
                 'kecamatan' => $store->kecamatan,
-                'phone_number' => $seller->phone_number,
+                'jenis_fasilitas' => $store->jenis_fasilitas,
+                'deskripsi' => $store->deskripsi,
+                'jam_operasional' => $store->jam_operasional,
+                'layanan_tersedia' => $store->layanan_tersedia ?? [],
+                'kategori_sampah_diterima' => $store->kategori_sampah_diterima ?? [],
+                'fokus_pengolahan' => $store->fokus_pengolahan,
+                'cakupan_wilayah' => $store->cakupan_wilayah,
+                'nama_koordinator' => $store->nama_koordinator,
+                'kontak_publik' => $store->kontak_publik,
+                'foto_url' => $store->foto_url,
+                'kapasitas_harian_kg' => $store->kapasitas_harian_kg,
                 'latitude' => $store->latitude,
                 'longitude' => $store->longitude,
                 'is_midtrans_active' => $store->isMidtransConfigured(),
                 'total_products' => $products->count(),
                 'products' => $products,
+                'wilayah_pengiriman' => $store->deliveryZones->map(fn ($zone): array => [
+                    'kelurahan' => $zone->kelurahan,
+                    'kecamatan' => $zone->kecamatan,
+                    'delivery_fee' => $zone->delivery_fee,
+                ])->values(),
             ],
         ], Response::HTTP_OK);
     }
@@ -300,174 +327,11 @@ class MarketplaceController extends Controller
     /**
      * Checkout shopping cart (MKT-F-003).
      */
-    public function checkout(CheckoutRequest $request): JsonResponse
+    public function checkout(CheckoutRequest $request, CreateMarketplaceOrder $createMarketplaceOrder): JsonResponse
     {
-        $validated = $request->validated();
         /** @var User $buyer */
         $buyer = $request->user();
-
-        $quantitiesByProduct = [];
-        foreach ($validated['items'] as $item) {
-            $productId = (int) $item['product_id'];
-            $quantitiesByProduct[$productId] = ($quantitiesByProduct[$productId] ?? 0) + (int) $item['jumlah'];
-        }
-
-        $order = DB::transaction(function () use ($validated, $buyer, $quantitiesByProduct): Order {
-            $products = WasteProduct::with('seller:id,is_active')
-                ->whereIn('id', array_keys($quantitiesByProduct))
-                ->orderBy('id')
-                ->lockForUpdate()
-                ->get()
-                ->keyBy('id');
-
-            $totalHarga = 0.0;
-            $orderItemsToCreate = [];
-
-            foreach ($quantitiesByProduct as $productId => $jumlah) {
-                /** @var WasteProduct|null $product */
-                $product = $products->get($productId);
-
-                if (! $product || ! $product->is_available) {
-                    throw ValidationException::withMessages([
-                        'items' => 'Salah satu produk tidak tersedia lagi.',
-                    ]);
-                }
-
-                if (! $product->seller || ! $product->seller->is_active) {
-                    throw ValidationException::withMessages([
-                        'items' => "Toko TPS3R untuk produk '{$product->nama_produk}' sedang tidak aktif.",
-                    ]);
-                }
-
-                if ($product->stok < $jumlah) {
-                    throw ValidationException::withMessages([
-                        'items' => "Stok produk '{$product->nama_produk}' tidak mencukupi (sisa: {$product->stok}).",
-                    ]);
-                }
-
-                $subtotal = round($product->harga * $jumlah, 2);
-                $totalHarga += $subtotal;
-                $orderItemsToCreate[] = [
-                    'product' => $product,
-                    'jumlah' => $jumlah,
-                    'harga_satuan' => $product->harga,
-                    'subtotal' => $subtotal,
-                ];
-            }
-
-            $sellerIds = [];
-            foreach ($orderItemsToCreate as $itemData) {
-                $sellerIds[$itemData['product']->seller_id] = true;
-            }
-
-            if (count($sellerIds) > 1) {
-                throw ValidationException::withMessages([
-                    'items' => 'Produk dalam satu transaksi harus berasal dari fasilitas TPS3R yang sama.',
-                ]);
-            }
-
-            $wargaProfile = null;
-            $requiredPoints = 0;
-            if ($validated['metode_pembayaran'] === 'poin_sampah') {
-                $wargaProfile = WargaProfile::where('user_id', $buyer->id)
-                    ->lockForUpdate()
-                    ->first();
-                $requiredPoints = (int) ceil($totalHarga);
-
-                if (! $wargaProfile || $wargaProfile->saldo_poin < $requiredPoints) {
-                    $saldoSaatIni = $wargaProfile ? $wargaProfile->saldo_poin : 0;
-
-                    throw ValidationException::withMessages([
-                        'metode_pembayaran' => "Saldo poin Anda ({$saldoSaatIni} poin) tidak mencukupi untuk pembayaran sebesar {$requiredPoints} poin.",
-                    ]);
-                }
-            }
-
-            if ($validated['metode_pembayaran'] === 'midtrans') {
-                $sellerId = (int) array_key_first($sellerIds);
-                $seller = User::with('pengelolaTps3rProfile')->find($sellerId);
-                $tps3rProfile = $seller?->pengelolaTps3rProfile;
-
-                if (! $tps3rProfile || ! $tps3rProfile->isMidtransConfigured()) {
-                    $namaTps = $tps3rProfile?->nama_tps3r ?? 'penjual';
-                    throw ValidationException::withMessages([
-                        'metode_pembayaran' => "Fasilitas TPS3R {$namaTps} belum mengonfigurasi atau mengaktifkan gateway pembayaran online Midtrans.",
-                    ]);
-                }
-            }
-
-            $nomorPesanan = 'ORD-'.date('Ymd').'-'.strtoupper(Str::random(6));
-
-            $order = Order::create([
-                'nomor_pesanan' => $nomorPesanan,
-                'buyer_id' => $buyer->id,
-                'total_harga' => $totalHarga,
-                'metode_pembayaran' => $validated['metode_pembayaran'],
-                'status' => $validated['metode_pembayaran'] === 'poin_sampah' ? 'dibayar' : 'pending',
-                'alamat_pengiriman' => $validated['alamat_pengiriman'],
-                'catatan' => $validated['catatan'] ?? null,
-            ]);
-
-            foreach ($orderItemsToCreate as $itemData) {
-                /** @var WasteProduct $product */
-                $product = $itemData['product'];
-                $jumlah = $itemData['jumlah'];
-
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $product->id,
-                    'jumlah' => $jumlah,
-                    'harga_satuan' => $itemData['harga_satuan'],
-                    'subtotal' => $itemData['subtotal'],
-                ]);
-
-                $product->decrement('stok', $jumlah);
-            }
-
-            $order->fulfillments()->createMany(
-                array_map(
-                    fn (int $sellerId): array => [
-                        'seller_id' => $sellerId,
-                        'status' => OrderFulfillmentStatus::Menunggu,
-                    ],
-                    array_keys($sellerIds),
-                ),
-            );
-
-            if ($wargaProfile) {
-                PointLedger::record(
-                    $buyer->id,
-                    'debit',
-                    'belanja_marketplace',
-                    $requiredPoints,
-                    "Pembayaran pesanan marketplace {$order->nomor_pesanan}",
-                    $order
-                );
-            }
-
-            if ($validated['metode_pembayaran'] === 'midtrans') {
-                $sellerId = (int) array_key_first($sellerIds);
-                $seller = User::with('pengelolaTps3rProfile')->find($sellerId);
-                /** @var PengelolaTps3rProfile $tps3rProfile */
-                $tps3rProfile = $seller->pengelolaTps3rProfile;
-
-                try {
-                    $snapData = app(MidtransService::class)->createSnapTransaction($order, $tps3rProfile);
-                    $order->update([
-                        'snap_token' => $snapData['token'],
-                        'snap_redirect_url' => $snapData['redirect_url'],
-                    ]);
-                } catch (\Throwable $e) {
-                    throw ValidationException::withMessages([
-                        'metode_pembayaran' => 'Gagal menghubungkan gateway pembayaran Midtrans: '.$e->getMessage(),
-                    ]);
-                }
-            }
-
-            return $order;
-        });
-
-        $order->load(['items.product', 'buyer:id,name,email,phone_number', 'fulfillments.seller:id,name']);
+        $order = $createMarketplaceOrder->handle($buyer, $request->validated());
 
         return response()->json([
             'success' => true,
@@ -490,7 +354,8 @@ class MarketplaceController extends Controller
             $query->where('buyer_id', $currentUser->id);
         }
 
-        $orders = $query->latest()->paginate((int) ($request->per_page ?? 10));
+        $perPage = min(max($request->integer('per_page', 10), 1), 50);
+        $orders = $query->latest()->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -536,12 +401,13 @@ class MarketplaceController extends Controller
     /**
      * Buyer cancels an order (only allowed if not yet shipped/completed).
      */
-    public function cancelOrder(Request $request, Order $order): JsonResponse
-    {
+    public function cancelOrder(
+        CancelOrderRequest $request,
+        Order $order,
+        CancelMarketplaceOrder $cancelMarketplaceOrder,
+    ): JsonResponse {
         /** @var User $currentUser */
         $currentUser = $request->user();
-
-        $order->load(['items.product', 'fulfillments']);
 
         if (! $currentUser->isAdminDlh() && $order->buyer_id !== $currentUser->id) {
             return response()->json([
@@ -550,64 +416,22 @@ class MarketplaceController extends Controller
             ], Response::HTTP_FORBIDDEN);
         }
 
-        if (in_array($order->status, ['siap_dikirim', 'dikirim', 'selesai', 'dibatalkan'], true)) {
+        try {
+            $order = $cancelMarketplaceOrder->handle(
+                $order,
+                $request->validated('alasan') ?? 'Dibatalkan oleh pembeli',
+            );
+        } catch (ValidationException $exception) {
             return response()->json([
                 'success' => false,
-                'message' => 'Pesanan tidak dapat dibatalkan karena sudah dalam pengiriman atau telah selesai.',
+                'message' => collect($exception->errors())->flatten()->first(),
+                'errors' => $exception->errors(),
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $order = DB::transaction(function () use ($order, $request): Order {
-            $lockedOrder = Order::with(['items.product', 'fulfillments'])
-                ->whereKey($order->id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            if (in_array($lockedOrder->status, ['siap_dikirim', 'dikirim', 'selesai', 'dibatalkan'], true)) {
-                throw ValidationException::withMessages([
-                    'order' => ['Pesanan tidak dapat dibatalkan karena sudah dalam pengiriman, selesai, atau telah dibatalkan.'],
-                ]);
-            }
-
-            $alasan = $request->input('alasan', 'Dibatalkan oleh pembeli');
-
-            foreach ($lockedOrder->fulfillments as $fulfillment) {
-                if ($fulfillment->status !== OrderFulfillmentStatus::Dibatalkan) {
-                    $fulfillment->update([
-                        'status' => OrderFulfillmentStatus::Dibatalkan,
-                        'catatan_status' => $alasan,
-                        'cancelled_at' => now(),
-                    ]);
-                }
-            }
-
-            foreach ($lockedOrder->items as $item) {
-                if ($item->product) {
-                    $item->product->increment('stok', $item->jumlah);
-                }
-            }
-
-            if ($lockedOrder->metode_pembayaran === 'poin_sampah') {
-                PointLedger::record(
-                    $lockedOrder->buyer_id,
-                    'kredit',
-                    'refund_marketplace',
-                    (int) ceil($lockedOrder->total_harga),
-                    "Pengembalian poin pembatalan pesanan {$lockedOrder->nomor_pesanan}",
-                    $lockedOrder
-                );
-            }
-
-            $lockedOrder->update(['status' => 'dibatalkan']);
-
-            return $lockedOrder;
-        }, 3);
-
-        $order->load(['items.product', 'fulfillments.seller:id,name']);
-
         return response()->json([
             'success' => true,
-            'message' => 'Pesanan berhasil dibatalkan. Stok produk dan saldo poin telah dikembalikan.',
+            'message' => 'Pesanan berhasil dibatalkan dan stok produk telah dikembalikan.',
             'data' => $order,
         ], Response::HTTP_OK);
     }
@@ -641,8 +465,18 @@ class MarketplaceController extends Controller
                 return ['status' => 'cancelled', 'order' => $lockedOrder];
             }
 
-            if ($lockedOrder->metode_pembayaran === 'midtrans' && $lockedOrder->status === 'pending') {
-                return ['status' => 'unpaid_midtrans', 'order' => $lockedOrder];
+            $activeFulfillments = $lockedOrder->fulfillments->reject(
+                fn ($fulfillment): bool => $fulfillment->status === OrderFulfillmentStatus::Dibatalkan,
+            );
+
+            if (
+                $lockedOrder->status !== 'dikirim'
+                || $activeFulfillments->isEmpty()
+                || $activeFulfillments->contains(
+                    fn ($fulfillment): bool => $fulfillment->status !== OrderFulfillmentStatus::Dikirim,
+                )
+            ) {
+                return ['status' => 'not_shipped', 'order' => $lockedOrder];
             }
 
             foreach ($lockedOrder->fulfillments as $fulfillment) {
@@ -675,10 +509,10 @@ class MarketplaceController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        if ($outcome['status'] === 'unpaid_midtrans') {
+        if ($outcome['status'] === 'not_shipped') {
             return response()->json([
                 'success' => false,
-                'message' => 'Pesanan Midtrans yang belum dibayar tidak dapat dikonfirmasi diterima.',
+                'message' => 'Pesanan hanya dapat dikonfirmasi setelah penjual menandainya telah dikirim.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 

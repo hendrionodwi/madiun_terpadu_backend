@@ -8,10 +8,11 @@
 @endphp
 
 <section {{ $attributes->class('overflow-hidden rounded-3xl border border-slate-200/85 bg-white shadow-[0_22px_55px_-38px_rgba(15,23,42,0.42)] dark:border-slate-800 dark:bg-slate-900') }}>
-    {{-- Cover Banner Civic Emerald --}}
-    <div class="relative h-24 overflow-hidden bg-linear-to-r from-civic-950 via-civic-800 to-civic-600 sm:h-28">
-        <div class="civic-hero-grid opacity-15" aria-hidden="true"></div>
+    {{-- Cover Banner Civic Emerald × Warm Amber (matching Razen Executive Portal layout) --}}
+    <div class="relative h-32 overflow-hidden bg-linear-to-r from-civic-950 via-[#9c6a21] to-[#c6892e] sm:h-40 md:h-44 dark:from-slate-950 dark:via-[#4e340e] dark:to-[#784d14]">
+        <div class="civic-hero-grid opacity-20" aria-hidden="true"></div>
         <span class="pointer-events-none -right-12 -bottom-14 absolute size-44 rounded-full border border-white/10 bg-white/5" aria-hidden="true"></span>
+        <span class="pointer-events-none top-4 left-1/3 absolute size-64 rounded-full border border-amber-300/10 bg-amber-400/5 blur-xl" aria-hidden="true"></span>
     </div>
 
     {{-- Identity + Floating Metrics Row --}}
@@ -19,7 +20,7 @@
         <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
                 {{-- Overlapping Rounded-Square Avatar --}}
-                <div class="-mt-12 flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-civic-50 shadow-md ring-1 ring-slate-200/70 sm:-mt-14 sm:size-28 dark:border-slate-900 dark:bg-civic-950 dark:ring-slate-700">
+                <div class="-mt-14 flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-civic-50 shadow-xl ring-1 ring-slate-200/80 sm:-mt-16 sm:size-32 dark:border-slate-900 dark:bg-civic-950 dark:ring-slate-700">
                     @if (! empty($profileData['avatar_url']))
                         <img
                             src="{{ $profileData['avatar_url'] }}"

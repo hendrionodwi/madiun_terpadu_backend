@@ -25,6 +25,7 @@ class WasteProductFactory extends Factory
             'kategori' => fake()->randomElement(['pupuk_kompos', 'kerajinan_plastik', 'maggot_pakan', 'ecobrick']),
             'harga' => fake()->numberBetween(10000, 75000),
             'stok' => fake()->numberBetween(10, 100),
+            'weight_grams' => fake()->randomElement([250, 500, 1000, 5000]),
             'foto' => null,
             'is_available' => true,
         ];

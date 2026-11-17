@@ -21,6 +21,7 @@ use App\Models\Tps3rWasteDeposit;
 use App\Models\User;
 use App\Models\WargaProfile;
 use App\Models\WasteWeighing;
+use App\Services\PointConversionService;
 use App\Services\WeighingProofService;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -36,18 +37,14 @@ class TrackingController extends Controller
     /**
      * Citizen mobile home summary (saldo poin, nearest schedule, monthly metrics, announcements).
      */
-    public function wargaSummary(Request $request): JsonResponse
+    public function wargaSummary(Request $request, PointConversionService $pointConversion): JsonResponse
     {
         /** @var User $warga */
         $warga = $request->user();
         $profile = $warga->wargaProfile;
         $saldoPoin = (int) ($profile?->saldo_poin ?? 0);
 
-        $rate = (float) (MasterData::query()
-            ->whereIn('group', ['point_conversion', 'point_conversions'])
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->value('numeric_value') ?? 10);
+        $rate = $pointConversion->currentRate();
 
         $nearestSchedule = PickupSchedule::query()
             ->where('warga_id', $warga->id)
@@ -1033,8 +1030,11 @@ class TrackingController extends Controller
     /**
      * Get detailed weighing receipt data for citizens and officers.
      */
-    public function weighingReceipt(Request $request, WasteWeighing $wasteWeighing): JsonResponse
-    {
+    public function weighingReceipt(
+        Request $request,
+        WasteWeighing $wasteWeighing,
+        PointConversionService $pointConversion
+    ): JsonResponse {
         /** @var User $currentUser */
         $currentUser = $request->user();
 
@@ -1057,11 +1057,7 @@ class TrackingController extends Controller
             ? WasteWeighing::where('pickup_schedule_id', $wasteWeighing->pickup_schedule_id)->get()
             : collect([$wasteWeighing]);
 
-        $rate = (float) (MasterData::query()
-            ->whereIn('group', ['point_conversion', 'point_conversions'])
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->value('numeric_value') ?? 10);
+        $rate = $pointConversion->currentRate();
 
         return response()->json([
             'success' => true,

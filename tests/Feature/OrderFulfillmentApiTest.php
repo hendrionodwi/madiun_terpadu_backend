@@ -113,7 +113,8 @@ test('parent order is completed after every seller fulfillment reaches a termina
     $fulfillment = OrderFulfillment::factory()->create([
         'order_id' => $order->id,
         'seller_id' => $seller->id,
-        'status' => OrderFulfillmentStatus::SiapDikirim,
+        'status' => OrderFulfillmentStatus::Dikirim,
+        'shipped_at' => now(),
     ]);
     OrderFulfillment::factory()->create([
         'order_id' => $order->id,

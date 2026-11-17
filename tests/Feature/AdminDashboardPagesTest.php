@@ -7,6 +7,7 @@ use App\Models\FundWithdrawalRequest;
 use App\Models\Order;
 use App\Models\OrderFulfillment;
 use App\Models\OrderItem;
+use App\Models\RewardFundAllocation;
 use App\Models\User;
 use App\Models\WasteProduct;
 
@@ -24,7 +25,7 @@ test('admin dlh can access all 10 dedicated admin pages', function () {
     $this->actingAs($admin)->get(route('dashboard.admin.complaints'))->assertOk()->assertSee('Kelola Pengaduan Masyarakat');
     $this->actingAs($admin)->get(route('dashboard.admin.reports'))->assertOk()->assertSee('Verifikasi Dokumen Lingkungan');
     $this->actingAs($admin)->get(route('dashboard.admin.entities'))->assertOk()->assertSee('Fasilitas TPS3R Kota');
-    $this->actingAs($admin)->get(route('dashboard.admin.points'))->assertOk()->assertSee('Sirkulasi Poin');
+    $this->actingAs($admin)->get(route('dashboard.admin.points'))->assertOk()->assertSee('Kas Reward & Settlement Poin');
     $this->actingAs($admin)->get(route('dashboard.admin.master-data'))->assertOk()->assertSee('Data Master');
     $this->actingAs($admin)->get(route('dashboard.admin.activity-logs'))->assertOk()->assertSee('Audit Trail');
     $this->actingAs($admin)->get(route('dashboard.admin.broadcasts'))->assertOk()->assertSee('Pengumuman Portal');
@@ -92,10 +93,15 @@ test('admin dlh can verify environmental report', function () {
 test('admin dlh can update fund withdrawal request status', function () {
     $admin = User::factory()->adminDlh()->create();
     $withdrawal = FundWithdrawalRequest::factory()->create(['status' => 'pending']);
+    $allocation = RewardFundAllocation::factory()->create([
+        'created_by' => $admin->id,
+        'amount' => 100000,
+    ]);
 
     $response = $this->actingAs($admin)->patch(route('dashboard.admin.points.update', $withdrawal), [
         'status' => 'approved',
-        'admin_note' => 'Transfer berhasil diproses via DANA.',
+        'reward_fund_allocation_id' => $allocation->id,
+        'admin_note' => 'Permintaan valid dan masuk antrean pembayaran.',
     ]);
 
     $response->assertRedirect();
@@ -144,6 +150,22 @@ test('admin dlh can store new reward fund allocation and view on points page', f
     $pageResponse->assertOk()
         ->assertSee('Saldo Kas Tersedia')
         ->assertSee('DPA-DLH/2026/TEST');
+});
+
+test('reward fund allocation rejects an amount outside the database range', function () {
+    $admin = User::factory()->adminDlh()->create();
+
+    $this->actingAs($admin)->post(route('dashboard.admin.points.allocations.store'), [
+        'source_type' => 'apbd',
+        'amount' => '25000000000000000000',
+        'fiscal_year' => 2026,
+        'allocated_at' => '2026-11-14',
+        'reference_number' => 'DPA-DLH/2026/OVERFLOW',
+    ])->assertSessionHasErrors('amount');
+
+    $this->assertDatabaseMissing('reward_fund_allocations', [
+        'reference_number' => 'DPA-DLH/2026/OVERFLOW',
+    ]);
 });
 
 test('admin dlh can store master data and broadcast announcement', function () {

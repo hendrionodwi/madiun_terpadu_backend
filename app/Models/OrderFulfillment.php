@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -20,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $catatan_status
  * @property Carbon|null $processed_at
  * @property Carbon|null $ready_at
+ * @property Carbon|null $shipped_at
  * @property Carbon|null $completed_at
  * @property Carbon|null $cancelled_at
  * @property Carbon|null $created_at
@@ -34,6 +36,7 @@ use Illuminate\Support\Carbon;
     'catatan_status',
     'processed_at',
     'ready_at',
+    'shipped_at',
     'completed_at',
     'cancelled_at',
 ])]
@@ -60,6 +63,7 @@ class OrderFulfillment extends Model
             'status' => OrderFulfillmentStatus::class,
             'processed_at' => 'datetime',
             'ready_at' => 'datetime',
+            'shipped_at' => 'datetime',
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
@@ -75,5 +79,11 @@ class OrderFulfillment extends Model
     public function seller(): BelongsTo
     {
         return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    /** @return HasMany<MarketplaceSettlementItem, $this> */
+    public function marketplaceSettlementItems(): HasMany
+    {
+        return $this->hasMany(MarketplaceSettlementItem::class);
     }
 }

@@ -42,4 +42,15 @@ return [
         'allow_mock' => env('MIDTRANS_ALLOW_MOCK', false),
     ],
 
+    'rajaongkir' => [
+        'enabled' => (bool) env('RAJAONGKIR_ENABLED', false),
+        'api_key' => env('RAJAONGKIR_API_KEY'),
+        'base_url' => rtrim((string) env('RAJAONGKIR_BASE_URL', 'https://rajaongkir.komerce.id/api/v1'), '/'),
+        'couriers' => env('RAJAONGKIR_COURIERS', 'jne:jnt:sicepat:anteraja:pos'),
+        'connect_timeout' => (int) env('RAJAONGKIR_CONNECT_TIMEOUT', 3),
+        'timeout' => (int) env('RAJAONGKIR_TIMEOUT', 10),
+        'destination_cache_seconds' => (int) env('RAJAONGKIR_DESTINATION_CACHE_SECONDS', 604800),
+        'cost_cache_seconds' => (int) env('RAJAONGKIR_COST_CACHE_SECONDS', 900),
+    ],
+
 ];

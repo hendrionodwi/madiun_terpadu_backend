@@ -17,8 +17,18 @@ use Illuminate\Support\Carbon;
  * @property int $buyer_id
  * @property float $total_harga
  * @property string $metode_pembayaran
+ * @property string $metode_pengiriman
+ * @property float $biaya_pengiriman
+ * @property string|null $shipping_source
  * @property string $status
  * @property string|null $alamat_pengiriman
+ * @property string|null $destination_kelurahan
+ * @property string|null $destination_kecamatan
+ * @property int|null $rajaongkir_destination_id
+ * @property string|null $shipping_courier
+ * @property string|null $shipping_service
+ * @property string|null $shipping_etd
+ * @property int $shipping_weight_grams
  * @property string|null $catatan
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -31,8 +41,18 @@ use Illuminate\Support\Carbon;
     'buyer_id',
     'total_harga',
     'metode_pembayaran',
+    'metode_pengiriman',
+    'biaya_pengiriman',
+    'shipping_source',
     'status',
     'alamat_pengiriman',
+    'destination_kelurahan',
+    'destination_kecamatan',
+    'rajaongkir_destination_id',
+    'shipping_courier',
+    'shipping_service',
+    'shipping_etd',
+    'shipping_weight_grams',
     'catatan',
     'snap_token',
     'snap_redirect_url',
@@ -56,6 +76,9 @@ class Order extends Model
     {
         return [
             'total_harga' => 'float',
+            'biaya_pengiriman' => 'float',
+            'rajaongkir_destination_id' => 'integer',
+            'shipping_weight_grams' => 'integer',
             'payment_gateway_response' => 'array',
             'paid_at' => 'datetime',
         ];

@@ -26,6 +26,7 @@
                         ['key' => 'menunggu', 'label' => 'Menunggu Diproses', 'count' => $statusCounts['menunggu'] ?? 0],
                         ['key' => 'diproses', 'label' => 'Sedang Diproses', 'count' => $statusCounts['diproses'] ?? 0],
                         ['key' => 'siap_dikirim', 'label' => 'Siap Dikirim', 'count' => $statusCounts['siap_dikirim'] ?? 0],
+                        ['key' => 'dikirim', 'label' => 'Dalam Pengiriman', 'count' => $statusCounts['dikirim'] ?? 0],
                         ['key' => 'selesai', 'label' => 'Selesai', 'count' => $statusCounts['selesai'] ?? 0],
                         ['key' => 'dibatalkan', 'label' => 'Dibatalkan', 'count' => $statusCounts['dibatalkan'] ?? 0],
                     ];
@@ -140,6 +141,8 @@
                                             <span class="civic-status-info">Sedang diproses</span>
                                         @elseif ($fStatus === 'siap_dikirim')
                                             <span class="civic-status bg-civic-100 text-civic-800 dark:bg-civic-950/60 dark:text-civic-300">Siap dikirim</span>
+                                        @elseif ($fStatus === 'dikirim')
+                                            <span class="civic-status bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">Dalam pengiriman</span>
                                         @elseif ($fStatus === 'selesai')
                                             <span class="civic-status-success">Selesai</span>
                                         @elseif ($fStatus === 'dibatalkan')

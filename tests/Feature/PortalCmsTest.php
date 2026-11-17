@@ -304,3 +304,75 @@ test('admin dlh sees dedicated content management workspaces', function () {
         ->assertSee('Bagian utama')
         ->assertSee('Kontak & transparansi', false);
 });
+
+test('admin dlh can manage dynamic hero showcase, app cta, and banner slider in portal settings', function () {
+    Storage::fake('public');
+
+    $admin = User::factory()->adminDlh()->create();
+    $bgImage = UploadedFile::fake()->image('madiun-hero-bg.jpg', 1920, 1080);
+    $qrImage = UploadedFile::fake()->image('custom-qr.png', 400, 400);
+
+    $this->actingAs($admin)
+        ->patch(route('dashboard.admin.portal-settings.update'), [
+            'hero_title' => 'Pilah Sampah Mudah Bersama Warga Madiun',
+            'hero_cta_primary_text' => 'Pasang Aplikasi Mobile',
+            'hero_cta_primary_link' => '#unduh-aplikasi',
+            'hero_background_image' => $bgImage,
+            'app_download_title' => 'Aplikasi DLH Madiun Siap Diunduh',
+            'app_download_url' => 'https://dlh.madiunkota.go.id/downloads/madiun-app.apk',
+            'app_qr_custom_image' => $qrImage,
+            'show_banner_slider' => true,
+            'show_app_download_section' => true,
+        ])
+        ->assertRedirect();
+
+    $savedBgImage = PortalSetting::where('key', 'hero_background_image')->value('value');
+    $savedQrImage = PortalSetting::where('key', 'app_qr_custom_image')->value('value');
+    expect($savedBgImage)->not->toBeNull();
+    expect($savedQrImage)->not->toBeNull();
+    Storage::disk('public')->assertExists($savedBgImage);
+    Storage::disk('public')->assertExists($savedQrImage);
+
+    $this->get(route('home'))
+        ->assertOk()
+        ->assertSee('Pilah Sampah Mudah Bersama Warga Madiun')
+        ->assertSee('Pasang Aplikasi Mobile')
+        ->assertSee(Storage::url($savedBgImage))
+        ->assertSee(Storage::url($savedQrImage))
+        ->assertSee('Aplikasi DLH Madiun Siap Diunduh')
+        ->assertSee('https://dlh.madiunkota.go.id/downloads/madiun-app.apk');
+
+    $this->actingAs($admin)
+        ->patch(route('dashboard.admin.portal-settings.update'), [
+            'remove_hero_background_image' => true,
+            'remove_app_qr_custom_image' => true,
+        ])
+        ->assertRedirect();
+
+    expect(PortalSetting::where('key', 'hero_background_image')->value('value'))->toBeNull();
+    expect(PortalSetting::where('key', 'app_qr_custom_image')->value('value'))->toBeNull();
+    Storage::disk('public')->assertMissing($savedBgImage);
+    Storage::disk('public')->assertMissing($savedQrImage);
+
+    // After removing custom QR, it falls back to dynamic SVG QR generation
+    $this->get(route('home'))
+        ->assertOk()
+        ->assertSee('<svg', false)
+        ->assertSee('QR Code Siap Dipindai');
+});
+
+test('admin portal settings reject unsafe link schemes', function (string $field) {
+    $admin = User::factory()->adminDlh()->create();
+
+    $this->actingAs($admin)
+        ->patch(route('dashboard.admin.portal-settings.update'), [
+            $field => 'javascript:alert(document.cookie)',
+        ])
+        ->assertSessionHasErrors($field);
+
+    expect(PortalSetting::query()->where('key', $field)->exists())->toBeFalse();
+})->with([
+    'primary hero action' => 'hero_cta_primary_link',
+    'secondary hero action' => 'hero_cta_secondary_link',
+    'application download' => 'app_download_url',
+]);

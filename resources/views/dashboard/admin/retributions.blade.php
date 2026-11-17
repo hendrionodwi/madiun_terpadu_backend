@@ -65,7 +65,7 @@
                     <span class="ml-1 text-slate-500 dark:text-slate-400">· Jatuh Tempo Standar: Tgl {{ $retributionConfig['standard_due_day'] ?? 20 }}</span>
                     <p class="mt-0.5 text-xs text-slate-600 dark:text-slate-300">
                         Maks. Diskon Poin: <strong class="text-civic-700 dark:text-civic-300">{{ $retributionConfig['max_point_discount_percent'] ?? 100 }}%</strong>
-                        · Kurs Poin: <strong>Rp {{ number_format($retributionConfig['point_conversion_rate'] ?? 10, 0, ',', '.') }} / Poin</strong>
+                        · Kurs Poin: <strong>Rp {{ number_format($retributionConfig['point_conversion_rate'] ?? 1, 2, ',', '.') }} / Poin</strong>
                         · Masa Tenggang: <strong>{{ $retributionConfig['grace_period_days'] ?? 0 }} Hari</strong>
                     </p>
                 </div>
@@ -165,7 +165,7 @@
                 $retributionMonthOptions[(string) $m] = DateTime::createFromFormat('!m', $m)->format('F');
             }
         @endphp
-        <div class="civic-card p-4">
+        <div class="civic-card relative z-30 p-4">
             <form id="retributionsFilterForm" method="GET" action="{{ route('dashboard.admin.retributions') }}" data-ajax-form data-ajax-targets="#retributionsStatusTabs,#retributionsTableCard" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 <div>
                     <span class="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-400">Status Pembayaran</span>
@@ -413,7 +413,7 @@
 
                     <div>
                         <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Nilai Tukar Poin (IDR per 1 Poin Sampah)</label>
-                        <input type="number" name="point_conversion_rate" value="{{ $retributionConfig['point_conversion_rate'] ?? 10 }}" min="1" step="1" class="{{ $fieldClass }}" required />
+                        <input type="number" name="point_conversion_rate" value="{{ $retributionConfig['point_conversion_rate'] ?? 1 }}" min="0.1" max="10" step="0.1" class="{{ $fieldClass }}" required />
                         <span class="text-xs text-slate-400">Contoh: 10 artinya 1.000 poin bernilai Rp 10.000.</span>
                     </div>
 

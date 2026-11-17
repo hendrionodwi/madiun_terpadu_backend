@@ -1,0 +1,16 @@
+@if (session('success'))
+    <div class="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900">
+        {{ session('success') }}
+    </div>
+@endif
+
+@if ($errors->any())
+    <div class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+        <p class="font-extrabold">Periksa kembali data berikut:</p>
+        <ul class="mt-1 list-disc pl-5">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif

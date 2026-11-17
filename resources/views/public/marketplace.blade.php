@@ -28,7 +28,16 @@
                     <span class="font-bold text-slate-800">Akses Publik:</span> Pengunjung dapat melihat produk dan membandingkan toko TPS3R tanpa login. Masuk akun Warga diperlukan untuk keranjang dan checkout.
                 </p>
                 @auth
-                    <a href="{{ route('dashboard') }}" class="shrink-0 font-bold text-civic-700 hover:text-civic-900">Buka Dashboard →</a>
+                    @if (auth()->user()->isWarga())
+                        <div class="flex shrink-0 items-center gap-4 font-bold text-civic-700">
+                            <a href="{{ route('marketplace.cart') }}" class="hover:text-civic-900">Keranjang</a>
+                            <a href="{{ route('marketplace.orders') }}" class="hover:text-civic-900">Pesanan Saya →</a>
+                        </div>
+                    @else
+                        <div class="flex shrink-0 items-center gap-4 font-bold text-civic-700">
+                            <a href="{{ route('dashboard') }}" class="hover:text-civic-900">Dashboard Anda →</a>
+                        </div>
+                    @endif
                 @else
                     <a href="{{ route('login') }}" class="shrink-0 font-bold text-civic-700 hover:text-civic-900">Masuk untuk membeli →</a>
                 @endauth
@@ -323,8 +332,8 @@
                             <p class="mt-1 text-xs font-medium text-slate-500">
                                 {{ $store->kelurahan ? 'Kel. '.$store->kelurahan.', ' : '' }}{{ $store->kecamatan ? 'Kec. '.$store->kecamatan.', ' : '' }}Kota Madiun
                             </p>
-                            <p class="mt-3 text-sm leading-6 text-slate-600">
-                                {{ $store->fokus_pengolahan ?: ($store->alamat ?: 'Pusat pengolahan sampah terpadu & pemberdayaan ekonomi sirkular warga.') }}
+                            <p class="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">
+                                {{ $store->deskripsi ?: ($store->fokus_pengolahan ?: ($store->alamat ?: 'Pusat pengolahan sampah terpadu dan ekonomi sirkular warga.')) }}
                             </p>
                         </div>
 
@@ -332,8 +341,8 @@
                             <a href="{{ route('public.marketplace', ['store' => $store->public_id]) }}" data-ajax-link data-ajax-targets="#marketplaceCategoryPills,#marketplaceResultSummary,#marketplaceResults" data-ajax-scroll class="text-civic-700 hover:text-civic-900">
                                 Lihat {{ $activeCount > 0 ? $activeCount.' Produk' : 'Toko' }} →
                             </a>
-                            <a href="{{ route('public.services', array_filter(['district' => $store->kecamatan, 'search' => $store->nama_tps3r])) }}" class="text-slate-600 hover:text-civic-800">
-                                Peta Lokasi
+                            <a href="{{ route('public.facilities.show', $store) }}" class="text-slate-600 hover:text-civic-800">
+                                Profil fasilitas
                             </a>
                         </div>
                     </div>

@@ -21,4 +21,9 @@ class FundWithdrawalRequestPolicy
     {
         return $user->isAdminDlh();
     }
+
+    public function executePayout(User $user, FundWithdrawalRequest $fundWithdrawalRequest): bool
+    {
+        return $user->isAdminDlh();
+    }
 }

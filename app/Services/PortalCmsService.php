@@ -299,6 +299,51 @@ class PortalCmsService
     {
         $defaults = PortalSetting::defaults();
 
+        if (isset($payload['hero_mockup_image']) && $payload['hero_mockup_image'] instanceof UploadedFile) {
+            $path = $payload['hero_mockup_image']->store('portal-settings', 'public');
+            $oldPath = PortalSetting::where('key', 'hero_mockup_image')->value('value');
+            if ($oldPath) {
+                $this->deleteLocalPublicFile($oldPath);
+            }
+            $payload['hero_mockup_image'] = $path;
+        } elseif (! empty($payload['remove_hero_mockup_image'])) {
+            $oldPath = PortalSetting::where('key', 'hero_mockup_image')->value('value');
+            if ($oldPath) {
+                $this->deleteLocalPublicFile($oldPath);
+            }
+            $payload['hero_mockup_image'] = null;
+        }
+
+        if (isset($payload['hero_background_image']) && $payload['hero_background_image'] instanceof UploadedFile) {
+            $path = $payload['hero_background_image']->store('portal-settings', 'public');
+            $oldPath = PortalSetting::where('key', 'hero_background_image')->value('value');
+            if ($oldPath) {
+                $this->deleteLocalPublicFile($oldPath);
+            }
+            $payload['hero_background_image'] = $path;
+        } elseif (! empty($payload['remove_hero_background_image'])) {
+            $oldPath = PortalSetting::where('key', 'hero_background_image')->value('value');
+            if ($oldPath) {
+                $this->deleteLocalPublicFile($oldPath);
+            }
+            $payload['hero_background_image'] = null;
+        }
+
+        if (isset($payload['app_qr_custom_image']) && $payload['app_qr_custom_image'] instanceof UploadedFile) {
+            $path = $payload['app_qr_custom_image']->store('portal-settings', 'public');
+            $oldPath = PortalSetting::where('key', 'app_qr_custom_image')->value('value');
+            if ($oldPath) {
+                $this->deleteLocalPublicFile($oldPath);
+            }
+            $payload['app_qr_custom_image'] = $path;
+        } elseif (! empty($payload['remove_app_qr_custom_image'])) {
+            $oldPath = PortalSetting::where('key', 'app_qr_custom_image')->value('value');
+            if ($oldPath) {
+                $this->deleteLocalPublicFile($oldPath);
+            }
+            $payload['app_qr_custom_image'] = null;
+        }
+
         DB::transaction(function () use ($admin, $payload, $defaults): void {
             foreach ($payload as $key => $value) {
                 if (! array_key_exists($key, $defaults)) {
@@ -306,9 +351,17 @@ class PortalCmsService
                 }
 
                 $isJson = is_array($defaults[$key]);
-                $isBool = in_array($key, ['announcement_banner_enabled', 'show_stats_section', 'show_education_section', 'show_marketplace_section'], true);
+                $isBool = in_array($key, [
+                    'announcement_banner_enabled',
+                    'show_banner_slider',
+                    'show_stats_section',
+                    'show_education_section',
+                    'show_marketplace_section',
+                    'show_app_download_section',
+                ], true);
 
                 $storedValue = match (true) {
+                    $value === null => null,
                     $isJson && is_array($value) => json_encode($value, JSON_UNESCAPED_UNICODE),
                     $isBool => ((bool) $value) ? '1' : '0',
                     default => (string) $value,

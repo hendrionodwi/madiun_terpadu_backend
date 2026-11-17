@@ -70,6 +70,12 @@ class TransitionOrderFulfillmentStatus
                 && $previousStatus !== OrderFulfillmentStatus::Dibatalkan
                 && $order->status !== 'dibatalkan'
             ) {
+                if ($order->metode_pembayaran === 'midtrans' && $order->status !== 'pending') {
+                    throw ValidationException::withMessages([
+                        'status' => ['Pesanan Midtrans yang telah dibayar memerlukan proses pengembalian dana oleh admin.'],
+                    ]);
+                }
+
                 // Restore stock for items belonging to this seller
                 $orderItems = OrderItem::where('order_id', $order->id)
                     ->whereHas('product', fn ($q) => $q->where('seller_id', $lockedFulfillment->seller_id))
@@ -120,20 +126,34 @@ class TransitionOrderFulfillmentStatus
         $allCancelled = $fulfillments->every(
             fn (OrderFulfillment $fulfillment): bool => $fulfillment->status === OrderFulfillmentStatus::Dibatalkan,
         );
-        $allTerminal = $fulfillments->every(
-            fn (OrderFulfillment $fulfillment): bool => $fulfillment->status->isTerminal(),
+        $activeFulfillments = $fulfillments->reject(
+            fn (OrderFulfillment $fulfillment): bool => $fulfillment->status === OrderFulfillmentStatus::Dibatalkan,
         );
-        $hasProgress = $fulfillments->contains(
+        $allCompleted = $activeFulfillments->isNotEmpty() && $activeFulfillments->every(
+            fn (OrderFulfillment $fulfillment): bool => $fulfillment->status === OrderFulfillmentStatus::Selesai,
+        );
+        $allShipped = $activeFulfillments->isNotEmpty() && $activeFulfillments->every(
             fn (OrderFulfillment $fulfillment): bool => in_array($fulfillment->status, [
-                OrderFulfillmentStatus::Diproses,
-                OrderFulfillmentStatus::SiapDikirim,
+                OrderFulfillmentStatus::Dikirim,
                 OrderFulfillmentStatus::Selesai,
             ], true),
+        );
+        $allReady = $activeFulfillments->isNotEmpty() && $activeFulfillments->every(
+            fn (OrderFulfillment $fulfillment): bool => in_array($fulfillment->status, [
+                OrderFulfillmentStatus::SiapDikirim,
+                OrderFulfillmentStatus::Dikirim,
+                OrderFulfillmentStatus::Selesai,
+            ], true),
+        );
+        $hasProgress = $activeFulfillments->contains(
+            fn (OrderFulfillment $fulfillment): bool => $fulfillment->status !== OrderFulfillmentStatus::Menunggu,
         );
 
         $status = match (true) {
             $allCancelled => 'dibatalkan',
-            $allTerminal => 'selesai',
+            $allCompleted => 'selesai',
+            $allShipped => 'dikirim',
+            $allReady => 'siap_dikirim',
             $hasProgress => 'diproses',
             default => $order->status,
         };

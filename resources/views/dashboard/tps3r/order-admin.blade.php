@@ -54,8 +54,10 @@
                         \App\Enums\OrderFulfillmentStatus::Menunggu => 'civic-status-warning',
                         \App\Enums\OrderFulfillmentStatus::Diproses => 'civic-status-info',
                         \App\Enums\OrderFulfillmentStatus::SiapDikirim => 'civic-status bg-civic-100 text-civic-800 dark:bg-civic-950/60 dark:text-civic-300',
+                        \App\Enums\OrderFulfillmentStatus::Dikirim => 'civic-status bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300',
                         \App\Enums\OrderFulfillmentStatus::Selesai => 'civic-status-success',
                         \App\Enums\OrderFulfillmentStatus::Dibatalkan => 'civic-status-danger',
+                        default => 'civic-status-neutral',
                     };
                 @endphp
 

@@ -170,7 +170,7 @@ class PublicPortalDataService
 
         $query = PengelolaTps3rProfile::query()
             ->whereHas('user', fn (Builder $q) => $q->where('is_active', true))
-            ->with('user:id,name,phone_number')
+            ->with('user:id,name')
             ->when($kecamatan, fn (Builder $q) => $q->where('kecamatan', $kecamatan))
             ->when($kelurahan, fn (Builder $q) => $q->where('kelurahan', $kelurahan))
             ->when($jenis, fn (Builder $q) => $q->where('jenis_fasilitas', $jenis));
@@ -179,7 +179,16 @@ class PublicPortalDataService
             PortalCmsService::applyEscapedLike($query, ['kategori_sampah_diterima'], $kategoriSampah);
         }
 
-        PortalCmsService::applyEscapedLike($query, ['nama_tps3r', 'kode_tps3r', 'alamat', 'kelurahan', 'kecamatan'], $search);
+        PortalCmsService::applyEscapedLike($query, [
+            'nama_tps3r',
+            'kode_tps3r',
+            'deskripsi',
+            'alamat',
+            'kelurahan',
+            'kecamatan',
+            'fokus_pengolahan',
+            'cakupan_wilayah',
+        ], $search);
 
         return $query
             ->orderByDesc('is_featured_portal')

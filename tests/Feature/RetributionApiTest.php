@@ -51,7 +51,7 @@ test('warga can pay retribution bill 100% using waste reward points', function (
     $warga = User::factory()->warga()->create();
     WargaProfile::factory()->create([
         'user_id' => $warga->id,
-        'saldo_poin' => 2000,
+        'saldo_poin' => 20000,
     ]);
 
     $bill = RetributionBill::factory()->create([
@@ -64,19 +64,19 @@ test('warga can pay retribution bill 100% using waste reward points', function (
 
     $response = $this->postJson("/api/v1/retributions/bills/{$bill->nomor_tagihan}/pay", [
         'use_points' => true,
-        'points_to_use' => 1000, // 1000 poin * Rp10 = Rp10.000 (lunas)
+        'points_to_use' => 10000, // 10.000 poin * Rp1 = Rp10.000 (lunas)
     ]);
 
     $response->assertOk()
         ->assertJsonPath('success', true)
         ->assertJsonPath('data.payment_type', 'full_points')
         ->assertJsonPath('data.bill.status', 'lunas')
-        ->assertJsonPath('data.sisa_saldo_poin', 1000);
+        ->assertJsonPath('data.sisa_saldo_poin', 10000);
 
     $bill->refresh();
     expect($bill->status)->toBe('lunas')
         ->and($bill->metode_pembayaran)->toBe('poin_sampah')
-        ->and($bill->poin_digunakan)->toBe(1000)
+        ->and($bill->poin_digunakan)->toBe(10000)
         ->and($bill->nominal_dibayar)->toBe(0.0)
         ->and($bill->paid_at)->not->toBeNull();
 
@@ -84,7 +84,7 @@ test('warga can pay retribution bill 100% using waste reward points', function (
         'warga_id' => $warga->id,
         'tipe' => 'debit',
         'kategori' => 'bayar_retribusi',
-        'jumlah_poin' => 1000,
+        'jumlah_poin' => 10000,
     ]);
 });
 
@@ -105,20 +105,20 @@ test('warga can pay retribution bill hybrid with partial points and remaining vi
 
     $response = $this->postJson("/api/v1/retributions/bills/{$bill->nomor_tagihan}/pay", [
         'use_points' => true,
-        'points_to_use' => 400, // 400 poin * Rp10 = Rp4.000, sisa Rp6.000 via Midtrans
+        'points_to_use' => 400, // 400 poin * Rp1 = Rp400, sisa Rp9.600 via Midtrans
     ]);
 
     $response->assertOk()
         ->assertJsonPath('success', true)
         ->assertJsonPath('data.payment_type', 'hybrid')
-        ->assertJsonPath('data.nominal_harus_dibayar', 6000)
+        ->assertJsonPath('data.nominal_harus_dibayar', 9600)
         ->assertJsonStructure(['data' => ['snap_token', 'snap_redirect_url']]);
 
     $bill->refresh();
     expect($bill->status)->toBe('menunggu_pembayaran')
         ->and($bill->metode_pembayaran)->toBe('hibrida')
         ->and($bill->poin_digunakan)->toBe(400)
-        ->and($bill->nominal_dibayar)->toBe(6000.0)
+        ->and($bill->nominal_dibayar)->toBe(9600.0)
         ->and($bill->snap_token)->not->toBeNull()
         ->and($warga->wargaProfile->fresh()->saldo_poin)->toBe(0);
 
@@ -158,7 +158,7 @@ test('signed midtrans webhook marks a pending retribution bill as paid without d
     $bill->refresh();
     $midtransOrderId = $bill->midtrans_order_id;
     $statusCode = '200';
-    $grossAmount = '7000.00';
+    $grossAmount = '9700.00';
     $signature = hash('sha512', $midtransOrderId.$statusCode.$grossAmount.$signatureSecret);
 
     $response = $this->postJson('/api/v1/retributions/midtrans/notification', [
@@ -246,7 +246,7 @@ test('expired hybrid payment returns reserved points exactly once', function () 
     $bill->refresh();
     $firstMidtransOrderId = $bill->midtrans_order_id;
     $statusCode = '200';
-    $grossAmount = '7000.00';
+    $grossAmount = '9700.00';
     $signature = hash('sha512', $firstMidtransOrderId.$statusCode.$grossAmount.config('services.midtrans.server_key'));
     $payload = [
         'order_id' => $firstMidtransOrderId,
@@ -271,7 +271,7 @@ test('expired hybrid payment returns reserved points exactly once', function () 
     $bill->refresh();
     $retryMidtransOrderId = $bill->midtrans_order_id;
     expect($retryMidtransOrderId)->not->toBe($firstMidtransOrderId);
-    $retryGrossAmount = '8000.00';
+    $retryGrossAmount = '9800.00';
     $retryPayload = [
         'order_id' => $retryMidtransOrderId,
         'status_code' => $statusCode,

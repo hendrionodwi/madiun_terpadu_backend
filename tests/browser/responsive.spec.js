@@ -46,6 +46,25 @@ test('public pages remain readable without horizontal overflow', async ({ page }
     }
 });
 
+test('home content slider keeps its height while changing slides', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'commit' });
+
+    const viewport = page.locator('[data-test="home-content-slider-viewport"]');
+    await expect(viewport).toBeVisible();
+
+    const heightBefore = await viewport.evaluate((element) => element.getBoundingClientRect().height);
+    expect(heightBefore).toBeGreaterThan(100);
+
+    const nextButton = page.locator('[data-test="home-content-slider-next"]');
+    if (await nextButton.isVisible()) {
+        await nextButton.click();
+        await page.waitForTimeout(600);
+
+        const heightAfter = await viewport.evaluate((element) => element.getBoundingClientRect().height);
+        expect(Math.abs(heightAfter - heightBefore)).toBeLessThanOrEqual(1);
+    }
+});
+
 for (const role of roleDashboards) {
     test(`${role.name} dashboard remains responsive`, async ({ page }) => {
         await login(page, role.email);

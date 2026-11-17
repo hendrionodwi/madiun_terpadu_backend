@@ -88,6 +88,7 @@ class RoleProfileSeeder extends Seeder
                 'nama_tps3r' => 'TPS3R Bersih Berseri Kartoharjo',
                 'kode_tps3r' => 'TPS3R-KTH-01',
                 'jenis_fasilitas' => 'tps3r',
+                'deskripsi' => 'Fasilitas pengolahan sampah terpadu yang melayani penerimaan sampah terpilah, pengomposan, dan edukasi lingkungan bagi warga Kartoharjo.',
                 'alamat' => 'Jl. Serayu No. 45, Kartoharjo',
                 'kelurahan' => 'Kartanegara',
                 'kecamatan' => 'Kartoharjo',
@@ -101,6 +102,7 @@ class RoleProfileSeeder extends Seeder
                 'fokus_pengolahan' => 'Kompos Aerobik & Budidaya Larva BSF',
                 'cakupan_wilayah' => 'Kel. Kartanegara & Sekitar Kartoharjo',
                 'nama_koordinator' => 'Ahmad Fauzi',
+                'kontak_publik' => '0812-3456-7892',
                 'is_featured_portal' => true,
                 'kapasitas_harian_kg' => 1500.00,
                 'latitude' => -7.6325000,
@@ -113,6 +115,22 @@ class RoleProfileSeeder extends Seeder
                 'midtrans_is_active' => true,
             ]
         );
+
+        $tps3rProfile->fill(array_filter([
+            'deskripsi' => $tps3rProfile->deskripsi ?: 'Fasilitas pengolahan sampah terpadu yang melayani penerimaan sampah terpilah, pengomposan, dan edukasi lingkungan bagi warga Kartoharjo.',
+            'jam_operasional' => $tps3rProfile->jam_operasional ?: '07.00 - 15.30 WIB (Senin - Sabtu)',
+            'layanan_tersedia' => $tps3rProfile->layanan_tersedia ?: [
+                'Penerimaan Sampah Pilah Mandiri',
+                'Pengomposan Skala Komunal',
+                'Edukasi Kunjungan Sekolah/Warga',
+            ],
+            'kategori_sampah_diterima' => $tps3rProfile->kategori_sampah_diterima ?: ['Organik Dapur', 'Plastik Botol PET', 'Kardus & Kertas', 'Minyak Jelantah'],
+            'fokus_pengolahan' => $tps3rProfile->fokus_pengolahan ?: 'Kompos Aerobik & Budidaya Larva BSF',
+            'cakupan_wilayah' => $tps3rProfile->cakupan_wilayah ?: 'Kel. Kartanegara & Sekitar Kartoharjo',
+            'nama_koordinator' => $tps3rProfile->nama_koordinator ?: 'Ahmad Fauzi',
+            'kontak_publik' => $tps3rProfile->kontak_publik ?: '0812-3456-7892',
+        ], static fn (mixed $value): bool => $value !== null));
+        $tps3rProfile->save();
 
         // 4. Pemrakarsa
         $pemrakarsa = User::firstOrCreate(

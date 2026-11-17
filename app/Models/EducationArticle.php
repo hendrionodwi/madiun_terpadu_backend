@@ -56,6 +56,7 @@ class EducationArticle extends Model
     /** @var array<int, string> */
     protected $appends = [
         'cover_url',
+        'thumbnail_url',
         'kategori_label',
     ];
 
@@ -129,7 +130,17 @@ class EducationArticle extends Model
             return $this->cover_image;
         }
 
-        return asset('storage/'.ltrim($this->cover_image, '/'));
+        $cleanPath = ltrim($this->cover_image, '/');
+        if (str_starts_with($cleanPath, 'storage/')) {
+            return asset($cleanPath);
+        }
+
+        return asset('storage/'.$cleanPath);
+    }
+
+    public function getThumbnailUrlAttribute(): ?string
+    {
+        return $this->cover_url;
     }
 
     public function getKategoriLabelAttribute(): string

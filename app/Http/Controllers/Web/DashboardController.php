@@ -428,7 +428,7 @@ class DashboardController extends Controller
         $isAdmin = $user->isAdminDlh();
 
         $status = $request->query('status');
-        $validStatuses = ['menunggu', 'diproses', 'siap_dikirim', 'selesai', 'dibatalkan'];
+        $validStatuses = ['menunggu', 'diproses', 'siap_dikirim', 'dikirim', 'selesai', 'dibatalkan'];
 
         $fulfillmentsQuery = OrderFulfillment::query()
             ->with([
@@ -452,6 +452,7 @@ class DashboardController extends Controller
             'menunggu' => (clone $baseCountsQuery)->where('status', OrderFulfillmentStatus::Menunggu)->count(),
             'diproses' => (clone $baseCountsQuery)->where('status', OrderFulfillmentStatus::Diproses)->count(),
             'siap_dikirim' => (clone $baseCountsQuery)->where('status', OrderFulfillmentStatus::SiapDikirim)->count(),
+            'dikirim' => (clone $baseCountsQuery)->where('status', OrderFulfillmentStatus::Dikirim)->count(),
             'selesai' => (clone $baseCountsQuery)->where('status', OrderFulfillmentStatus::Selesai)->count(),
             'dibatalkan' => (clone $baseCountsQuery)->where('status', OrderFulfillmentStatus::Dibatalkan)->count(),
         ];

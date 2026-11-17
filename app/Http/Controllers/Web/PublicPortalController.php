@@ -96,6 +96,35 @@ class PublicPortalController extends Controller
         ]);
     }
 
+    public function showFacility(PengelolaTps3rProfile $pengelolaTps3rProfile): View
+    {
+        $pengelolaTps3rProfile->load([
+            'user' => fn ($query) => $query
+                ->select(['id', 'name', 'is_active'])
+                ->with(['wasteProducts' => fn ($productQuery) => $productQuery
+                    ->where('is_available', true)
+                    ->where('stok', '>', 0)
+                    ->latest()
+                    ->limit(8)]),
+            'deliveryZones' => fn ($query) => $query
+                ->approved()
+                ->orderBy('kecamatan')
+                ->orderBy('kelurahan'),
+        ]);
+
+        abort_unless((bool) $pengelolaTps3rProfile->user?->is_active, Response::HTTP_NOT_FOUND);
+
+        $overview = $this->portalData->homeOverview();
+
+        return view('public.facility-show', [
+            ...$overview,
+            'portalSettings' => $overview['settings'],
+            'facility' => $pengelolaTps3rProfile,
+            'products' => $pengelolaTps3rProfile->user->wasteProducts,
+            'deliveryZones' => $pengelolaTps3rProfile->deliveryZones,
+        ]);
+    }
+
     public function education(Request $request): View
     {
         $filters = $request->only(['kategori', 'search']);

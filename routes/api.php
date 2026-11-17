@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AdminCmsController;
+use App\Http\Controllers\Api\V1\AdminTps3rDeliveryZoneController;
 use App\Http\Controllers\Api\V1\AnnouncementController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ComplaintController;
@@ -14,7 +15,9 @@ use App\Http\Controllers\Api\V1\OrderFulfillmentController;
 use App\Http\Controllers\Api\V1\PointLedgerController;
 use App\Http\Controllers\Api\V1\PublicPortalController;
 use App\Http\Controllers\Api\V1\RetributionController;
+use App\Http\Controllers\Api\V1\ShippingController;
 use App\Http\Controllers\Api\V1\Tps3rController;
+use App\Http\Controllers\Api\V1\Tps3rDeliveryZoneController;
 use App\Http\Controllers\Api\V1\TrackingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -62,6 +65,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/master-data', [MasterDataController::class, 'index']);
     Route::get('/marketplace/stores', [MarketplaceController::class, 'indexStores']);
     Route::get('/marketplace/stores/{store}', [MarketplaceController::class, 'showStore']);
+    Route::get('/marketplace/stores/{store}/delivery-zones', [Tps3rDeliveryZoneController::class, 'publicIndex']);
     Route::get('/marketplace/products', [MarketplaceController::class, 'indexProducts']);
     Route::get('/marketplace/products/{product}', [MarketplaceController::class, 'showProduct']);
     Route::post('/marketplace/midtrans/notification', [MarketplaceController::class, 'handleMidtransNotification']);
@@ -153,17 +157,39 @@ Route::prefix('v1')->group(function () {
                 ->middleware('role:pengelola_tps3r,pemrakarsa,admin_dlh');
 
             // MKT-F-003: Checkout Keranjang Belanja
-            Route::post('/checkout', [MarketplaceController::class, 'checkout']);
-            Route::get('/orders', [MarketplaceController::class, 'indexOrders']);
-            Route::get('/orders/{order}', [MarketplaceController::class, 'showOrder']);
-            Route::patch('/orders/{order}/cancel', [MarketplaceController::class, 'cancelOrder']);
-            Route::patch('/orders/{order}/confirm-received', [MarketplaceController::class, 'confirmReceived']);
+            Route::post('/checkout', [MarketplaceController::class, 'checkout'])
+                ->middleware('role:warga');
+            Route::get('/orders', [MarketplaceController::class, 'indexOrders'])
+                ->middleware('role:warga,admin_dlh');
+            Route::get('/orders/{order}', [MarketplaceController::class, 'showOrder'])
+                ->middleware('role:warga,admin_dlh');
+            Route::patch('/orders/{order}/cancel', [MarketplaceController::class, 'cancelOrder'])
+                ->middleware('role:warga,admin_dlh');
+            Route::patch('/orders/{order}/confirm-received', [MarketplaceController::class, 'confirmReceived'])
+                ->middleware('role:warga,admin_dlh');
             Route::get('/fulfillments', [OrderFulfillmentController::class, 'index'])
                 ->middleware('role:pengelola_tps3r');
             Route::get('/fulfillments/{orderFulfillment}', [OrderFulfillmentController::class, 'show'])
                 ->middleware('role:pengelola_tps3r');
             Route::patch('/fulfillments/{orderFulfillment}', [OrderFulfillmentController::class, 'update'])
                 ->middleware('role:pengelola_tps3r');
+        });
+
+        Route::prefix('shipping')->middleware(['role:warga', 'throttle:20,1'])->group(function () {
+            Route::get('/destinations', [ShippingController::class, 'destinations']);
+            Route::post('/quotes', [ShippingController::class, 'quotes']);
+        });
+
+        Route::prefix('tps3r/delivery-zones')->middleware('role:pengelola_tps3r')->group(function () {
+            Route::get('/', [Tps3rDeliveryZoneController::class, 'index']);
+            Route::post('/', [Tps3rDeliveryZoneController::class, 'store']);
+            Route::patch('/{tps3rDeliveryZone}', [Tps3rDeliveryZoneController::class, 'update']);
+            Route::delete('/{tps3rDeliveryZone}', [Tps3rDeliveryZoneController::class, 'destroy']);
+        });
+
+        Route::prefix('admin/tps3r-delivery-zones')->middleware('role:admin_dlh')->group(function () {
+            Route::get('/', [AdminTps3rDeliveryZoneController::class, 'index']);
+            Route::patch('/{tps3rDeliveryZone}/review', [AdminTps3rDeliveryZoneController::class, 'review']);
         });
 
         // ==========================================

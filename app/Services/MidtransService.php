@@ -51,6 +51,15 @@ class MidtransService
             ];
         }
 
+        if ($order->biaya_pengiriman > 0) {
+            $itemDetails[] = [
+                'id' => 'DELIVERY',
+                'price' => (int) round($order->biaya_pengiriman),
+                'quantity' => 1,
+                'name' => 'Biaya pengiriman',
+            ];
+        }
+
         $grossAmount = (int) ceil($order->total_harga);
 
         $payload = [
@@ -78,6 +87,7 @@ class MidtransService
         $response = Http::withBasicAuth($serverKey, '')
             ->acceptJson()
             ->asJson()
+            ->connectTimeout(5)
             ->timeout(15)
             ->post($url, $payload);
 
@@ -147,6 +157,7 @@ class MidtransService
             $response = Http::withBasicAuth($serverKey, '')
                 ->acceptJson()
                 ->asJson()
+                ->connectTimeout(5)
                 ->timeout(10)
                 ->post($url, [
                     'transaction_details' => [
@@ -239,6 +250,7 @@ class MidtransService
             $response = Http::withBasicAuth($serverKey, '')
                 ->acceptJson()
                 ->asJson()
+                ->connectTimeout(5)
                 ->timeout(10)
                 ->post($url, $payload);
 

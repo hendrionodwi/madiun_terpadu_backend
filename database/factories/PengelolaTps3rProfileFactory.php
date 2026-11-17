@@ -19,10 +19,11 @@ class PengelolaTps3rProfileFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
+            'user_id' => User::factory()->pengelolaTps3r(),
             'nama_tps3r' => 'TPS3R '.fake()->company(),
             'kode_tps3r' => 'TPS3R-'.fake()->unique()->numerify('###'),
             'jenis_fasilitas' => 'tps3r',
+            'deskripsi' => 'Fasilitas pengolahan sampah terpadu yang melayani pemilahan, pengomposan, dan edukasi lingkungan untuk warga Kota Madiun.',
             'alamat' => fake()->streetAddress(),
             'kelurahan' => fake()->randomElement(['Pandean', 'Oro-Oro Ombo', 'Demangan', 'Klegen']),
             'kecamatan' => fake()->randomElement(['Taman', 'Kartoharjo', 'Manguharjo']),
@@ -32,9 +33,11 @@ class PengelolaTps3rProfileFactory extends Factory
             'fokus_pengolahan' => 'Kompos Aerobik & Pemilahan Anorganik',
             'cakupan_wilayah' => 'Kelurahan Sekitar Kota Madiun',
             'nama_koordinator' => fake()->name(),
+            'kontak_publik' => fake()->numerify('08##########'),
             'kapasitas_harian_kg' => fake()->randomFloat(2, 500, 3000),
             'latitude' => fake()->latitude(-7.65, -7.61),
             'longitude' => fake()->longitude(111.51, 111.55),
+            'rajaongkir_origin_id' => fake()->numberBetween(6300, 6399),
         ];
     }
 

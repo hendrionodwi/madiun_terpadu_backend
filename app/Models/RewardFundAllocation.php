@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RewardFundAllocation extends Model
 {
@@ -38,6 +39,28 @@ class RewardFundAllocation extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** @return HasMany<FundWithdrawalRequest, $this> */
+    public function withdrawals(): HasMany
+    {
+        return $this->hasMany(FundWithdrawalRequest::class);
+    }
+
+    public function getCommittedAmountAttribute(mixed $value): float
+    {
+        if ($value !== null) {
+            return (float) $value;
+        }
+
+        return (float) $this->withdrawals()
+            ->whereIn('status', ['approved', 'processing', 'paid'])
+            ->sum('amount');
+    }
+
+    public function getAvailableAmountAttribute(): float
+    {
+        return max(0, (float) $this->amount - $this->committed_amount);
     }
 
     public function getSourceLabelAttribute(): string
