@@ -10,9 +10,13 @@ use Illuminate\Validation\ValidationException;
 
 class CancelMarketplaceOrder
 {
-    public function handle(Order $order, string $reason): Order
+    public function __construct(
+        public SendMarketplaceTransactionNotifications $transactionNotifications,
+    ) {}
+
+    public function handle(Order $order, string $reason, bool $sendNotification = true): Order
     {
-        return DB::transaction(function () use ($order, $reason): Order {
+        $result = DB::transaction(function () use ($order, $reason): array {
             $lockedOrder = Order::query()
                 ->with(['items.product', 'fulfillments'])
                 ->whereKey($order->id)
@@ -56,9 +60,24 @@ class CancelMarketplaceOrder
                 );
             }
 
+            $previousStatus = $lockedOrder->status;
             $lockedOrder->update(['status' => 'dibatalkan']);
 
-            return $lockedOrder->fresh(['items.product', 'fulfillments.seller:id,name']);
+            return [
+                'order' => $lockedOrder->fresh(['buyer', 'items.product', 'fulfillments.seller']),
+                'previous_status' => $previousStatus,
+            ];
         }, 3);
+
+        /** @var Order $cancelledOrder */
+        $cancelledOrder = $result['order'];
+        if ($sendNotification) {
+            $this->transactionNotifications->orderStatusChanged(
+                $cancelledOrder,
+                $result['previous_status'],
+            );
+        }
+
+        return $cancelledOrder;
     }
 }

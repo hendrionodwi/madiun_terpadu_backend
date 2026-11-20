@@ -30,6 +30,7 @@ class OrderFulfillmentController extends Controller
             $fulfillment,
             OrderFulfillmentStatus::from($validated['status']),
             $validated['catatan_status'] ?? null,
+            $validated['tracking_number'] ?? null,
         );
 
         return to_route('dashboard.tps3r.orders.show', $fulfillment->order)

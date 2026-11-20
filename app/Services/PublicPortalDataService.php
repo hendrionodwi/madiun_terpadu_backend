@@ -14,8 +14,8 @@ use App\Models\Tps3rWasteDeposit;
 use App\Models\User;
 use App\Models\WasteProduct;
 use App\Models\WasteWeighing;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 class PublicPortalDataService

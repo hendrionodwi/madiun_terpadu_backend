@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\Marketplace\CancelMarketplaceOrder;
 use App\Actions\Marketplace\CreateMarketplaceOrder;
+use App\Actions\Marketplace\SendMarketplaceTransactionNotifications;
 use App\Enums\OrderFulfillmentStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
@@ -25,6 +26,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 class MarketplaceController extends Controller
 {
+    public function __construct(
+        public SendMarketplaceTransactionNotifications $transactionNotifications,
+    ) {}
+
     /**
      * Get list of TPS3R stores (Store-First Marketplace Discovery).
      */
@@ -79,6 +84,7 @@ class MarketplaceController extends Controller
                 'latitude' => $profile->latitude,
                 'longitude' => $profile->longitude,
                 'is_midtrans_active' => $profile->isMidtransConfigured(),
+                'is_rajaongkir_active' => $this->isRajaOngkirAvailable($profile),
                 'total_products' => (int) ($user->total_products ?? 0),
             ];
         });
@@ -142,6 +148,7 @@ class MarketplaceController extends Controller
                 'latitude' => $store->latitude,
                 'longitude' => $store->longitude,
                 'is_midtrans_active' => $store->isMidtransConfigured(),
+                'is_rajaongkir_active' => $this->isRajaOngkirAvailable($store),
                 'total_products' => $products->count(),
                 'products' => $products,
                 'wilayah_pengiriman' => $store->deliveryZones->map(fn ($zone): array => [
@@ -151,6 +158,13 @@ class MarketplaceController extends Controller
                 ])->values(),
             ],
         ], Response::HTTP_OK);
+    }
+
+    private function isRajaOngkirAvailable(PengelolaTps3rProfile $profile): bool
+    {
+        return (bool) config('services.rajaongkir.enabled')
+            && trim((string) config('services.rajaongkir.api_key')) !== ''
+            && $profile->rajaongkir_origin_id !== null;
     }
 
     /**
@@ -490,7 +504,11 @@ class MarketplaceController extends Controller
 
             $lockedOrder->update(['status' => 'selesai']);
 
-            return ['status' => 'completed', 'order' => $lockedOrder];
+            return [
+                'status' => 'completed',
+                'order' => $lockedOrder,
+                'previous_status' => 'dikirim',
+            ];
         });
 
         if ($outcome['status'] === 'already_done') {
@@ -516,6 +534,7 @@ class MarketplaceController extends Controller
         }
 
         $order = $outcome['order']->load(['items.product', 'fulfillments.seller:id,name']);
+        $this->transactionNotifications->orderStatusChanged($order, $outcome['previous_status']);
 
         return response()->json([
             'success' => true,
@@ -582,18 +601,19 @@ class MarketplaceController extends Controller
         $transactionStatus = (string) ($payload['transaction_status'] ?? '');
         $fraudStatus = (string) ($payload['fraud_status'] ?? '');
 
-        $outcome = DB::transaction(function () use ($order, $transactionStatus, $fraudStatus, $payload): string {
+        $outcome = DB::transaction(function () use ($order, $transactionStatus, $fraudStatus, $payload): array {
             $lockedOrder = Order::with(['items.product', 'fulfillments'])
                 ->whereKey($order->id)
                 ->lockForUpdate()
                 ->firstOrFail();
+            $previousStatus = $lockedOrder->status;
 
             $isSettlement = ($transactionStatus === 'capture' && $fraudStatus === 'accept')
                 || $transactionStatus === 'settlement';
 
             if ($isSettlement) {
                 if ($lockedOrder->status === 'dibatalkan') {
-                    return 'conflict_cancelled';
+                    return ['code' => 'conflict_cancelled', 'changed' => false, 'previous_status' => $previousStatus];
                 }
 
                 $lockedOrder->update(['payment_gateway_response' => $payload]);
@@ -602,16 +622,20 @@ class MarketplaceController extends Controller
                     $lockedOrder->update(['status' => 'dibayar', 'paid_at' => now()]);
                 }
 
-                return 'ok';
+                return [
+                    'code' => 'ok',
+                    'changed' => $lockedOrder->status !== $previousStatus,
+                    'previous_status' => $previousStatus,
+                ];
             }
 
             if (in_array($transactionStatus, ['cancel', 'deny', 'expire'], true)) {
                 if ($lockedOrder->status === 'dibatalkan') {
-                    return 'ok';
+                    return ['code' => 'ok', 'changed' => false, 'previous_status' => $previousStatus];
                 }
 
                 if ($lockedOrder->status !== 'pending') {
-                    return 'conflict_paid';
+                    return ['code' => 'conflict_paid', 'changed' => false, 'previous_status' => $previousStatus];
                 }
 
                 $lockedOrder->update(['payment_gateway_response' => $payload]);
@@ -632,7 +656,7 @@ class MarketplaceController extends Controller
                     }
                 }
 
-                return 'ok';
+                return ['code' => 'ok', 'changed' => true, 'previous_status' => $previousStatus];
             }
 
             if ($transactionStatus === 'pending' && $lockedOrder->status === 'pending') {
@@ -642,14 +666,22 @@ class MarketplaceController extends Controller
                 ]);
             }
 
-            return 'ok';
+            return [
+                'code' => 'ok',
+                'changed' => $lockedOrder->status !== $previousStatus,
+                'previous_status' => $previousStatus,
+            ];
         });
 
-        if ($outcome !== 'ok') {
+        if ($outcome['code'] !== 'ok') {
             return response()->json([
                 'success' => false,
                 'message' => 'Status pesanan saat ini tidak dapat ditimpa oleh notifikasi Midtrans tersebut.',
             ], Response::HTTP_CONFLICT);
+        }
+
+        if ($outcome['changed']) {
+            $this->transactionNotifications->orderStatusChanged($order, $outcome['previous_status']);
         }
 
         return response()->json([

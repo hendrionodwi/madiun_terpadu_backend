@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Web;
 
 use App\Actions\Marketplace\CancelMarketplaceOrder;
 use App\Actions\Marketplace\CreateMarketplaceOrder;
+use App\Actions\Marketplace\SendMarketplaceTransactionNotifications;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Web\Marketplace\StoreCheckoutRequest;
 use App\Http\Requests\Web\Marketplace\UpdateCartRequest;
 use App\Models\Order;
+use App\Models\Tps3rDeliveryZone;
 use App\Models\User;
 use App\Models\WasteProduct;
 use App\Services\PublicPortalDataService;
@@ -15,13 +17,15 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Validation\ValidationException;
 
 class MarketplaceController extends Controller
 {
     private const CART_SESSION_KEY = 'marketplace_cart';
 
-    public function __construct(public PublicPortalDataService $portalData) {}
+    public function __construct(
+        public PublicPortalDataService $portalData,
+        public SendMarketplaceTransactionNotifications $transactionNotifications,
+    ) {}
 
     public function showProduct(WasteProduct $product): View
     {
@@ -52,21 +56,6 @@ class MarketplaceController extends Controller
     {
         abort_unless($product->is_available && $product->stok > 0, 404);
         $cart = $request->session()->get(self::CART_SESSION_KEY, []);
-
-        $existingProducts = WasteProduct::query()
-            ->whereIn('public_id', array_keys($cart))
-            ->get(['public_id', 'seller_id']);
-
-        if (
-            $existingProducts->isNotEmpty()
-            && $existingProducts->contains(
-                fn (WasteProduct $existingProduct): bool => $existingProduct->seller_id !== $product->seller_id,
-            )
-        ) {
-            throw ValidationException::withMessages([
-                'cart' => 'Selesaikan pesanan dari fasilitas sebelumnya sebelum menambah produk toko lain.',
-            ]);
-        }
 
         $quantity = min(($cart[$product->public_id] ?? 0) + $request->integer('jumlah'), $product->stok);
         $cart[$product->public_id] = $quantity;
@@ -99,10 +88,18 @@ class MarketplaceController extends Controller
 
     public function checkout(Request $request): View|RedirectResponse
     {
-        $cartData = $this->cartData($request);
-        if ($cartData['items']->isEmpty()) {
+        $allCartData = $this->cartData($request);
+        if ($allCartData['items']->isEmpty()) {
             return redirect()->route('marketplace.cart')->withErrors(['cart' => 'Keranjang belanja masih kosong.']);
         }
+
+        $sellerId = $this->resolveCheckoutSellerId($request, $allCartData['items']);
+        if ($sellerId === null) {
+            return redirect()->route('marketplace.cart')->withErrors([
+                'cart' => 'Pilih TPS3R yang ingin diproses terlebih dahulu.',
+            ]);
+        }
+        $cartData = $this->cartData($request, $sellerId);
 
         /** @var User $user */
         $user = $request->user();
@@ -115,13 +112,37 @@ class MarketplaceController extends Controller
         $cartWeight = (int) $cartData['items']->sum(
             fn (array $item): int => max(1, $item['product']->weight_grams) * $item['jumlah'],
         );
+        $destinationKelurahan = $this->oldString($request, 'destination_kelurahan');
+        $destinationKecamatan = $this->oldString($request, 'destination_kecamatan');
+        $checkoutConfig = [
+            'delivery' => $this->oldString($request, 'metode_pengiriman', 'ambil_mandiri'),
+            'source' => $this->oldString($request, 'shipping_source', 'local_tps3r'),
+            'payment' => $this->oldString($request, 'metode_pembayaran', 'midtrans'),
+            'zones' => $deliveryZones->map(static fn (Tps3rDeliveryZone $zone): array => [
+                'key' => $zone->kelurahan.'|'.$zone->kecamatan,
+                'kelurahan' => $zone->kelurahan,
+                'kecamatan' => $zone->kecamatan,
+                'fee' => (int) $zone->delivery_fee,
+            ])->values()->all(),
+            'selectedZoneKey' => $destinationKelurahan !== '' && $destinationKecamatan !== ''
+                ? $destinationKelurahan.'|'.$destinationKecamatan
+                : '',
+            'destinationKelurahan' => $destinationKelurahan,
+            'destinationKecamatan' => $destinationKecamatan,
+            'destinationId' => (int) $this->oldString($request, 'rajaongkir_destination_id', '0'),
+            'originId' => (int) ($tps3rProfile->rajaongkir_origin_id ?? 0),
+            'destinationsUrl' => route('marketplace.shipping.destinations'),
+            'quotesUrl' => route('marketplace.shipping.quotes'),
+            'csrfToken' => csrf_token(),
+            'cartWeight' => $cartWeight,
+        ];
 
         return view('marketplace.checkout', $this->viewData([
             ...$cartData,
             'wargaProfile' => $user->wargaProfile,
             'deliveryZones' => $deliveryZones,
-            'rajaongkirOriginId' => $tps3rProfile?->rajaongkir_origin_id,
-            'cartWeight' => $cartWeight,
+            'checkoutConfig' => $checkoutConfig,
+            'checkoutSellerId' => $sellerId,
         ]));
     }
 
@@ -129,7 +150,14 @@ class MarketplaceController extends Controller
         StoreCheckoutRequest $request,
         CreateMarketplaceOrder $createMarketplaceOrder,
     ): RedirectResponse {
-        $cartData = $this->cartData($request);
+        $allCartData = $this->cartData($request);
+        $sellerId = $this->resolveCheckoutSellerId($request, $allCartData['items']);
+        if ($sellerId === null) {
+            return redirect()->route('marketplace.cart')->withErrors([
+                'cart' => 'Pilih TPS3R yang ingin diproses terlebih dahulu.',
+            ]);
+        }
+        $cartData = $this->cartData($request, $sellerId);
         /** @var Collection<int, array{product: WasteProduct, jumlah: int, subtotal: float}> $items */
         $items = $cartData['items'];
         if ($items->isEmpty()) {
@@ -148,7 +176,12 @@ class MarketplaceController extends Controller
             )),
         );
 
-        $request->session()->forget(self::CART_SESSION_KEY);
+        /** @var array<string, int> $cart */
+        $cart = $request->session()->get(self::CART_SESSION_KEY, []);
+        foreach ($items as $item) {
+            unset($cart[$item['product']->public_id]);
+        }
+        $request->session()->put(self::CART_SESSION_KEY, $cart);
 
         return redirect()->route('marketplace.orders.show', $order)
             ->with('success', 'Pesanan berhasil dibuat.');
@@ -220,12 +253,19 @@ class MarketplaceController extends Controller
             ]);
         }
         $order->update(['status' => 'selesai']);
+        $this->transactionNotifications->orderStatusChanged($order, 'dikirim');
 
         return back()->with('success', 'Pesanan dikonfirmasi telah diterima.');
     }
 
-    /** @return array{items: Collection<int, array{product: WasteProduct, jumlah: int, subtotal: float}>, subtotal: float} */
-    private function cartData(Request $request): array
+    /**
+     * @return array{
+     *     items: Collection<int, array{product: WasteProduct, jumlah: int, subtotal: float}>,
+     *     groups: Collection<int, array{seller_id: int, seller_name: string, items: Collection<int, array{product: WasteProduct, jumlah: int, subtotal: float}>, subtotal: float}>,
+     *     subtotal: float
+     * }
+     */
+    private function cartData(Request $request, ?int $sellerId = null): array
     {
         /** @var array<string, int> $cart */
         $cart = $request->session()->get(self::CART_SESSION_KEY, []);
@@ -251,10 +291,51 @@ class MarketplaceController extends Controller
             ];
         })->filter()->values();
 
+        if ($sellerId !== null) {
+            $items = $items
+                ->filter(fn (array $item): bool => (int) $item['product']->seller_id === $sellerId)
+                ->values();
+        }
+
+        $groups = $items
+            ->groupBy(fn (array $item): int => (int) $item['product']->seller_id)
+            ->map(function (Collection $sellerItems, int $groupSellerId): array {
+                /** @var array{product: WasteProduct, jumlah: int, subtotal: float} $firstItem */
+                $firstItem = $sellerItems->first();
+                $seller = $firstItem['product']->seller;
+
+                return [
+                    'seller_id' => $groupSellerId,
+                    'seller_name' => $seller->pengelolaTps3rProfile->nama_tps3r ?? $seller->name,
+                    'items' => $sellerItems->values(),
+                    'subtotal' => (float) $sellerItems->sum('subtotal'),
+                ];
+            })
+            ->values();
+
         return [
             'items' => $items,
+            'groups' => $groups,
             'subtotal' => (float) $items->sum('subtotal'),
         ];
+    }
+
+    /**
+     * @param  Collection<int, array{product: WasteProduct, jumlah: int, subtotal: float}>  $items
+     */
+    private function resolveCheckoutSellerId(Request $request, Collection $items): ?int
+    {
+        $sellerIds = $items
+            ->map(fn (array $item): int => (int) $item['product']->seller_id)
+            ->unique()
+            ->values();
+        $requestedSellerId = $request->integer('seller_id');
+
+        if ($requestedSellerId > 0 && $sellerIds->contains($requestedSellerId)) {
+            return $requestedSellerId;
+        }
+
+        return $sellerIds->count() === 1 ? (int) $sellerIds->first() : null;
     }
 
     /**
@@ -264,6 +345,13 @@ class MarketplaceController extends Controller
     private function viewData(array $data): array
     {
         return [...$data, 'portalSettings' => $this->portalData->homeOverview()['settings']];
+    }
+
+    private function oldString(Request $request, string $key, string $default = ''): string
+    {
+        $value = $request->old($key);
+
+        return is_string($value) ? $value : $default;
     }
 
     private function authorizeBuyer(Request $request, Order $order): void

@@ -23,6 +23,7 @@ class StoreCheckoutRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'seller_id' => ['nullable', 'integer', 'exists:users,id'],
             'metode_pengiriman' => ['required', 'string', 'in:diantar,ambil_mandiri'],
             'alamat_pengiriman' => ['nullable', 'required_if:metode_pengiriman,diantar', 'string', 'max:500'],
             'shipping_source' => ['nullable', 'required_if:metode_pengiriman,diantar', 'string', 'in:local_tps3r,rajaongkir'],

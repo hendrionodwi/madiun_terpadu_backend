@@ -4,14 +4,18 @@ use App\Http\Controllers\Api\V1\ShippingController as ApiShippingController;
 use App\Http\Controllers\Web\AdminContentController;
 use App\Http\Controllers\Web\AdminDashboardController;
 use App\Http\Controllers\Web\AdminRetributionController;
+use App\Http\Controllers\Web\AdminShippingSettingsController;
 use App\Http\Controllers\Web\AdminTps3rDeliveryZoneController;
 use App\Http\Controllers\Web\CashPointRedemptionController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\FundWithdrawalController;
+use App\Http\Controllers\Web\LocaleController;
 use App\Http\Controllers\Web\MarketplaceController;
+use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\OrderFulfillmentController;
 use App\Http\Controllers\Web\PemrakarsaProfileController;
 use App\Http\Controllers\Web\PublicPortalController;
+use App\Http\Controllers\Web\PublicSearchController;
 use App\Http\Controllers\Web\ReportExportController;
 use App\Http\Controllers\Web\Tps3rDeliveryZoneController;
 use App\Http\Controllers\Web\Tps3rPaymentSettingsController;
@@ -20,6 +24,10 @@ use App\Http\Controllers\Web\WasteProcessingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PublicPortalController::class, 'index'])->name('home');
+Route::get('cari', PublicSearchController::class)->name('public.search');
+Route::post('bahasa/{locale}', LocaleController::class)
+    ->whereIn('locale', ['id', 'en'])
+    ->name('locale.update');
 Route::get('layanan', [PublicPortalController::class, 'services'])->name('public.services');
 Route::get('fasilitas/{pengelolaTps3rProfile}', [PublicPortalController::class, 'showFacility'])->name('public.facilities.show');
 Route::get('jadwal-peta', [PublicPortalController::class, 'services'])->name('portal.jadwal-peta');
@@ -31,6 +39,10 @@ Route::get('marketplace/produk/{product}', [MarketplaceController::class, 'showP
 Route::view('payment/return', 'payment-return')->name('payment.return');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('notifikasi', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::patch('notifikasi/{notification}/baca', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('notifikasi/baca-semua', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+
     // Primary dynamic dashboard router
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -71,6 +83,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('dashboard/admin/routes', [AdminDashboardController::class, 'storeRoute'])->name('dashboard.admin.routes.store');
         Route::patch('dashboard/admin/routes/{route}', [AdminDashboardController::class, 'updateRoute'])->name('dashboard.admin.routes.update');
         Route::delete('dashboard/admin/routes/{route}', [AdminDashboardController::class, 'destroyRoute'])->name('dashboard.admin.routes.destroy');
+
+        Route::get('dashboard/admin/shipping-settings', [AdminShippingSettingsController::class, 'index'])
+            ->name('dashboard.admin.shipping-settings.index');
+        Route::post('dashboard/admin/shipping-settings/couriers', [AdminShippingSettingsController::class, 'store'])
+            ->name('dashboard.admin.shipping-settings.store');
+        Route::patch('dashboard/admin/shipping-settings', [AdminShippingSettingsController::class, 'update'])
+            ->name('dashboard.admin.shipping-settings.update');
+        Route::delete('dashboard/admin/shipping-settings/couriers/{code}', [AdminShippingSettingsController::class, 'destroy'])
+            ->name('dashboard.admin.shipping-settings.destroy');
 
         // 4. Kelola Pengaduan Masyarakat & Peninjauan Hasil
         Route::get('dashboard/admin/complaints', [AdminDashboardController::class, 'complaints'])->name('dashboard.admin.complaints');

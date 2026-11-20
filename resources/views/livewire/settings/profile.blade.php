@@ -194,9 +194,9 @@
                                 accept=".jpg,.jpeg,.png,.webp"
                                 class="block w-full text-xs text-slate-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-civic-100 file:px-3.5 file:py-2 file:text-xs file:font-bold file:text-civic-800 hover:file:bg-civic-200 dark:text-slate-300 dark:file:bg-civic-900 dark:file:text-civic-200"
                             >
-                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" wire:loading.remove wire:target="avatar">
-                                Format JPG, PNG, atau WebP (maks. 2 MB).
-                            </p>
+                            <div wire:loading.remove wire:target="avatar">
+                                <x-civic.image-upload-guidance ideal="800 × 800 px" ratio="1:1" minimum="400 × 400 px" max-size="2 MB" note="Gunakan foto wajah atau logo yang jelas dan posisikan objek di tengah." />
+                            </div>
                             <p class="mt-1 text-xs font-semibold text-civic-700 dark:text-civic-300" wire:loading wire:target="avatar">
                                 Mengunggah pratinjau foto...
                             </p>

@@ -1278,7 +1278,6 @@ File ini adalah media koordinasi asinkron. Agar sinkronisasi benar-benar berjala
   - `cmd.exe /c npm run build` → **`passed (0 errors)`**.
   - `git diff --check` → **`clean`**.
 
-
 #### Task `AG-20261116-006`: Standardisasi Navbar Minimalis & Elegan Terinspirasi JAKI Smart City
 - **Owner:** Gemini Antigravity
 - **Status:** `[DONE]`
@@ -1400,3 +1399,34 @@ File ini adalah media koordinasi asinkron. Agar sinkronisasi benar-benar berjala
   - `vendor/bin/pint --dirty --format agent` → **`passed`**.
   - `cmd.exe /c npm run build` → **`passed in 4.06s`**.
   - `git diff --check` → **`clean`**.
+
+#### Task `AG-20261119-001`: Sinkronisasi CRUD Pengaturan Kurir Admin DLH dengan Pilihan Ongkir Mobile & Filtering Layanan Non-Retail
+- **Owner:** Gemini Antigravity
+- **Status:** `[DONE]`
+- **Target:** Mengatasi kendala pada aplikasi Flutter Mobile di mana dropdown "Kurir & layanan" pada checkout pesanan masih menampilkan 15 pilihan (seluruh kurir dan layanan kargo internal dari RajaOngkir/Komerce) meskipun admin telah membatasi kurir aktif melalui CRUD Pengaturan Pengiriman di Dashboard Admin DLH (`/dashboard/admin/shipping-settings`).
+- **Scope File:**
+  - `app/Services/RajaOngkirService.php`
+  - `app/Http/Controllers/Web/AdminShippingSettingsController.php`
+  - `tests/Feature/Api/V1/ShippingControllerTest.php`
+  - `tests/Feature/AdminShippingSettingsTest.php`
+- **Penyebab Utama & Solusi:**
+  1. **Cache Invalidation (Penyebab Utama Hasil Lama Tetap Muncul):**
+     - `RajaOngkirService::calculateDomesticCosts` mencatat cache ongkir selama 15 menit (900 detik). Saat admin memperbarui daftar kurir di dashboard admin, cache ongkir tidak di-invalidasi sehingga aplikasi mobile tetap menerima response lama berisi 15 layanan.
+     - *Solusi:* Menambahkan method `clearCostCache()` pada [`RajaOngkirService.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/app/Services/RajaOngkirService.php) dan memanggilnya otomatis di `update()`, `store()`, dan `destroy()` pada [`AdminShippingSettingsController.php`](file:///c:/laragon/www/Projek%20Magang%20Razen/madiun_terpadu_backend/app/Http/Controllers/Web/AdminShippingSettingsController.php).
+  2. **Strict Filtering pada Response Normalization:**
+     - Pada `RajaOngkirService::normalizeCosts()`, ditambahkan filter ketat `in_array($cost['courier_code'], $allowedCouriers, true)`. Layanan kurir dari pihak luar yang tidak termasuk dalam kurir aktif di database dipastikan tidak akan lolos ke mobile app.
+  3. **Pembersihan Layanan Non-Retail / Kargo Alat Berat / B3:**
+     - Layanan RajaOngkir pihak ketiga sering mengembalikan jenis layanan yang tidak relevan untuk transaksi pupuk/kerajinan daur ulang, seperti tier kargo `JTR<130`, `JTR>130`, `JTR>200` (Rp 500k-650k), `PAKETPOS DANGEROUS GOODS`, `PAKETPOS VALUABLE GOODS`, dan `DOK` (dokumen kertas).
+     - *Solusi:* Ditambahkan filter `isRelevantRetailService` yang menyaring layanan paket reguler e-commerce yang wajar bagi pembeli warga.
+- **Hasil Quality Gate:**
+  - `php artisan test tests/Feature/Api/V1/ShippingControllerTest.php` → **`9 / 9 passed (30 assertions)`**.
+  - `php artisan test tests/Feature/AdminShippingSettingsTest.php` → **`8 / 8 passed (49 assertions)`**.
+  - `php artisan cache:clear` → **`Cleaned`**.
+  - `vendor/bin/pint --dirty --format agent` → **`passed`**.
+  - `git diff --check` → **`clean`**.
+
+#### Revisi `REV-20261120-001`: Sinkronisasi Batas Pesan dan Sesi Rute Harian
+- **Status:** `PROPOSED` — catatan hasil pembahasan, belum diimplementasikan atau diklaim agen.
+- **Masalah saat ini:** Batas penjadwalan warga memakai `start_time` rute dikurangi 1 jam, tetapi petugas dapat memulai dan menyelesaikan sesi lebih awal. Untuk rute 15.00–16.00, sesi yang selesai pukul 13.00 masih memungkinkan warga membuat jadwal pukul 13.30; jadwal tersimpan tetapi petugas tidak dapat memprosesnya karena sesi hari itu sudah selesai.
+- **Aturan yang diinginkan:** Warga dapat menjadwalkan hari yang sama sampai sebelum 14.00; mulai rute dari depo baru tersedia pada jam mulai rute yang dipublikasikan (15.00 pada contoh); setelah batas pemesanan, warga memilih hari layanan berikutnya. Penyelesaian di TPS3R perlu memeriksa jadwal hari itu yang belum ditangani dan memberi tindakan yang jelas sebelum sesi ditutup.
+- **Cakupan saat dikerjakan:** validasi backend penjadwalan dan transisi sesi rute, status/keterangan tombol mobile warga dan petugas, serta tes batas waktu dan sesi selesai lebih awal. Aturan harus ditegakkan di backend; validasi mobile hanya membantu pengguna.

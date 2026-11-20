@@ -2,6 +2,8 @@
 
 use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\LogUserActivity;
+use App\Http\Middleware\SetLocale;
+use App\Http\Middleware\ShareNotificationCount;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,7 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => CheckRole::class,
         ]);
+        $middleware->appendToGroup('web', SetLocale::class);
         $middleware->appendToGroup('web', LogUserActivity::class);
+        $middleware->appendToGroup('web', ShareNotificationCount::class);
         $middleware->appendToGroup('api', LogUserActivity::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

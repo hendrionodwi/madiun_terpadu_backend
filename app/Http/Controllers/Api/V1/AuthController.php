@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Fortify\ResetUserPassword;
+use App\Concerns\PasswordValidationRules;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Auth\LoginRequest;
@@ -16,12 +18,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthController extends Controller
 {
+    use PasswordValidationRules;
+
+    public function __construct(private readonly ResetUserPassword $resetUserPassword) {}
+
     /**
      * Handle user login across multiple roles.
      *
@@ -226,18 +231,16 @@ class AuthController extends Controller
         $validated = $request->validate([
             'token' => ['required', 'string'],
             'email' => ['required', 'string', 'email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => $this->passwordRules(),
         ]);
 
         $status = Password::broker()->reset(
             $validated,
             function (User $user, string $password): void {
-                $user->forceFill([
-                    'password' => Hash::make($password),
-                    'remember_token' => Str::random(60),
-                ])->save();
-
-                $user->tokens()->delete();
+                $this->resetUserPassword->reset($user, [
+                    'password' => $password,
+                    'password_confirmation' => $password,
+                ]);
             }
         );
 
@@ -263,7 +266,7 @@ class AuthController extends Controller
 
         $validated = $request->validate([
             'current_password' => ['required', 'string', 'current_password'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => $this->passwordRules(),
         ]);
 
         $user->update([

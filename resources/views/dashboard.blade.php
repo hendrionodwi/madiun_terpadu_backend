@@ -20,7 +20,7 @@
             @php
                 $profile = $wargaData['profile'] ?? null;
                 $saldoPoin = $profile->saldo_poin ?? 0;
-                $totalSampah = $profile->total_sampah_kg ?? 0;
+                $totalSampah = $wargaData['totalSampahKg'] ?? 0;
                 $riwayatTimbangan = $wargaData['riwayatTimbangan'] ?? collect();
                 $pengaduanSaya = $wargaData['pengaduanSaya'] ?? collect();
                 $jadwalWilayah = $wargaData['jadwalWilayah'] ?? collect();

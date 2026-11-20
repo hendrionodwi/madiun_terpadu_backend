@@ -264,7 +264,7 @@ class TrackingController extends Controller
         } elseif ($request->boolean('active_manifest') || $request->boolean('active_only') || ($currentUser->isPetugasLapangan() && ! $request->filled('status'))) {
             $today = now()->toDateString();
             $query->where(function ($q) use ($today) {
-                $q->whereNotIn('status', ['selesai', 'dibatalkan', 'batal'])
+                $q->whereNotIn('status', ['selesai', 'dibatalkan', 'batal', 'ditolak'])
                     ->orWhere(function ($sub) use ($today) {
                         $sub->where('status', 'selesai')
                             ->whereDate('tanggal_penjemputan', $today);
@@ -528,64 +528,6 @@ class TrackingController extends Controller
     }
 
     /**
-     * Start a new pickup session or reset daily route pickup points (TRK-F-001).
-     */
-    public function renewRouteSession(Request $request, string $routeCode): JsonResponse
-    {
-        /** @var User $currentUser */
-        $currentUser = $request->user();
-
-        abort_unless(
-            $currentUser->isPetugasLapangan() || $currentUser->isAdminDlh(),
-            Response::HTTP_FORBIDDEN,
-            'Hanya petugas lapangan atau Admin DLH yang dapat memperbarui sesi rute.'
-        );
-
-        $today = now()->toDateString();
-        $targetPetugasId = $currentUser->isPetugasLapangan() ? $currentUser->id : null;
-
-        $route = RouteAssignment::query()
-            ->where('route_code', $routeCode)
-            ->where('is_active', true)
-            ->firstOrFail();
-
-        if ($currentUser->isPetugasLapangan()) {
-            abort_unless(
-                $route->petugas_id === $currentUser->id,
-                Response::HTTP_FORBIDDEN,
-                'Petugas hanya dapat memperbarui sesi rute yang ditugaskan kepadanya.'
-            );
-        }
-
-        $query = PickupSchedule::query()
-            ->where('id_wilayah_rute', $routeCode)
-            ->whereDate('tanggal_penjemputan', $today);
-
-        if ($targetPetugasId) {
-            $query->where('petugas_id', $targetPetugasId);
-        }
-
-        $existing = $query->get();
-
-        foreach ($existing as $schedule) {
-            WasteWeighing::where('pickup_schedule_id', $schedule->id)
-                ->update(['pickup_schedule_id' => null]);
-
-            $schedule->update(['status' => 'terjadwal']);
-        }
-
-        $refreshed = (clone $query)->with(['petugas:id,name', 'warga:id,name'])->get();
-
-        return response()->json([
-            'success' => true,
-            'message' => $existing->isEmpty()
-                ? "Tidak ada jadwal penjemputan rute {$routeCode} untuk diperbarui hari ini."
-                : "Sesi penjemputan rute {$routeCode} berhasil diperbarui. Titik penjemputan warga telah aktif kembali.",
-            'data' => $refreshed,
-        ], Response::HTTP_OK);
-    }
-
-    /**
      * Update the progress status of a pickup schedule owned by the petugas.
      *
      * @throws ValidationException
@@ -602,15 +544,36 @@ class TrackingController extends Controller
 
         $validated = $request->validated();
         $status = $validated['status'];
+
+        if ($pickupSchedule->status === $status) {
+            $message = match ($status) {
+                'ditolak' => 'Jadwal penjemputan sudah berstatus ditolak.',
+                'batal' => 'Jadwal penjemputan sudah dibatalkan.',
+                'selesai' => 'Jadwal penjemputan sudah selesai.',
+                'berlangsung' => 'Jadwal penjemputan sedang berlangsung.',
+                default => 'Status jadwal penjemputan sudah sesuai.',
+            };
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => $pickupSchedule,
+            ], Response::HTTP_OK);
+        }
+
         $allowedTransitions = [
-            'terjadwal' => ['berlangsung', 'batal'],
-            'berlangsung' => ['selesai', 'batal'],
+            'terjadwal' => ['berlangsung', 'batal', 'ditolak'],
+            'berlangsung' => ['selesai', 'batal', 'ditolak'],
         ];
 
         if (! in_array($status, $allowedTransitions[$pickupSchedule->status] ?? [], true)) {
             throw ValidationException::withMessages([
                 'status' => ['Perubahan status jadwal tidak valid.'],
             ]);
+        }
+
+        if (in_array($status, ['berlangsung', 'selesai', 'ditolak'], true)) {
+            $this->requireActiveRouteSession($pickupSchedule, $currentUser);
         }
 
         $updateData = ['status' => $status];
@@ -621,9 +584,15 @@ class TrackingController extends Controller
         $pickupSchedule->update($updateData);
         $pickupSchedule->load('petugas:id,name,phone_number');
 
+        $message = match ($status) {
+            'ditolak' => 'Jadwal penjemputan berhasil ditolak.',
+            'batal' => 'Jadwal penjemputan berhasil dibatalkan.',
+            default => 'Status jadwal penjemputan berhasil diperbarui.',
+        };
+
         return response()->json([
             'success' => true,
-            'message' => 'Status jadwal penjemputan berhasil diperbarui.',
+            'message' => $message,
             'data' => $pickupSchedule,
         ], Response::HTTP_OK);
     }
@@ -812,6 +781,8 @@ class TrackingController extends Controller
                     'warga_id' => ['Akun warga tidak sesuai dengan warga pada jadwal penjemputan.'],
                 ]);
             }
+
+            $this->requireActiveRouteSession($pickupSchedule);
         }
 
         $items = $validated['items'] ?? [
@@ -835,6 +806,10 @@ class TrackingController extends Controller
                         throw ValidationException::withMessages([
                             'pickup_schedule_id' => ['Jadwal penjemputan sudah selesai atau dibatalkan sehingga tidak dapat ditimbang ulang.'],
                         ]);
+                    }
+
+                    if ($lockedSchedule !== null) {
+                        $this->requireActiveRouteSession($lockedSchedule);
                     }
                 }
 
@@ -936,6 +911,31 @@ class TrackingController extends Controller
                 'total_saldo_poin_warga' => $result['saldo_poin_terbaru'],
             ],
         ], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Ensure pickup activity only happens after the assigned route starts from the depot.
+     */
+    private function requireActiveRouteSession(PickupSchedule $pickupSchedule, ?User $currentUser = null): ?RouteSession
+    {
+        if ($currentUser && $currentUser->isAdminDlh()) {
+            return null;
+        }
+
+        $routeSession = RouteSession::query()
+            ->where('route_code', $pickupSchedule->id_wilayah_rute)
+            ->where('petugas_id', $pickupSchedule->petugas_id)
+            ->today()
+            ->where('status', 'berlangsung')
+            ->first();
+
+        if ($routeSession === null) {
+            throw ValidationException::withMessages([
+                'route_session' => ['Mulai rute dari depo terlebih dahulu sebelum mengambil atau menimbang sampah warga.'],
+            ]);
+        }
+
+        return $routeSession;
     }
 
     /**

@@ -8,11 +8,11 @@
 @endphp
 
 <section {{ $attributes->class('overflow-hidden rounded-3xl border border-slate-200/85 bg-white shadow-[0_22px_55px_-38px_rgba(15,23,42,0.42)] dark:border-slate-800 dark:bg-slate-900') }}>
-    {{-- Cover Banner Civic Emerald × Warm Amber (matching Razen Executive Portal layout) --}}
-    <div class="relative h-32 overflow-hidden bg-linear-to-r from-civic-950 via-[#9c6a21] to-[#c6892e] sm:h-40 md:h-44 dark:from-slate-950 dark:via-[#4e340e] dark:to-[#784d14]">
-        <div class="civic-hero-grid opacity-20" aria-hidden="true"></div>
-        <span class="pointer-events-none -right-12 -bottom-14 absolute size-44 rounded-full border border-white/10 bg-white/5" aria-hidden="true"></span>
-        <span class="pointer-events-none top-4 left-1/3 absolute size-64 rounded-full border border-amber-300/10 bg-amber-400/5 blur-xl" aria-hidden="true"></span>
+    {{-- Cover Banner Civic Emerald --}}
+    <div class="relative h-32 overflow-hidden bg-linear-to-r from-civic-950 via-civic-800 to-civic-600 sm:h-40 md:h-44 dark:from-slate-950 dark:via-civic-950 dark:to-civic-800">
+        <div class="civic-hero-grid opacity-15" aria-hidden="true"></div>
+        <span class="pointer-events-none -right-12 -bottom-14 absolute size-44 rounded-full border border-civic-100/20 bg-civic-100/10" aria-hidden="true"></span>
+        <span class="pointer-events-none top-4 left-1/3 absolute size-64 rounded-full border border-civic-200/10 bg-civic-300/10 blur-xl" aria-hidden="true"></span>
     </div>
 
     {{-- Identity + Floating Metrics Row --}}

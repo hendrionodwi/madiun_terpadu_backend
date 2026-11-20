@@ -1,4 +1,19 @@
-@extends('layouts.public', ['title' => 'Portal Publik'])
+@extends('layouts.public', ['title' => __('portal.home.title')])
+
+@php
+    $isEnglish = app()->isLocale('en');
+    $localizedSetting = static function (string $key, string $fallback) use ($isEnglish, $portalSettings): string {
+        if ($isEnglish && filled($portalSettings[$key.'_en'] ?? null)) {
+            return (string) $portalSettings[$key.'_en'];
+        }
+
+        if (! $isEnglish && filled($portalSettings[$key] ?? null)) {
+            return (string) $portalSettings[$key];
+        }
+
+        return $fallback;
+    };
+@endphp
 
 @section('content')
     {{-- HERO SECTION (Background Foto Dinamis Penuh & Efek Fade Bawah - Inspirasi JAKI × Civic Emerald) --}}
@@ -8,14 +23,14 @@
             @if (!empty($portalSettings['hero_background_image']))
                 <img
                     src="{{ Storage::url($portalSettings['hero_background_image']) }}"
-                    alt="Background Kota Madiun"
+                    alt="{{ __('portal.home.background_alt') }}"
                     class="h-full w-full object-cover object-center"
                 >
             @else
                 {{-- Foto Default Pemandangan Smart City / Kota Madiun --}}
                 <img
                     src="https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=2000&q=80"
-                    alt="Background Kota Madiun"
+                    alt="{{ __('portal.home.background_alt') }}"
                     class="h-full w-full object-cover object-center"
                 >
             @endif
@@ -39,17 +54,17 @@
                         <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
                         <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-600"></span>
                     </span>
-                    {{ $portalSettings['hero_kicker'] ?? 'Portal Layanan Terpadu DLH Kota Madiun' }}
+                    {{ $localizedSetting('hero_kicker', __('portal.home.hero.kicker')) }}
                 </div>
 
                 {{-- Headline --}}
                 <h1 class="mt-5 font-display text-3xl font-extrabold leading-[1.15] tracking-[-0.03em] text-slate-950 sm:text-4xl lg:text-5xl">
-                    {{ $portalSettings['hero_title'] }}
+                    {{ $localizedSetting('hero_title', __('portal.home.hero.title')) }}
                 </h1>
 
                 {{-- Subtitle --}}
                 <p class="mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-                    {{ $portalSettings['hero_subtitle'] }}
+                    {{ $localizedSetting('hero_subtitle', __('portal.home.hero.subtitle')) }}
                 </p>
 
                 {{-- Quick Search Bar --}}
@@ -63,21 +78,21 @@
                             id="portal-search-input"
                             type="text"
                             name="search"
-                            placeholder="Cari nama TPS3R, kelurahan, atau rute..."
+                            placeholder="{{ __('portal.home.service_search_placeholder') }}"
                             class="min-h-11 w-full border-0 bg-transparent px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
                         >
                     </label>
                     <button type="submit" class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-civic-700 px-5 text-sm font-bold text-white hover:bg-civic-800">
-                        Cari layanan
+                        {{ __('portal.home.search_services') }}
                     </button>
                 </form>
 
                 {{-- Shortcut Wilayah Kecamatan --}}
                 <div class="mt-3.5 flex flex-wrap items-center gap-2 text-xs">
-                    <span class="font-semibold text-slate-500">Kecamatan:</span>
+                    <span class="font-semibold text-slate-500">{{ __('portal.common.district') }}:</span>
                     @foreach (['Kartoharjo', 'Manguharjo', 'Taman'] as $districtShortcut)
                         <a href="{{ route('public.services', ['district' => $districtShortcut]) }}" class="rounded-full border border-civic-200 bg-white px-3 py-1 font-semibold text-civic-800 transition hover:border-civic-400 hover:bg-civic-50">
-                            Kec. {{ $districtShortcut }}
+                            {{ __('portal.common.district_short') }} {{ $districtShortcut }}
                         </a>
                     @endforeach
                 </div>
@@ -86,15 +101,15 @@
                 <div class="mt-7 flex flex-wrap items-center gap-3">
                     <a href="{{ $portalSettings['hero_cta_primary_link'] ?? '#unduh-aplikasi' }}" class="group inline-flex min-h-12 items-center gap-2.5 rounded-xl bg-civic-700 px-6 text-sm font-bold text-white shadow-md shadow-civic-700/20 transition hover:-translate-y-0.5 hover:bg-civic-800">
                         <flux:icon.device-phone-mobile class="size-5 shrink-0" />
-                        <span>{{ $portalSettings['hero_cta_primary_text'] ?? 'Unduh Aplikasi Warga' }}</span>
+                        <span>{{ $localizedSetting('hero_cta_primary_text', __('portal.home.hero.primary_cta')) }}</span>
                     </a>
                     <a href="{{ $portalSettings['hero_cta_secondary_link'] ?? route('public.services') }}" class="inline-flex min-h-12 items-center gap-2 rounded-xl border border-civic-200 bg-white px-5 text-sm font-bold text-civic-800 shadow-2xs transition hover:border-civic-400 hover:bg-civic-50">
                         <flux:icon.map class="size-4 shrink-0 text-civic-700" />
-                        <span>{{ $portalSettings['hero_cta_secondary_text'] ?? 'Jadwal & Peta Armada' }}</span>
+                        <span>{{ $localizedSetting('hero_cta_secondary_text', __('portal.home.hero.secondary_cta')) }}</span>
                     </a>
                     <a href="{{ route('public.marketplace') }}" class="inline-flex min-h-12 items-center gap-1.5 rounded-xl px-4 text-sm font-bold text-slate-700 hover:text-civic-700">
                         <flux:icon.shopping-bag class="size-4 shrink-0 text-civic-700" />
-                        <span>Marketplace</span>
+                        <span>{{ __('portal.navigation.marketplace') }}</span>
                     </a>
                 </div>
             </div>
@@ -112,7 +127,7 @@
                         </div>
                         <div>
                             <p class="font-display text-2xl font-extrabold text-slate-900 tabular-nums sm:text-3xl">{{ number_format($statistics['facilities'], 0, ',', '.') }}</p>
-                            <p class="text-xs font-semibold text-slate-500">Fasilitas TPS3R Aktif</p>
+                            <p class="text-xs font-semibold text-slate-500">{{ __('portal.home.stats.facilities') }}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-3.5 lg:px-6">
@@ -121,7 +136,7 @@
                         </div>
                         <div>
                             <p class="font-display text-2xl font-extrabold text-slate-900 tabular-nums sm:text-3xl">{{ number_format($statistics['routes'], 0, ',', '.') }}</p>
-                            <p class="text-xs font-semibold text-slate-500">Rute Terjadwal</p>
+                            <p class="text-xs font-semibold text-slate-500">{{ __('portal.home.stats.routes') }}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-3.5 lg:px-6">
@@ -130,7 +145,7 @@
                         </div>
                         <div>
                             <p class="font-display text-2xl font-extrabold text-slate-900 tabular-nums sm:text-3xl">{{ number_format($statistics['products'], 0, ',', '.') }}</p>
-                            <p class="text-xs font-semibold text-slate-500">Produk Daur Ulang</p>
+                            <p class="text-xs font-semibold text-slate-500">{{ __('portal.home.stats.products') }}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-3.5 lg:px-6">
@@ -139,7 +154,7 @@
                         </div>
                         <div>
                             <p class="font-display text-2xl font-extrabold text-slate-900 tabular-nums sm:text-3xl">{{ number_format($statistics['residents'], 0, ',', '.') }}</p>
-                            <p class="text-xs font-semibold text-slate-500">Warga Terhubung</p>
+                            <p class="text-xs font-semibold text-slate-500">{{ __('portal.home.stats.residents') }}</p>
                         </div>
                     </div>
                 </div>
@@ -156,14 +171,14 @@
             foreach ($announcements->take(3) as $ann) {
                 $sliderItems->push([
                     'type' => 'announcement',
-                    'badge' => 'Pengumuman Resmi',
+                    'badge' => __('portal.home.slider.announcement_badge'),
                     'badge_color' => 'bg-amber-100 text-amber-900 border-amber-200',
                     'icon_box' => 'bg-amber-50 border-amber-200 text-amber-800',
                     'title' => $ann->title,
                     'desc' => $ann->summary ?: Str::limit(strip_tags($ann->content), 120),
                     'date' => $ann->published_at?->translatedFormat('d F Y'),
                     'link' => route('public.services') . '#pengumuman',
-                    'link_text' => 'Lihat Pengumuman',
+                    'link_text' => __('portal.home.slider.announcement_link'),
                     'icon' => 'megaphone',
                 ]);
             }
@@ -172,14 +187,14 @@
             foreach ($articles->take(3) as $art) {
                 $sliderItems->push([
                     'type' => 'education',
-                    'badge' => 'Edukasi & Tips',
+                    'badge' => __('portal.home.slider.education_badge'),
                     'badge_color' => 'bg-emerald-100 text-emerald-900 border-emerald-200',
                     'icon_box' => 'bg-emerald-50 border-emerald-200 text-emerald-800',
                     'title' => $art->judul,
                     'desc' => $art->ringkasan ?: Str::limit(strip_tags($art->isi ?? ''), 120),
                     'date' => $art->published_at?->translatedFormat('d F Y'),
                     'link' => route('portal.articles.show', $art),
-                    'link_text' => 'Baca Panduan',
+                    'link_text' => __('portal.home.slider.education_link'),
                     'icon' => 'book-open',
                 ]);
             }
@@ -188,14 +203,14 @@
             if ($sliderItems->isEmpty()) {
                 $sliderItems->push([
                     'type' => 'info',
-                    'badge' => 'Program Unggulan',
+                    'badge' => __('portal.home.slider.program_badge'),
                     'badge_color' => 'bg-civic-100 text-civic-800 border-civic-200',
                     'icon_box' => 'bg-civic-50 border-civic-200 text-civic-800',
-                    'title' => 'Gerakan Madiun Kota Bersih: Pilah dari Sumber Rumah Tangga',
-                    'desc' => 'Dukung kelestarian lingkungan dengan memilah sampah organik dan anorganik. Dapatkan insentif poin yang bisa ditukar produk ramah lingkungan.',
+                    'title' => __('portal.home.slider.program_title'),
+                    'desc' => __('portal.home.slider.program_description'),
                     'date' => now()->translatedFormat('d F Y'),
                     'link' => route('public.education'),
-                    'link_text' => 'Pelajari Cara Pemilahan',
+                    'link_text' => __('portal.home.slider.program_link'),
                     'icon' => 'sparkles',
                 ]);
             }
@@ -321,7 +336,7 @@
                                     type="button"
                                     @click="prev()"
                                     class="flex size-7 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-                                    aria-label="Slide Sebelumnya"
+                                    aria-label="{{ __('portal.home.slider.previous') }}"
                                 >
                                     <flux:icon.chevron-left class="size-4" />
                                 </button>
@@ -330,7 +345,7 @@
                                     @click="next()"
                                     data-test="home-content-slider-next"
                                     class="flex size-7 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-                                    aria-label="Slide Selanjutnya"
+                                    aria-label="{{ __('portal.home.slider.next') }}"
                                 >
                                     <flux:icon.chevron-right class="size-4" />
                                 </button>
@@ -358,13 +373,13 @@
                     <div class="lg:col-span-7">
                         <span class="inline-flex items-center gap-1.5 rounded-full bg-civic-100 px-3 py-1 text-xs font-bold text-civic-800">
                             <flux:icon.sparkles class="size-3.5 text-civic-700" />
-                            Aplikasi Warga Resmi Kota Madiun
+                            {{ __('portal.home.app.badge') }}
                         </span>
                         <h2 class="mt-3 font-display text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">
-                            {{ $portalSettings['app_download_title'] ?? 'Semua Urusan Sampah Lingkungan Selesai Lewat Ponsel' }}
+                            {{ $localizedSetting('app_download_title', __('portal.home.app.title')) }}
                         </h2>
                         <p class="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
-                            {{ $portalSettings['app_download_subtitle'] ?? 'Aplikasi mobile Madiun Terpadu dirancang khusus untuk memudahkan warga memantau armada keliling, mengajukan jadwal penjemputan berkala, dan mencatat timbangan sampah langsung di depan rumah.' }}
+                            {{ $localizedSetting('app_download_subtitle', __('portal.home.app.subtitle')) }}
                         </p>
 
                         <div class="mt-6 grid gap-4 sm:grid-cols-3">
@@ -372,22 +387,22 @@
                                 <div class="flex size-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
                                     <flux:icon.map-pin class="size-5" />
                                 </div>
-                                <h4 class="mt-3 text-xs font-extrabold text-slate-900">Lacak Truk Real-time</h4>
-                                <p class="mt-1 text-[11px] leading-relaxed text-slate-500">Lihat pergerakan armada keliling di kelurahan Anda.</p>
+                                <h4 class="mt-3 text-xs font-extrabold text-slate-900">{{ __('portal.home.app.track_title') }}</h4>
+                                <p class="mt-1 text-[11px] leading-relaxed text-slate-500">{{ __('portal.home.app.track_description') }}</p>
                             </div>
                             <div class="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs">
                                 <div class="flex size-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
                                     <flux:icon.bell class="size-5" />
                                 </div>
-                                <h4 class="mt-3 text-xs font-extrabold text-slate-900">Pengingat Jadwal</h4>
-                                <p class="mt-1 text-[11px] leading-relaxed text-slate-500">Notifikasi otomatis sebelum armada tiba di depan pagar.</p>
+                                <h4 class="mt-3 text-xs font-extrabold text-slate-900">{{ __('portal.home.app.reminder_title') }}</h4>
+                                <p class="mt-1 text-[11px] leading-relaxed text-slate-500">{{ __('portal.home.app.reminder_description') }}</p>
                             </div>
                             <div class="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs">
                                 <div class="flex size-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
                                     <flux:icon.banknotes class="size-5" />
                                 </div>
-                                <h4 class="mt-3 text-xs font-extrabold text-slate-900">Poin Jadi Rupiah</h4>
-                                <p class="mt-1 text-[11px] leading-relaxed text-slate-500">Hasil pilahan ditimbang resmi & dicatat ke akun warga.</p>
+                                <h4 class="mt-3 text-xs font-extrabold text-slate-900">{{ __('portal.home.app.points_title') }}</h4>
+                                <p class="mt-1 text-[11px] leading-relaxed text-slate-500">{{ __('portal.home.app.points_description') }}</p>
                             </div>
                         </div>
 
@@ -395,15 +410,15 @@
                             @if ($hasDownloadTarget)
                                 <a href="{{ $absoluteDownloadUrl }}" download class="inline-flex min-h-12 items-center gap-2.5 rounded-xl bg-civic-700 px-6 text-sm font-bold text-white shadow-md shadow-civic-700/20 transition hover:bg-civic-800">
                                     <flux:icon.arrow-down-tray class="size-5" />
-                                    <span>{{ $portalSettings['app_download_button_text'] ?? 'Unduh APK Android (Gratis)' }}</span>
+                                    <span>{{ $localizedSetting('app_download_button_text', __('portal.home.app.download_button')) }}</span>
                                 </a>
                                 <span class="text-xs text-slate-500">
-                                    {{ $portalSettings['app_download_badge'] ?? 'Android 8.0+ · Gratis & Resmi DLH Kota Madiun' }}
+                                    {{ $localizedSetting('app_download_badge', __('portal.home.app.download_badge')) }}
                                 </span>
                             @else
                                 <span class="inline-flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 bg-slate-100 px-5 text-sm font-bold text-slate-500">
                                     <flux:icon.clock class="size-5" />
-                                    Unduhan belum tersedia
+                                    {{ __('portal.home.app.unavailable') }}
                                 </span>
                             @endif
                         </div>
@@ -414,7 +429,7 @@
                         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-center">
                             <div class="mx-auto flex size-44 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50/40 p-3 shadow-inner">
                                 @if (!empty($portalSettings['app_qr_custom_image']))
-                                    <img src="{{ Storage::url($portalSettings['app_qr_custom_image']) }}" alt="QR Code Unduh Aplikasi" class="size-36 rounded-lg object-contain">
+                                    <img src="{{ Storage::url($portalSettings['app_qr_custom_image']) }}" alt="{{ __('portal.home.app.qr_title') }}" class="size-36 rounded-lg object-contain">
                                 @elseif ($hasDownloadTarget)
                                     <div class="size-36 flex items-center justify-center [&_svg]:size-full [&_svg]:h-auto [&_svg]:w-full text-slate-900">
                                         {!! \App\Services\QrCodeService::generateSvg($absoluteDownloadUrl, 160) !!}
@@ -425,8 +440,8 @@
                                     </div>
                                 @endif
                             </div>
-                            <p class="mt-3 text-xs font-bold text-slate-900">Pindai QR untuk Unduh di HP</p>
-                            <p class="mt-0.5 text-[11px] text-slate-500">Arahkan kamera smartphone Android Anda</p>
+                            <p class="mt-3 text-xs font-bold text-slate-900">{{ __('portal.home.app.qr_title') }}</p>
+                            <p class="mt-0.5 text-[11px] text-slate-500">{{ __('portal.home.app.qr_description') }}</p>
                             <span @class([
                                 'mt-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold',
                                 'border-emerald-200 bg-emerald-50 text-emerald-700' => $hasQrCode,
@@ -437,7 +452,7 @@
                                     'animate-pulse bg-emerald-500' => $hasQrCode,
                                     'bg-slate-400' => ! $hasQrCode,
                                 ])></span>
-                                {{ $hasQrCode ? 'QR Code Siap Dipindai' : 'Menunggu tautan resmi' }}
+                                {{ $hasQrCode ? __('portal.home.app.qr_ready') : __('portal.home.app.waiting') }}
                             </span>
                         </div>
                     </div>
@@ -450,18 +465,18 @@
     <section class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8" data-scroll-fade>
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-civic-700">Direktori layanan</p>
-                <h2 class="mt-1.5 font-display text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">Pilih kebutuhan Anda</h2>
+                <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-civic-700">{{ __('portal.home.directory.kicker') }}</p>
+                <h2 class="mt-1.5 font-display text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">{{ __('portal.home.directory.title') }}</h2>
             </div>
-            <p class="text-sm text-slate-500">Akses cepat modul layanan persampahan Kota Madiun.</p>
+            <p class="text-sm text-slate-500">{{ __('portal.home.directory.description') }}</p>
         </div>
 
         <div class="mt-6 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
             @foreach ([
-                ['title' => 'Jadwal & peta', 'text' => 'Cari rute pengangkutan dan titik TPS3R per kecamatan.', 'route' => 'public.services', 'meta' => $statistics['routes'].' rute aktif', 'icon' => 'map'],
-                ['title' => 'Edukasi pilah', 'text' => 'Panduan pemilahan 3 kategori, artikel, dan dokumen resmi.', 'route' => 'public.education', 'meta' => 'Panduan & SOP', 'icon' => 'book'],
-                ['title' => 'Marketplace', 'text' => 'Produk pupuk kompos dan kerajinan dari fasilitas TPS3R.', 'route' => 'public.marketplace', 'meta' => $statistics['products'].' produk siap beli', 'icon' => 'bag'],
-                ['title' => 'Aduan kebersihan', 'text' => 'Laporkan sampah liar atau masalah pelayanan langsung ke DLH.', 'route' => 'login', 'meta' => 'Respon cepat', 'icon' => 'chat'],
+                ['title' => __('portal.home.directory.schedule_title'), 'text' => __('portal.home.directory.schedule_copy'), 'route' => 'public.services', 'meta' => __('portal.home.directory.schedule_meta', ['count' => $statistics['routes']]), 'icon' => 'map'],
+                ['title' => __('portal.home.directory.education_title'), 'text' => __('portal.home.directory.education_copy'), 'route' => 'public.education', 'meta' => __('portal.home.directory.education_meta'), 'icon' => 'book'],
+                ['title' => __('portal.home.directory.marketplace_title'), 'text' => __('portal.home.directory.marketplace_copy'), 'route' => 'public.marketplace', 'meta' => __('portal.home.directory.marketplace_meta', ['count' => $statistics['products']]), 'icon' => 'bag'],
+                ['title' => __('portal.home.directory.report_title'), 'text' => __('portal.home.directory.report_copy'), 'route' => 'login', 'meta' => __('portal.home.directory.report_meta'), 'icon' => 'chat'],
             ] as $card)
                 <a href="{{ route($card['route']) }}" class="civic-card-interactive group flex flex-col justify-between p-5">
                     <div>
@@ -493,18 +508,18 @@
         <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
             <div class="grid gap-8 lg:grid-cols-12 lg:items-start">
                 <div class="lg:col-span-4">
-                    <span class="inline-flex rounded-md bg-civic-700 px-2.5 py-1 text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-white">Fasilitas Resmi</span>
-                    <h2 class="mt-3 font-display text-3xl font-extrabold tracking-tight text-slate-950">TPS3R Kota Madiun</h2>
+                    <span class="inline-flex rounded-md bg-civic-700 px-2.5 py-1 text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-white">{{ __('portal.home.facilities.badge') }}</span>
+                    <h2 class="mt-3 font-display text-3xl font-extrabold tracking-tight text-slate-950">{{ __('portal.home.facilities.title') }}</h2>
                     <p class="mt-3 text-sm leading-6 text-slate-600">
-                        Daftar titik penerimaan dan pengolahan sampah terpadu yang aktif beroperasi melayani warga di Kota Madiun.
+                        {{ __('portal.home.facilities.description') }}
                     </p>
                     <div class="mt-6 flex flex-wrap gap-2 text-xs">
-                        <span class="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 shadow-2xs">3 Kecamatan</span>
-                        <span class="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 shadow-2xs">Kapasitas Harian Terdata</span>
-                        <span class="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 shadow-2xs">Pengolahan Kompos &amp; Maggot</span>
+                        <span class="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 shadow-2xs">{{ __('portal.home.facilities.districts') }}</span>
+                        <span class="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 shadow-2xs">{{ __('portal.home.facilities.capacity') }}</span>
+                        <span class="rounded-full bg-white px-3 py-1 font-semibold text-slate-700 shadow-2xs">{{ __('portal.home.facilities.processing') }}</span>
                     </div>
                     <a href="{{ route('public.services') }}" class="group mt-6 inline-flex min-h-10 items-center gap-2 rounded-xl bg-civic-700 px-4 text-sm font-bold text-white shadow-xs hover:bg-civic-800">
-                        Buka peta &amp; jadwal lengkap
+                        {{ __('portal.home.facilities.open_map') }}
                         <svg class="size-4 transition-transform duration-200 group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
                     </a>
                 </div>
@@ -517,25 +532,25 @@
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-2">
                                             <span class="size-2 rounded-full bg-emerald-500"></span>
-                                            <span class="text-xs font-semibold text-civic-700">{{ $facility->kelurahan ? 'Kel. '.$facility->kelurahan : 'Unit TPS3R' }}</span>
+                                            <span class="text-xs font-semibold text-civic-700">{{ $facility->kelurahan ? __('portal.common.village_short').' '.$facility->kelurahan : __('portal.home.facilities.unit') }}</span>
                                         </div>
                                         <h3 class="mt-1 font-display text-base font-extrabold text-slate-950">{{ $facility->nama_tps3r }}</h3>
                                     </div>
-                                    <span class="rounded-md bg-civic-100 px-2 py-0.5 text-[0.68rem] font-bold text-civic-800">Aktif</span>
+                                    <span class="rounded-md bg-civic-100 px-2 py-0.5 text-[0.68rem] font-bold text-civic-800">{{ __('portal.common.active') }}</span>
                                 </div>
                                 <p class="mt-2 line-clamp-2 text-xs leading-5 text-slate-600">{{ $facility->alamat }}</p>
                                 <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
                                     <span class="font-semibold text-slate-500">
-                                        {{ $facility->kecamatan ? 'Kec. '.$facility->kecamatan : 'Kota Madiun' }}{{ $facility->kapasitas_harian_kg ? ' · '.number_format($facility->kapasitas_harian_kg, 0, ',', '.').' kg/hari' : '' }}
+                                        {{ $facility->kecamatan ? __('portal.common.district_short').' '.$facility->kecamatan : __('portal.common.city') }}{{ $facility->kapasitas_harian_kg ? ' · '.number_format($facility->kapasitas_harian_kg, 0, ',', '.').' '.__('portal.common.per_day') : '' }}
                                     </span>
                                     <span class="inline-flex items-center gap-1 font-bold text-civic-700">
-                                        Lihat profil
+                                        {{ __('portal.home.facilities.view_profile') }}
                                         <svg class="size-3.5 transition-transform duration-200 group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" /></svg>
                                     </span>
                                 </div>
                             </a>
                         @empty
-                            <x-public.empty-state class="sm:col-span-2" title="Fasilitas belum dipublikasikan" description="Data fasilitas akan tampil setelah profil TPS3R diaktifkan." />
+                            <x-public.empty-state class="sm:col-span-2" :title="__('portal.home.facilities.empty_title')" :description="__('portal.home.facilities.empty_description')" />
                         @endforelse
                     </div>
                 </div>
@@ -548,11 +563,11 @@
         <section class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8" data-scroll-fade>
             <div class="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-civic-700">Edukasi terbaru</p>
-                    <h2 class="mt-2 font-display text-3xl font-extrabold tracking-tight text-slate-950">Panduan praktis warga</h2>
+                    <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-civic-700">{{ __('portal.home.education.kicker') }}</p>
+                    <h2 class="mt-2 font-display text-3xl font-extrabold tracking-tight text-slate-950">{{ __('portal.home.education.title') }}</h2>
                 </div>
                 <a href="{{ route('public.education') }}" class="group inline-flex min-h-10 items-center gap-2 rounded-xl border border-civic-200 bg-white px-4 text-sm font-bold text-civic-800 hover:border-civic-400 hover:bg-civic-50">
-                    Lihat semua edukasi
+                    {{ __('portal.home.education.view_all') }}
                     <svg class="size-4 transition-transform duration-200 group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
                 </a>
             </div>
@@ -574,24 +589,24 @@
                         @endif
                         <div class="flex flex-1 flex-col justify-between p-5">
                             <div>
-                                <span class="rounded-md bg-civic-50 px-2.5 py-1 text-[0.68rem] font-bold text-civic-700 ring-1 ring-civic-200">{{ $article->kategori_label ?? ($article->kategori ? ucfirst($article->kategori) : 'Panduan') }}</span>
+                                <span class="rounded-md bg-civic-50 px-2.5 py-1 text-[0.68rem] font-bold text-civic-700 ring-1 ring-civic-200">{{ $article->kategori_label ?? ($article->kategori ? ucfirst($article->kategori) : __('portal.home.education.guide')) }}</span>
                                 <h3 class="mt-3 line-clamp-2 min-h-[3rem] font-display text-base font-extrabold text-slate-950 group-hover:text-civic-700">
                                     <a href="{{ route('portal.articles.show', $article) }}" class="focus:outline-none">
                                         {{ $article->judul }}
                                     </a>
                                 </h3>
                                 <p class="mt-2 line-clamp-2 min-h-[2.5rem] text-xs leading-5 text-slate-600">
-                                    {{ $article->ringkasan ?: 'Pelajari panduan dan langkah praktis pemilahan serta pengelolaan sampah terpadu Kota Madiun.' }}
+                                    {{ $article->ringkasan ?: __('portal.home.education.fallback') }}
                                 </p>
                             </div>
                             <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
                                 <span>{{ $article->published_at?->translatedFormat('d F Y') ?? now()->translatedFormat('d F Y') }}</span>
-                                <span class="font-bold text-civic-700 group-hover:underline">Baca selengkapnya</span>
+                                <span class="font-bold text-civic-700 group-hover:underline">{{ __('portal.common.read_more') }}</span>
                             </div>
                         </div>
                     </article>
                 @empty
-                    <x-public.empty-state class="sm:col-span-2 lg:col-span-3" title="Belum ada artikel edukasi" description="Artikel dan tips pemilahan sampah akan segera dipublikasikan." />
+                    <x-public.empty-state class="sm:col-span-2 lg:col-span-3" :title="__('portal.home.education.empty_title')" :description="__('portal.home.education.empty_description')" />
                 @endforelse
             </div>
         </section>
@@ -603,11 +618,11 @@
             <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
                 <div class="flex flex-wrap items-end justify-between gap-4">
                     <div>
-                        <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-civic-700">Ekonomi sirkular</p>
-                        <h2 class="mt-2 font-display text-3xl font-extrabold tracking-tight text-slate-950">Produk olahan TPS3R</h2>
+                        <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-civic-700">{{ __('portal.home.marketplace.kicker') }}</p>
+                        <h2 class="mt-2 font-display text-3xl font-extrabold tracking-tight text-slate-950">{{ __('portal.home.marketplace.title') }}</h2>
                     </div>
                     <a href="{{ route('public.marketplace') }}" class="group inline-flex min-h-10 items-center gap-2 rounded-xl border border-civic-200 bg-white px-4 text-sm font-bold text-civic-800 hover:border-civic-400 hover:bg-civic-50">
-                        Buka katalog lengkap
+                        {{ __('portal.home.marketplace.open_catalog') }}
                         <svg class="size-4 transition-transform duration-200 group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
                     </a>
                 </div>
@@ -616,7 +631,7 @@
                     @forelse (($products ?? $featuredProducts ?? $featured_products ?? []) as $product)
                         <x-public.product-card :product="$product" />
                     @empty
-                        <x-public.empty-state class="sm:col-span-2 lg:col-span-4" title="Belum ada produk daur ulang" description="Katalog pupuk kompos dan kerajinan daur ulang akan segera tersedia." />
+                        <x-public.empty-state class="sm:col-span-2 lg:col-span-4" :title="__('portal.home.marketplace.empty_title')" :description="__('portal.home.marketplace.empty_description')" />
                     @endforelse
                 </div>
             </div>

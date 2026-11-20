@@ -170,6 +170,7 @@
                             <input type="file" name="foto" x-ref="newPhotoInput" accept="image/png,image/jpeg,image/webp" class="sr-only" @change="const file = $event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (e) => { newPhotoPreview = e.target.result; }; reader.readAsDataURL(file); } else { newPhotoPreview = null; }">
                         </label>
                     </div>
+                    <x-civic.image-upload-guidance ideal="1200 × 1200 px" ratio="1:1" minimum="800 × 800 px" max-size="5 MB" note="Gunakan latar bersih dan sisakan ruang di tepi agar produk tetap utuh saat gambar dipotong." />
                     @error('foto')<span class="text-xs text-red-600">{{ $message }}</span>@enderror
                 </div>
 
@@ -399,6 +400,7 @@
                                 <input type="file" name="foto" x-ref="editPhotoInput" accept="image/png,image/jpeg,image/webp" class="sr-only" @change="const file = $event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (e) => { editPhotoPreview = e.target.result; }; reader.readAsDataURL(file); } else { editPhotoPreview = null; }">
                             </label>
                         </div>
+                        <x-civic.image-upload-guidance ideal="1200 × 1200 px" ratio="1:1" minimum="800 × 800 px" max-size="5 MB" note="Posisikan produk di tengah dengan latar bersih." />
                     </div>
 
                     <input type="hidden" name="is_available" value="0">

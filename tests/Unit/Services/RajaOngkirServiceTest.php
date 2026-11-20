@@ -120,6 +120,53 @@ it('returns normalized domestic shipping costs', function (): void {
         && $request['courier'] === 'jne:jnt');
 });
 
+it('rejects couriers outside the configured allowlist without contacting the provider', function (): void {
+    Http::preventStrayRequests();
+    Http::fake([]);
+
+    expect(fn () => (new RajaOngkirService)->calculateDomesticCosts(501, 1200, 2500, 'pos'))
+        ->toThrow(InvalidArgumentException::class, 'Kurir pengiriman tidak valid.');
+    Http::assertNothingSent();
+});
+
+it('returns normalized waybill tracking data', function (): void {
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://rajaongkir.test/api/v1/track/waybill*' => Http::response([
+            'meta' => ['code' => 200, 'status' => 'success'],
+            'data' => [
+                'delivered' => true,
+                'summary' => ['status' => 'DELIVERED'],
+                'delivery_status' => [
+                    'status' => 'DELIVERED',
+                    'pod_receiver' => 'Siti Aminah',
+                    'pod_date' => '2026-11-17',
+                    'pod_time' => '10:15:00',
+                ],
+                'manifest' => [[
+                    'manifest_description' => 'Paket diterima oleh Siti Aminah',
+                ]],
+            ],
+        ]),
+    ]);
+
+    $tracking = (new RajaOngkirService)->trackWaybill('JNE123456789', 'JNE', '56789');
+
+    expect($tracking)->toBe([
+        'delivered' => true,
+        'status' => 'DELIVERED',
+        'description' => 'Paket diterima oleh Siti Aminah',
+        'receiver' => 'Siti Aminah',
+        'delivered_at' => '2026-11-17 10:15:00',
+    ]);
+    Http::assertSent(fn (Request $request): bool => $request->method() === 'POST'
+        && str_starts_with($request->url(), 'https://rajaongkir.test/api/v1/track/waybill?')
+        && $request->hasHeader('key', 'test-api-key')
+        && str_contains($request->url(), 'awb=JNE123456789')
+        && str_contains($request->url(), 'courier=jne')
+        && str_contains($request->url(), 'last_phone_number=56789'));
+});
+
 it('does not contact RajaOngkir when the integration is disabled', function (): void {
     config()->set('services.rajaongkir.enabled', false);
     Http::preventStrayRequests();

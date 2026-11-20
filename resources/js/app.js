@@ -1,3 +1,5 @@
+import { initDatePickers } from './ui/date-picker';
+
 const mapContainerSelector = '#adminRouteMap, #adminRouteCreateMap, #adminRouteEditMap, #publicServicesMap';
 let mapModulePromise = null;
 let portalScrollObserver = null;
@@ -420,6 +422,7 @@ const bootUi = () => {
     loadMapLibreWhenNeeded();
     initPortalScrollFade();
     initUniversalAsyncNavigation();
+    initDatePickers();
 };
 
 if (document.readyState === 'loading') {
@@ -429,3 +432,4 @@ if (document.readyState === 'loading') {
 }
 
 document.addEventListener('livewire:navigated', bootUi);
+document.addEventListener('madiun:ajax-updated', () => initDatePickers());

@@ -18,6 +18,85 @@ test('public portal pages are accessible without authentication', function () {
     $this->get(route('public.marketplace'))->assertOk()->assertSee('Marketplace daur ulang');
 });
 
+test('portal search returns matching content from each public module', function () {
+    $admin = User::factory()->adminDlh()->create();
+    $petugas = User::factory()->petugasLapangan()->create();
+    $seller = User::factory()->pengelolaTps3r()->create();
+
+    PengelolaTps3rProfile::factory()->create([
+        'user_id' => $seller->id,
+        'nama_tps3r' => 'TPS3R Sirkular Madiun',
+    ]);
+    RouteAssignment::factory()->create([
+        'petugas_id' => $petugas->id,
+        'assigned_by' => $admin->id,
+        'route_name' => 'Rute Sirkular Kota',
+        'is_active' => true,
+    ]);
+    EducationArticle::factory()->create(['judul' => 'Panduan Hidup Sirkular']);
+    PublicDocument::factory()->create(['judul' => 'Regulasi Ekonomi Sirkular']);
+    WasteProduct::factory()->create([
+        'seller_id' => $seller->id,
+        'nama_produk' => 'Pot Sirkular Daur Ulang',
+        'is_available' => true,
+        'stok' => 10,
+    ]);
+
+    $this->get(route('public.search', ['q' => 'Sirkular']))
+        ->assertOk()
+        ->assertSee('TPS3R Sirkular Madiun')
+        ->assertSee('Rute Sirkular Kota')
+        ->assertSee('Panduan Hidup Sirkular')
+        ->assertSee('Regulasi Ekonomi Sirkular')
+        ->assertSee('Pot Sirkular Daur Ulang');
+});
+
+test('portal search escapes user supplied query text', function () {
+    $this->get(route('public.search', ['q' => '<script>alert(1)</script>']))
+        ->assertOk()
+        ->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)
+        ->assertDontSee('<script>alert(1)</script>', false);
+});
+
+test('portal language preference persists in the session', function () {
+    $this->from(route('home'))
+        ->post(route('locale.update', 'en'))
+        ->assertRedirect(route('home'))
+        ->assertSessionHas('locale', 'en');
+
+    $this->withSession(['locale' => 'en'])
+        ->get(route('home'))
+        ->assertOk()
+        ->assertSee('<html lang="en"', false)
+        ->assertSee('Schedules &amp; Maps', false)
+        ->assertSee('Search the portal')
+        ->assertSee('Together for a Clean and Sustainable Madiun')
+        ->assertSee('Choose what you need')
+        ->assertSee('Active TPS3R Facilities');
+
+    $this->withSession(['locale' => 'en'])
+        ->get(route('public.services'))
+        ->assertOk()
+        ->assertSee('Service schedules &amp; map', false)
+        ->assertSee('Active operational data');
+
+    $this->withSession(['locale' => 'en'])
+        ->get(route('public.education'))
+        ->assertOk()
+        ->assertSee('Sort better, process more.')
+        ->assertSee('Waste categories');
+
+    $this->withSession(['locale' => 'en'])
+        ->get(route('public.marketplace'))
+        ->assertOk()
+        ->assertSee('Recycled Product Marketplace')
+        ->assertSee('Marketplace Governance Information');
+});
+
+test('portal rejects unsupported language preferences', function () {
+    $this->post('/bahasa/fr')->assertNotFound();
+});
+
 test('home does not advertise a missing default application download as active', function () {
     $this->get(route('home'))
         ->assertOk()
@@ -135,7 +214,7 @@ test('public facility profile presents official details products and approved de
         'layanan_tersedia' => ['Penerimaan sampah pilah', 'Edukasi lingkungan'],
         'kategori_sampah_diterima' => ['Sampah organik', 'Plastik PET'],
     ]);
-    WasteProduct::factory()->create([
+    $product = WasteProduct::factory()->create([
         'seller_id' => $seller->id,
         'nama_produk' => 'Kompos Kartoharjo',
         'is_available' => true,
@@ -156,6 +235,19 @@ test('public facility profile presents official details products and approved de
         ->assertSee('Sampah organik')
         ->assertSee('Kompos Kartoharjo')
         ->assertSee('Oro-Oro Ombo');
+
+    $this->withSession(['locale' => 'en'])
+        ->get(route('public.facilities.show', $facility))
+        ->assertOk()
+        ->assertSee('About the facility')
+        ->assertSee('Available services')
+        ->assertSee('Delivery areas');
+
+    $this->withSession(['locale' => 'en'])
+        ->get(route('marketplace.products.show', $product))
+        ->assertOk()
+        ->assertSee('Managed by')
+        ->assertSee('Sign in to buy');
 
     $this->get('/fasilitas/'.$facility->id)->assertNotFound();
 });

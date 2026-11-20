@@ -44,9 +44,10 @@
                 @if (auth()->user()->isAdminDlh())
                     <flux:sidebar.item icon="home" :href="route('dashboard.admin')" :current="request()->routeIs('dashboard.admin')" wire:navigate>{{ __('Monitoring Kota') }}</flux:sidebar.item>
 
-                    <flux:sidebar.group :heading="__('Operasional')" expandable :expanded="request()->routeIs('dashboard.admin.complaints*', 'dashboard.admin.routes*', 'dashboard.admin.reports*')" class="grid">
+                    <flux:sidebar.group :heading="__('Operasional')" expandable :expanded="request()->routeIs('dashboard.admin.complaints*', 'dashboard.admin.routes*', 'dashboard.admin.reports*', 'dashboard.admin.shipping-settings*')" class="grid">
                         <flux:sidebar.item icon="chat-bubble-left-right" :href="route('dashboard.admin.complaints')" :current="request()->routeIs('dashboard.admin.complaints*')" wire:navigate>{{ __('Pengaduan Warga') }}</flux:sidebar.item>
                         <flux:sidebar.item icon="map-pin" :href="route('dashboard.admin.routes')" :current="request()->routeIs('dashboard.admin.routes*')" wire:navigate>{{ __('Rute & Petugas') }}</flux:sidebar.item>
+                        <flux:sidebar.item icon="truck" :href="route('dashboard.admin.shipping-settings.index')" :current="request()->routeIs('dashboard.admin.shipping-settings*')" wire:navigate>{{ __('Pengaturan Pengiriman') }}</flux:sidebar.item>
                         <flux:sidebar.item icon="document-text" :href="route('dashboard.admin.reports')" :current="request()->routeIs('dashboard.admin.reports*')" wire:navigate>{{ __('Laporan Lingkungan') }}</flux:sidebar.item>
                     </flux:sidebar.group>
 
@@ -109,6 +110,14 @@
             <flux:sidebar.spacer />
 
             <flux:sidebar.nav class="civic-sidebar-secondary-nav mt-3 border-t border-civic-100/80 pt-3 dark:border-civic-900/70">
+                <flux:sidebar.item icon="bell" :href="route('notifications.index')" :current="request()->routeIs('notifications.*')" wire:navigate>
+                    <span class="flex w-full items-center justify-between gap-3">
+                        <span>{{ __('Notifikasi') }}</span>
+                        @if ($unreadNotificationCount > 0)
+                            <span class="min-w-5 rounded-full bg-red-600 px-1.5 py-0.5 text-center text-[0.65rem] font-black text-white">{{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}</span>
+                        @endif
+                    </span>
+                </flux:sidebar.item>
                 <flux:sidebar.item icon="globe-alt" :href="route('home')" target="_blank">{{ __('Portal Publik') }}</flux:sidebar.item>
                 @if (auth()->user()->isAdminDlh())
                     <flux:sidebar.item icon="credit-card" :href="route('dashboard.tps3r.payment-settings')" :current="request()->routeIs('dashboard.tps3r.payment-settings*')" wire:navigate>{{ __('Setup Midtrans') }}</flux:sidebar.item>
@@ -138,6 +147,13 @@
             </div>
 
             <flux:spacer />
+
+            <a href="{{ route('notifications.index') }}" class="relative mr-2 flex size-10 items-center justify-center rounded-xl text-slate-600 transition hover:bg-civic-50 hover:text-civic-800 dark:text-slate-300 dark:hover:bg-civic-950" aria-label="Notifikasi">
+                <flux:icon.bell class="size-5" />
+                @if ($unreadNotificationCount > 0)
+                    <span class="absolute right-0.5 top-0.5 flex min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[0.55rem] font-black leading-4 text-white">{{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}</span>
+                @endif
+            </a>
 
             <flux:dropdown position="top" align="end">
                 <flux:profile :initials="auth()->user()->initials()" :avatar="auth()->user()->avatar_url" icon-trailing="chevron-down" />

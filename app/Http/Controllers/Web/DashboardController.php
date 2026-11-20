@@ -57,6 +57,8 @@ class DashboardController extends Controller
         if ($user->isWarga()) {
             $wargaData = [
                 'profile' => $user->wargaProfile,
+                'totalSampahKg' => (float) WasteWeighing::where('warga_id', $user->id)
+                    ->sum('berat_kg'),
                 'riwayatTimbangan' => WasteWeighing::where('warga_id', $user->id)
                     ->with('petugas:id,name')
                     ->latest()

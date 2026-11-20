@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Notifications\PasswordResetNotification;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Features;
 
@@ -26,7 +28,22 @@ test('reset password link can be requested', function () {
 
     $this->post(route('password.request'), ['email' => $user->email]);
 
-    Notification::assertSentTo($user, ResetPassword::class);
+    Notification::assertSentTo($user, PasswordResetNotification::class);
+});
+
+test('password reset request does not reveal whether an email is registered', function () {
+    Notification::fake();
+
+    $user = User::factory()->create();
+    $genericMessage = 'Jika email terdaftar dalam sistem, tautan atur ulang kata sandi telah dikirim.';
+
+    $this->post(route('password.request'), ['email' => $user->email])
+        ->assertSessionHas('status', $genericMessage);
+
+    $this->post(route('password.request'), ['email' => 'tidak-terdaftar@example.test'])
+        ->assertSessionHas('status', $genericMessage);
+
+    Notification::assertSentTo($user, PasswordResetNotification::class);
 });
 
 test('reset password screen can be rendered', function () {
@@ -36,12 +53,17 @@ test('reset password screen can be rendered', function () {
 
     $this->post(route('password.request'), ['email' => $user->email]);
 
-    Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
-        $response = $this->get(route('password.reset', $notification->token));
+    Notification::assertSentTo($user, PasswordResetNotification::class, function ($notification) use ($user) {
+        $response = $this->get(route('password.reset', [
+            'token' => $notification->token,
+            'email' => $user->email,
+        ]));
 
         $response
             ->assertOk()
             ->assertSee('Buat Kata Sandi Baru')
+            ->assertSee('Buka di Aplikasi Android')
+            ->assertSee('madiunterpadu://auth/reset-password', false)
             ->assertDontSee('Kata sandi saat ini');
 
         return true;
@@ -50,22 +72,40 @@ test('reset password screen can be rendered', function () {
 
 test('password can be reset with valid token', function () {
     Notification::fake();
+    config()->set('session.driver', 'database');
 
-    $user = User::factory()->create();
+    $user = User::factory()->create([
+        'remember_token' => 'remember-token-lama',
+    ]);
+    $user->createToken('perangkat-lama');
+    DB::table('sessions')->insert([
+        'id' => 'sesi-perangkat-lama',
+        'user_id' => $user->id,
+        'ip_address' => '127.0.0.1',
+        'user_agent' => 'Pest',
+        'payload' => '',
+        'last_activity' => now()->timestamp,
+    ]);
 
     $this->post(route('password.request'), ['email' => $user->email]);
 
-    Notification::assertSentTo($user, ResetPassword::class, function ($notification) use ($user) {
+    Notification::assertSentTo($user, PasswordResetNotification::class, function ($notification) use ($user) {
         $response = $this->post(route('password.update'), [
             'token' => $notification->token,
             'email' => $user->email,
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'PasswordBaru123!',
+            'password_confirmation' => 'PasswordBaru123!',
         ]);
 
         $response
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('login', absolute: false));
+
+        $user->refresh();
+        expect(Hash::check('PasswordBaru123!', $user->password))->toBeTrue()
+            ->and($user->remember_token)->not->toBe('remember-token-lama')
+            ->and($user->tokens()->count())->toBe(0)
+            ->and(DB::table('sessions')->where('user_id', $user->id)->exists())->toBeFalse();
 
         return true;
     });

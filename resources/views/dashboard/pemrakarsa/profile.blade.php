@@ -129,6 +129,7 @@
                                         accept=".pdf,.jpg,.jpeg,.png"
                                         class="block w-full text-xs text-slate-700 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-civic-100 file:px-3.5 file:py-2 file:text-xs file:font-bold file:text-civic-800 hover:file:bg-civic-200 dark:text-slate-300 dark:file:bg-civic-900 dark:file:text-civic-200"
                                     >
+                                    <x-civic.image-upload-guidance ideal="1240 × 1754 px" ratio="A4/portrait" minimum="1000 × 1414 px" formats="PDF, JPG, atau PNG" max-size="5 MB" note="Jika memakai foto, pastikan seluruh dokumen terlihat, lurus, dan teks dapat dibaca." />
                                 </div>
                             </div>
                         </div>

@@ -106,6 +106,39 @@ test('seller can advance their fulfillment and the parent order status is synchr
     expect($order->fresh()->status)->toBe('diproses');
 });
 
+test('seller must record a waybill before sending a RajaOngkir order', function () {
+    $seller = User::factory()->pengelolaTps3r()->create();
+    $order = Order::factory()->create([
+        'status' => 'siap_dikirim',
+        'shipping_source' => 'rajaongkir',
+        'shipping_courier' => 'jne',
+    ]);
+    $fulfillment = OrderFulfillment::factory()->create([
+        'order_id' => $order->id,
+        'seller_id' => $seller->id,
+        'status' => OrderFulfillmentStatus::SiapDikirim,
+        'ready_at' => now(),
+    ]);
+    Sanctum::actingAs($seller, ['role:pengelola_tps3r']);
+
+    $this->patchJson("/api/v1/marketplace/fulfillments/{$fulfillment->public_id}", [
+        'status' => OrderFulfillmentStatus::Dikirim->value,
+    ])->assertUnprocessable()
+        ->assertInvalid(['tracking_number' => 'Nomor resi wajib diisi']);
+
+    $this->patchJson("/api/v1/marketplace/fulfillments/{$fulfillment->public_id}", [
+        'status' => OrderFulfillmentStatus::Dikirim->value,
+        'tracking_number' => 'jne-123456789',
+    ])->assertOk()
+        ->assertJsonPath('data.status', OrderFulfillmentStatus::Dikirim->value)
+        ->assertJsonPath('data.tracking_number', 'JNE-123456789');
+
+    expect($fulfillment->fresh())
+        ->status->toBe(OrderFulfillmentStatus::Dikirim)
+        ->tracking_number->toBe('JNE-123456789')
+        ->next_tracking_check_at->not->toBeNull();
+});
+
 test('parent order is completed after every seller fulfillment reaches a terminal status', function () {
     $seller = User::factory()->pengelolaTps3r()->create();
     $otherSeller = User::factory()->pengelolaTps3r()->create();

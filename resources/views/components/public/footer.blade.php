@@ -18,13 +18,13 @@
                     </svg>
                 </span>
                 <div>
-                    <p class="font-display text-sm font-extrabold text-civic-800">Pemerintah Kota Madiun</p>
-                    <p class="text-xs font-medium text-slate-500">Dinas Lingkungan Hidup</p>
+                    <p class="font-display text-sm font-extrabold text-civic-800">{{ __('portal.footer.government') }}</p>
+                    <p class="text-xs font-medium text-slate-500">{{ __('portal.footer.department') }}</p>
                 </div>
             </div>
 
             <p class="mt-4 max-w-sm text-sm leading-6 text-slate-600">
-                Portal resmi tata kelola persampahan dan perlindungan lingkungan hidup terpadu menuju Kota Madiun yang bersih, mandiri, sirkular, dan berkelanjutan.
+                {{ __('portal.footer.description') }}
             </p>
 
             <div class="mt-5 space-y-2 text-xs font-medium text-slate-600">
@@ -44,35 +44,35 @@
         </div>
 
         <div class="text-sm">
-            <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-900">Layanan &amp; Navigasi</p>
+            <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-900">{{ __('portal.footer.services_title') }}</p>
             <div class="mt-4 grid gap-2.5 text-slate-600">
-                <a href="{{ route('home') }}" class="hover:text-civic-700">Beranda</a>
-                <a href="{{ route('public.services') }}" class="hover:text-civic-700">Jadwal &amp; Rute Armada</a>
-                <a href="{{ route('public.services') }}" class="hover:text-civic-700">Jaringan TPS3R &amp; Bank Sampah</a>
-                <a href="{{ route('public.marketplace') }}" class="hover:text-civic-700">Marketplace Daur Ulang</a>
+                <a href="{{ route('home') }}" class="hover:text-civic-700">{{ __('portal.navigation.home') }}</a>
+                <a href="{{ route('public.services') }}" class="hover:text-civic-700">{{ __('portal.navigation.routes') }}</a>
+                <a href="{{ route('public.services') }}" class="hover:text-civic-700">{{ __('portal.footer.waste_network') }}</a>
+                <a href="{{ route('public.marketplace') }}" class="hover:text-civic-700">{{ __('portal.footer.recycling_marketplace') }}</a>
             </div>
         </div>
 
         <div class="text-sm">
-            <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-900">Keterbukaan Publik</p>
+            <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-900">{{ __('portal.footer.public_title') }}</p>
             <div class="mt-4 grid gap-2.5 text-slate-600">
-                <a href="{{ route('public.education') }}" class="hover:text-civic-700">Edukasi &amp; Publikasi Lingkungan</a>
-                <a href="{{ route('public.education') }}" class="hover:text-civic-700">Panduan &amp; Regulasi Resmi</a>
-                <a href="{{ route('login') }}" class="hover:text-civic-700">Masuk Layanan Terpadu</a>
-                <a href="{{ route('register') }}" class="hover:text-civic-700">Pendaftaran Akun Warga</a>
+                <a href="{{ route('public.education') }}" class="hover:text-civic-700">{{ __('portal.footer.education_publications') }}</a>
+                <a href="{{ route('public.education') }}" class="hover:text-civic-700">{{ __('portal.footer.official_guides') }}</a>
+                <a href="{{ route('login') }}" class="hover:text-civic-700">{{ __('portal.footer.integrated_login') }}</a>
+                <a href="{{ route('register') }}" class="hover:text-civic-700">{{ __('portal.footer.resident_registration') }}</a>
             </div>
 
             <div class="mt-5 rounded-xl border border-indigo-100 bg-slate-50 p-3.5 text-xs leading-5 text-slate-600">
-                <span class="font-bold text-slate-800">Catatan:</span> {{ $transparencyNote }}
+                <span class="font-bold text-slate-800">{{ __('portal.footer.note') }}</span> {{ $transparencyNote }}
             </div>
         </div>
     </div>
 
     <div class="border-t border-slate-100 bg-slate-50/70 px-4 py-4">
         <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 text-xs text-slate-500 sm:flex-row sm:px-2 lg:px-4">
-            <p>&copy; {{ now()->year }} Pemerintah Kota Madiun. Dinas Lingkungan Hidup.</p>
+            <p>&copy; {{ now()->year }} {{ __('portal.footer.copyright') }}</p>
             <span class="inline-flex items-center rounded-full border border-civic-200 bg-civic-50 px-3 py-1 font-bold text-civic-800">
-                Portal Resmi DLH Kota Madiun
+                {{ __('portal.footer.official_portal') }}
             </span>
         </div>
     </div>

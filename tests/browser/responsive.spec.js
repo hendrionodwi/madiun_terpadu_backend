@@ -65,6 +65,66 @@ test('home content slider keeps its height while changing slides', async ({ page
     }
 });
 
+test('public header search and language controls are interactive', async ({ page }) => {
+    test.skip(page.viewportSize().width < 1280, 'desktop header controls are visible from xl breakpoint');
+
+    await page.goto('/', { waitUntil: 'commit' });
+    await page.getByRole('button', { name: 'Buka pencarian portal' }).click();
+
+    const searchDialog = page.getByRole('dialog', { name: 'Cari di portal' });
+    await expect(searchDialog).toBeVisible();
+    await searchDialog.locator('input[name="q"]').fill('TPS3R');
+    await searchDialog.getByRole('button', { name: 'Cari', exact: true }).click();
+    await page.waitForURL(/\/cari\?q=TPS3R/);
+    await expect(page.getByRole('heading', { name: 'Pencarian portal' })).toBeVisible();
+
+    await page.goto('/', { waitUntil: 'commit' });
+    await page.getByTitle('Gunakan Bahasa Inggris').click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toContainText('Schedules & Maps');
+    await expect(page.getByRole('heading', { name: 'Together for a Clean and Sustainable Madiun' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Choose what you need' })).toBeVisible();
+
+    await page.goto('/layanan', { waitUntil: 'commit' });
+    await expect(page.getByRole('heading', { name: 'Service schedules & map' })).toBeVisible();
+
+    await page.goto('/marketplace', { waitUntil: 'commit' });
+    await expect(page.getByRole('heading', { name: 'Recycled Product Marketplace' })).toBeVisible();
+});
+
+test('dashboard date fields use the shared styled picker', async ({ page }) => {
+    await login(page, 'admin.dlh@madiunkota.go.id');
+    await page.goto('/dashboard/admin/broadcasts', { waitUntil: 'commit' });
+
+    const dateInput = page.locator('input[name="published_at"]').first();
+    await expect(dateInput).toHaveAttribute('data-civic-date-picker-ready', 'true');
+
+    const trigger = dateInput.locator('xpath=..').locator('.civic-date-picker-trigger');
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+
+    const picker = page.locator('.civic-date-picker-panel');
+    await expect(picker).toBeVisible();
+    await expect(picker.locator('.civic-date-picker-weekdays')).toContainText('Sen');
+    await picker.locator('[data-action="today"]').click();
+    await picker.locator('[data-action="apply"]').click();
+
+    await expect(dateInput).toHaveValue(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expectNoDocumentOverflow(page);
+});
+
+test('image uploads show sizing recommendations', async ({ page }) => {
+    await login(page, 'admin.dlh@madiunkota.go.id');
+    await page.goto('/dashboard/admin/portal-settings', { waitUntil: 'commit' });
+
+    const recommendations = page.locator('[data-image-upload-guidance]');
+    await expect(recommendations).toHaveCount(2);
+    await expect(recommendations.first()).toContainText('1920 × 1080 px');
+    await expect(recommendations.last()).toContainText('1200 × 1200 px');
+    await expectNoDocumentOverflow(page);
+});
+
 for (const role of roleDashboards) {
     test(`${role.name} dashboard remains responsive`, async ({ page }) => {
         await login(page, role.email);

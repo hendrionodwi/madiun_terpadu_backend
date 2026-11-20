@@ -7,6 +7,7 @@
 
         <form method="POST" action="{{ route('marketplace.checkout.store') }}" class="mt-7 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
             @csrf
+            <input type="hidden" name="seller_id" value="{{ $checkoutSellerId }}">
             <input type="hidden" name="shipping_source" :value="delivery === 'diantar' ? source : ''">
             <input type="hidden" name="destination_kelurahan" :value="destinationKelurahan">
             <input type="hidden" name="destination_kecamatan" :value="destinationKecamatan">
@@ -121,21 +122,23 @@
 @push('scripts')
     <script>
         function marketplaceCheckout() {
+            const config = {{ Illuminate\Support\Js::from($checkoutConfig) }};
+
             return {
-                delivery: @json(old('metode_pengiriman', 'ambil_mandiri')),
-                source: @json(old('shipping_source', 'local_tps3r')),
-                payment: @json(old('metode_pembayaran', 'midtrans')),
-                zones: @json($deliveryZones->map(fn ($zone) => ['key' => $zone->kelurahan.'|'.$zone->kecamatan, 'kelurahan' => $zone->kelurahan, 'kecamatan' => $zone->kecamatan, 'fee' => (int) $zone->delivery_fee])->values()),
-                selectedZoneKey: @json(old('destination_kelurahan') && old('destination_kecamatan') ? old('destination_kelurahan').'|'.old('destination_kecamatan') : ''),
-                destinationKelurahan: @json(old('destination_kelurahan', '')),
-                destinationKecamatan: @json(old('destination_kecamatan', '')),
-                destinationId: Number(@json(old('rajaongkir_destination_id', 0))),
+                delivery: config.delivery,
+                source: config.source,
+                payment: config.payment,
+                zones: config.zones,
+                selectedZoneKey: config.selectedZoneKey,
+                destinationKelurahan: config.destinationKelurahan,
+                destinationKecamatan: config.destinationKecamatan,
+                destinationId: Number(config.destinationId),
                 destinationSearch: '',
                 destinations: [],
                 quotes: [],
                 selectedQuote: null,
                 fee: 0,
-                originId: Number(@json($rajaongkirOriginId ?? 0)),
+                originId: Number(config.originId),
                 loadingDestinations: false,
                 loadingQuotes: false,
                 shippingError: '',
@@ -187,7 +190,7 @@
                     this.loadingDestinations = true;
                     this.shippingError = '';
                     try {
-                        const url = new URL(@json(route('marketplace.shipping.destinations')), window.location.origin);
+                        const url = new URL(config.destinationsUrl, window.location.origin);
                         url.searchParams.set('search', this.destinationSearch.trim());
                         const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
                         const payload = await response.json();
@@ -207,10 +210,10 @@
                     this.shippingError = '';
                     this.clearQuote();
                     try {
-                        const response = await fetch(@json(route('marketplace.shipping.quotes')), {
+                        const response = await fetch(config.quotesUrl, {
                             method: 'POST',
-                            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },
-                            body: JSON.stringify({ origin_id: this.originId, destination_id: this.destinationId, weight_grams: @json($cartWeight) }),
+                            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': config.csrfToken },
+                            body: JSON.stringify({ origin_id: this.originId, destination_id: this.destinationId, weight_grams: config.cartWeight }),
                         });
                         const payload = await response.json();
                         if (!response.ok) throw new Error(payload.message || 'Ongkir tidak dapat dihitung.');

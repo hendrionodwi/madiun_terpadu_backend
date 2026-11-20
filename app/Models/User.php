@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\UserRole;
+use App\Notifications\PasswordResetNotification;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -253,6 +254,16 @@ class User extends Authenticatable
         }
 
         return url('api/v1/media/'.ltrim($this->avatar, '/'));
+    }
+
+    /**
+     * Send the password reset notification using the branded recovery flow.
+     *
+     * @param  string  $token
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new PasswordResetNotification($token));
     }
 
     /**

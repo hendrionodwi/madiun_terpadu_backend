@@ -108,6 +108,13 @@
                             <span class="font-semibold">Catatan:</span> {{ $fulfillment->catatan_status }}
                         </p>
                     @endif
+                    @if ($fulfillment->tracking_number)
+                        <div class="grid gap-2 border-t border-slate-100 px-5 py-3 text-sm sm:grid-cols-3 dark:border-slate-800">
+                            <p><span class="text-slate-500 dark:text-slate-400">Resi:</span> <span class="font-mono font-semibold text-slate-950 dark:text-white">{{ $fulfillment->tracking_number }}</span></p>
+                            <p><span class="text-slate-500 dark:text-slate-400">Status kurir:</span> <span class="font-semibold text-slate-950 dark:text-white">{{ $fulfillment->courier_status ?: 'Belum diperiksa' }}</span></p>
+                            <p><span class="text-slate-500 dark:text-slate-400">Diterima:</span> <span class="font-semibold text-slate-950 dark:text-white">{{ $fulfillment->delivered_at?->format('d M Y, H:i') ?? '-' }}</span></p>
+                        </div>
+                    @endif
                 </article>
             @empty
                 <div class="civic-empty py-12">

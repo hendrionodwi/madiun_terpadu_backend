@@ -88,6 +88,29 @@
                             @csrf
                             @method('PATCH')
 
+                            @if (
+                                $order->shipping_source === 'rajaongkir'
+                                && in_array(\App\Enums\OrderFulfillmentStatus::Dikirim, $fulfillment->status->allowedTransitions(), true)
+                            )
+                                <label class="grid gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200">
+                                    <span>Nomor resi kurir <span class="text-red-600">*</span></span>
+                                    <input
+                                        type="text"
+                                        name="tracking_number"
+                                        value="{{ old('tracking_number', $fulfillment->tracking_number) }}"
+                                        maxlength="100"
+                                        required
+                                        autocomplete="off"
+                                        placeholder="Contoh: JNE1234567890"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold uppercase text-slate-900 shadow-sm outline-none transition focus:border-civic-500 focus:ring-2 focus:ring-civic-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-civic-900"
+                                    >
+                                    <span class="font-normal text-slate-500 dark:text-slate-400">Resi digunakan untuk memperbarui status paket secara otomatis.</span>
+                                    @error('tracking_number')
+                                        <span class="text-xs text-red-600 dark:text-red-400">{{ $message }}</span>
+                                    @enderror
+                                </label>
+                            @endif
+
                             <label class="grid gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200">
                                 <span>Catatan untuk pembeli (opsional)</span>
                                 <textarea name="catatan_status" rows="3" maxlength="500" placeholder="Misal: Pesanan sedang dipacking / Resi pengiriman / Alasan pembatalan" class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-civic-500 focus:ring-2 focus:ring-civic-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-civic-900">{{ old('catatan_status', $fulfillment->catatan_status) }}</textarea>
@@ -217,6 +240,41 @@
                                 {{ $order->alamat_pengiriman ?? 'Ambil di lokasi TPS3R' }}
                             </dd>
                         </div>
+                        @if ($order->shipping_source === 'rajaongkir')
+                            <div>
+                                <dt class="text-xs text-slate-500 dark:text-slate-400">Kurir luar kota</dt>
+                                <dd class="mt-1 font-semibold text-slate-950 dark:text-white">
+                                    {{ strtoupper($order->shipping_courier ?? '-') }} {{ $order->shipping_service ? '· '.$order->shipping_service : '' }}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs text-slate-500 dark:text-slate-400">Nomor resi</dt>
+                                <dd class="mt-1 font-mono font-semibold text-slate-950 dark:text-white">{{ $fulfillment->tracking_number ?? '-' }}</dd>
+                            </div>
+                            @if ($fulfillment->courier_status || $fulfillment->tracking_checked_at)
+                                <div class="rounded-xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-900/60 dark:bg-blue-950/30">
+                                    <dt class="text-xs font-bold text-blue-700 dark:text-blue-300">Status pelacakan</dt>
+                                    <dd class="mt-1 text-sm font-semibold text-blue-950 dark:text-blue-100">
+                                        {{ $fulfillment->courier_status ?: 'Menunggu pembaruan kurir' }}
+                                    </dd>
+                                    @if ($fulfillment->courier_status_description)
+                                        <p class="mt-1 text-xs text-blue-800 dark:text-blue-200">{{ $fulfillment->courier_status_description }}</p>
+                                    @endif
+                                    @if ($fulfillment->tracking_checked_at)
+                                        <p class="mt-1.5 text-[11px] text-blue-600 dark:text-blue-300">Diperiksa {{ $fulfillment->tracking_checked_at->format('d M Y, H:i') }}</p>
+                                    @endif
+                                </div>
+                            @endif
+                            @if ($fulfillment->delivered_at)
+                                <div class="rounded-xl border border-civic-200 bg-civic-50 p-3 dark:border-civic-900/60 dark:bg-civic-950/30">
+                                    <dt class="text-xs font-bold text-civic-700 dark:text-civic-300">Terdeteksi diterima kurir</dt>
+                                    <dd class="mt-1 text-sm font-semibold text-civic-950 dark:text-civic-100">{{ $fulfillment->delivered_at->format('d M Y, H:i') }}</dd>
+                                    @if ($fulfillment->auto_complete_at)
+                                        <p class="mt-1 text-xs text-civic-700 dark:text-civic-300">Otomatis selesai {{ $fulfillment->auto_complete_at->format('d M Y, H:i') }} jika pembeli tidak mengonfirmasi lebih awal.</p>
+                                    @endif
+                                </div>
+                            @endif
+                        @endif
                     </dl>
                 </div>
 

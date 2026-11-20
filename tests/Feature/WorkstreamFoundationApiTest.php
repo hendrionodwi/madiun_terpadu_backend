@@ -12,7 +12,7 @@ use App\Models\Tps3rWasteDeposit;
 use App\Models\User;
 use App\Models\WargaProfile;
 use App\Models\WasteProduct;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Notifications\PasswordResetNotification;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
@@ -37,7 +37,7 @@ test('forgot password and reset password recover account access and revoke old a
     $forgotResponse->assertOk()
         ->assertJsonPath('success', true);
 
-    Notification::assertSentTo($user, ResetPassword::class);
+    Notification::assertSentTo($user, PasswordResetNotification::class);
 
     $token = Password::broker()->createToken($user);
 

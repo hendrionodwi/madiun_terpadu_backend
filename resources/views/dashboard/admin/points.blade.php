@@ -296,6 +296,7 @@
                                                 <input type="hidden" name="status" value="paid">
                                                 <input name="payout_reference" required class="{{ $fieldClass }} w-full" placeholder="Referensi transfer/kwitansi">
                                                 <input type="file" name="payout_proof" required accept=".jpg,.jpeg,.png,.pdf" class="block w-full text-xs text-slate-500 file:mr-2 file:rounded-lg file:border-0 file:bg-civic-50 file:px-2 file:py-1.5 file:font-bold file:text-civic-700">
+                                                <x-civic.image-upload-guidance ideal="1200 × 1600 px" ratio="3:4/portrait" minimum="900 × 1200 px" formats="JPG, PNG, atau PDF" max-size="5 MB" note="Pastikan nominal, tanggal, dan nomor referensi terbaca." />
                                                 <input name="payout_note" class="{{ $fieldClass }} w-full" placeholder="Catatan pembayaran">
                                                 <button class="civic-button-primary !min-h-9 !py-1.5 !text-xs">Catat sudah dibayar</button>
                                             </form>
@@ -354,6 +355,7 @@
                         <label class="grid gap-1.5">
                             <span class="font-bold text-slate-700 dark:text-slate-300">Bukti serah-terima</span>
                             <input type="file" name="payout_proof" required accept=".jpg,.jpeg,.png,.pdf" class="block min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-500 file:mr-2 file:min-h-10 file:border-0 file:bg-civic-50 file:px-3 file:font-bold file:text-civic-700 dark:border-slate-700 dark:bg-slate-800">
+                            <x-civic.image-upload-guidance ideal="1200 × 1600 px" ratio="3:4/portrait" minimum="900 × 1200 px" formats="JPG, PNG, atau PDF" max-size="5 MB" note="Pastikan identitas transaksi, nominal, dan tanda terima terbaca." />
                         </label>
                         <label class="grid gap-1.5">
                             <span class="font-bold text-slate-700 dark:text-slate-300">Catatan <span class="font-normal text-slate-400">(opsional)</span></span>

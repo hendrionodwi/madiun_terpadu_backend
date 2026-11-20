@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\FundWithdrawalController;
 use App\Http\Controllers\Api\V1\MarketplaceController;
 use App\Http\Controllers\Api\V1\MasterDataController;
 use App\Http\Controllers\Api\V1\MediaController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OrderFulfillmentController;
 use App\Http\Controllers\Api\V1\PointLedgerController;
 use App\Http\Controllers\Api\V1\PublicPortalController;
@@ -36,8 +37,10 @@ Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('/login', [AuthController::class, 'login']);
         Route::post('/register', [AuthController::class, 'register']);
-        Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-        Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+        Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
+            ->middleware('throttle:password-recovery');
+        Route::post('/reset-password', [AuthController::class, 'resetPassword'])
+            ->middleware('throttle:password-recovery');
 
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('/me', [AuthController::class, 'me']);
@@ -78,6 +81,10 @@ Route::prefix('v1')->group(function () {
     // ==========================================
     Route::middleware('auth:sanctum')->group(function () {
 
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+
         Route::get('/warga/summary', [TrackingController::class, 'wargaSummary'])
             ->middleware('role:warga');
         Route::get('/petugas/summary', [TrackingController::class, 'petugasSummary'])
@@ -96,8 +103,6 @@ Route::prefix('v1')->group(function () {
             Route::post('/routes/{routeCode}/session/start', [TrackingController::class, 'startRouteSession'])
                 ->middleware('role:petugas_lapangan,admin_dlh');
             Route::post('/routes/{routeCode}/session/finish', [TrackingController::class, 'finishRouteSession'])
-                ->middleware('role:petugas_lapangan,admin_dlh');
-            Route::post('/routes/{routeCode}/renew-session', [TrackingController::class, 'renewRouteSession'])
                 ->middleware('role:petugas_lapangan,admin_dlh');
             Route::get('/schedules', [TrackingController::class, 'indexSchedules']);
             Route::get('/schedules/{pickupSchedule}', [TrackingController::class, 'showSchedule']);

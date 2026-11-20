@@ -13,6 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class TransitionOrderFulfillmentStatus
 {
+    public function __construct(
+        public SendMarketplaceTransactionNotifications $transactionNotifications,
+    ) {}
+
     /**
      * @throws ValidationException
      */
@@ -20,8 +24,9 @@ class TransitionOrderFulfillmentStatus
         OrderFulfillment $fulfillment,
         OrderFulfillmentStatus $targetStatus,
         ?string $note = null,
+        ?string $trackingNumber = null,
     ): OrderFulfillment {
-        return DB::transaction(function () use ($fulfillment, $targetStatus, $note): OrderFulfillment {
+        $result = DB::transaction(function () use ($fulfillment, $targetStatus, $note, $trackingNumber): array {
             $order = Order::query()
                 ->whereKey($fulfillment->order_id)
                 ->lockForUpdate()
@@ -38,9 +43,47 @@ class TransitionOrderFulfillmentStatus
                 ]);
             }
 
+            $trackingAttributes = [];
+            if ($targetStatus === OrderFulfillmentStatus::Dikirim && $order->shipping_source === 'rajaongkir') {
+                $normalizedTrackingNumber = mb_strtoupper(trim(
+                    $trackingNumber ?? $lockedFulfillment->tracking_number ?? '',
+                ));
+
+                if ($normalizedTrackingNumber === '') {
+                    throw ValidationException::withMessages([
+                        'tracking_number' => ['Nomor resi wajib diisi untuk pengiriman kurir luar kota.'],
+                    ]);
+                }
+
+                $trackingAttributes = [
+                    'tracking_number' => $normalizedTrackingNumber,
+                    'next_tracking_check_at' => now(),
+                    'tracking_last_error' => null,
+                ];
+
+                if ($lockedFulfillment->tracking_number !== $normalizedTrackingNumber) {
+                    $trackingAttributes = [
+                        ...$trackingAttributes,
+                        'courier_status' => null,
+                        'courier_status_description' => null,
+                        'tracking_checked_at' => null,
+                        'delivered_at' => null,
+                        'auto_complete_at' => null,
+                    ];
+                }
+            }
+
             // Callback status yang sama bersifat idempoten tanpa mengulang efek samping stok/poin
             if ($lockedFulfillment->status === $targetStatus) {
-                return $lockedFulfillment->fresh();
+                if ($trackingAttributes !== []) {
+                    $lockedFulfillment->update($trackingAttributes);
+                }
+
+                return [
+                    'fulfillment' => $lockedFulfillment->fresh(),
+                    'previous_status' => $lockedFulfillment->status,
+                    'changed' => false,
+                ];
             }
 
             if (
@@ -57,6 +100,7 @@ class TransitionOrderFulfillmentStatus
             $attributes = [
                 'status' => $targetStatus,
                 'catatan_status' => $note,
+                ...$trackingAttributes,
             ];
 
             if ($targetStatus->timestampColumn() !== null) {
@@ -110,8 +154,23 @@ class TransitionOrderFulfillmentStatus
 
             $this->syncOrderStatus($order, $allFulfillments);
 
-            return $lockedFulfillment->fresh();
+            return [
+                'fulfillment' => $lockedFulfillment->fresh(),
+                'previous_status' => $previousStatus,
+                'changed' => true,
+            ];
         });
+
+        /** @var OrderFulfillment $updatedFulfillment */
+        $updatedFulfillment = $result['fulfillment'];
+        if ($result['changed']) {
+            $this->transactionNotifications->fulfillmentStatusChanged(
+                $updatedFulfillment,
+                $result['previous_status'],
+            );
+        }
+
+        return $updatedFulfillment;
     }
 
     /** @param Collection<int, OrderFulfillment> $fulfillments */

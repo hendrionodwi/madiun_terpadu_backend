@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api\Auth;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Password;
 
 class RegisterRequest extends FormRequest
 {
@@ -25,7 +26,7 @@ class RegisterRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', Password::default(), 'confirmed'],
             'phone_number' => ['nullable', 'string', 'max:20'],
             'nik' => ['nullable', 'string', 'size:16', 'unique:warga_profiles,nik'],
             'alamat' => ['nullable', 'string', 'max:500'],

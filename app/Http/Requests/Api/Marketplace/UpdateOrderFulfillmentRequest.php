@@ -20,6 +20,7 @@ class UpdateOrderFulfillmentRequest extends FormRequest
         return [
             'status' => ['required', new Enum(OrderFulfillmentStatus::class)],
             'catatan_status' => ['nullable', 'string', 'max:500'],
+            'tracking_number' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9._\/-]+$/'],
         ];
     }
 
@@ -30,6 +31,8 @@ class UpdateOrderFulfillmentRequest extends FormRequest
             'status.required' => 'Status pemrosesan wajib dipilih.',
             'status.enum' => 'Status pemrosesan yang dipilih tidak valid.',
             'catatan_status.max' => 'Catatan status maksimal 500 karakter.',
+            'tracking_number.max' => 'Nomor resi maksimal 100 karakter.',
+            'tracking_number.regex' => 'Format nomor resi tidak valid.',
         ];
     }
 }

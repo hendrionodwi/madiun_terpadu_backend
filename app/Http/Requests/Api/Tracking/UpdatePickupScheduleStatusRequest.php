@@ -23,7 +23,7 @@ class UpdatePickupScheduleStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['required', 'string', 'in:berlangsung,selesai,batal'],
+            'status' => ['required', 'string', 'in:berlangsung,selesai,batal,ditolak'],
             'keterangan' => ['nullable', 'string', 'max:500'],
         ];
     }

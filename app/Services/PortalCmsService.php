@@ -432,6 +432,8 @@ class PortalCmsService
             'kelurahan' => "kelurahan like ? escape '!'",
             'kecamatan' => "kecamatan like ? escape '!'",
             'deskripsi' => "deskripsi like ? escape '!'",
+            'fokus_pengolahan' => "fokus_pengolahan like ? escape '!'",
+            'cakupan_wilayah' => "cakupan_wilayah like ? escape '!'",
             'subdistrict' => "subdistrict like ? escape '!'",
             'schedule_day' => "schedule_day like ? escape '!'",
             'route_code' => "route_code like ? escape '!'",

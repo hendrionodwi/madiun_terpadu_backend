@@ -13,7 +13,7 @@ use App\Models\WargaProfile;
 use App\Models\WasteWeighing;
 use Laravel\Sanctum\Sanctum;
 
-test('petugas cannot start, finish, or renew a route assigned to another petugas', function () {
+test('petugas cannot start or finish a route assigned to another petugas', function () {
     $assignedPetugas = User::factory()->petugasLapangan()->create();
     $otherPetugas = User::factory()->petugasLapangan()->create();
 
@@ -27,7 +27,6 @@ test('petugas cannot start, finish, or renew a route assigned to another petugas
 
     $this->postJson("/api/v1/tracking/routes/{$route->route_code}/session/start")->assertForbidden();
     $this->postJson("/api/v1/tracking/routes/{$route->route_code}/session/finish")->assertForbidden();
-    $this->postJson("/api/v1/tracking/routes/{$route->route_code}/renew-session")->assertForbidden();
 
     $this->assertDatabaseCount('route_sessions', 0);
 });
@@ -88,7 +87,7 @@ test('route session enforces valid state transitions and idempotent active start
     ])->assertOk()
         ->assertJsonPath('data.status', 'selesai');
 
-    // Tidak bisa finish ulang atau start langsung dari selesai tanpa renew-session
+    // Tidak bisa finish ulang atau memulai kembali sesi yang sudah selesai
     $this->postJson("/api/v1/tracking/routes/{$activeRoute->route_code}/session/finish")
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['status']);
@@ -96,12 +95,7 @@ test('route session enforces valid state transitions and idempotent active start
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['status']);
 
-    // Setelah renew-session, jadwal kembali terjadwal
-    $this->postJson("/api/v1/tracking/routes/{$activeRoute->route_code}/renew-session")
-        ->assertOk()
-        ->assertJsonPath('success', true);
-
-    expect($schedule->fresh()->status)->toBe('terjadwal');
+    expect($schedule->fresh()->status)->toBe('selesai');
     expect(RouteSession::where('route_assignment_id', $activeRoute->id)->count())->toBe(1);
 });
 
@@ -109,8 +103,14 @@ test('pickup schedule status transition blocks skipping state or modifying forei
     $petugas = User::factory()->petugasLapangan()->create();
     $otherPetugas = User::factory()->petugasLapangan()->create();
 
+    $route = RouteAssignment::factory()->create([
+        'petugas_id' => $petugas->id,
+        'route_code' => 'RUTE-STATUS-01',
+    ]);
+
     $schedule = PickupSchedule::factory()->create([
         'petugas_id' => $petugas->id,
+        'id_wilayah_rute' => $route->route_code,
         'status' => 'terjadwal',
     ]);
 
@@ -127,6 +127,15 @@ test('pickup schedule status transition blocks skipping state or modifying forei
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['status']);
 
+    RouteSession::create([
+        'route_assignment_id' => $route->id,
+        'petugas_id' => $petugas->id,
+        'route_code' => $route->route_code,
+        'tanggal' => now()->toDateString(),
+        'status' => 'berlangsung',
+        'waktu_mulai' => now()->format('H:i'),
+    ]);
+
     // Transisi valid: terjadwal -> berlangsung -> selesai
     $this->patchJson("/api/v1/tracking/schedules/{$schedule->id}/status", [
         'status' => 'berlangsung',
@@ -141,6 +150,44 @@ test('pickup schedule status transition blocks skipping state or modifying forei
         'status' => 'batal',
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['status']);
+});
+
+test('pickup and weighing require the assigned route session to be active', function () {
+    $petugas = User::factory()->petugasLapangan()->create();
+    $warga = User::factory()->warga()->create();
+    $route = RouteAssignment::factory()->create([
+        'petugas_id' => $petugas->id,
+        'route_code' => 'RUTE-DEPO-01',
+    ]);
+    $schedule = PickupSchedule::factory()->create([
+        'petugas_id' => $petugas->id,
+        'warga_id' => $warga->id,
+        'id_wilayah_rute' => $route->route_code,
+        'status' => 'terjadwal',
+    ]);
+
+    Sanctum::actingAs($petugas, ['role:petugas_lapangan']);
+
+    $this->patchJson("/api/v1/tracking/schedules/{$schedule->id}/status", [
+        'status' => 'berlangsung',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['route_session'])
+        ->assertJsonPath(
+            'errors.route_session.0',
+            'Mulai rute dari depo terlebih dahulu sebelum mengambil atau menimbang sampah warga.'
+        );
+
+    $this->postJson('/api/v1/tracking/weighings', [
+        'warga_id' => $warga->id,
+        'pickup_schedule_id' => $schedule->id,
+        'jenis_sampah' => 'organik',
+        'berat_kg' => 3.5,
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['route_session']);
+
+    expect($schedule->fresh()->status)->toBe('terjadwal');
+    $this->assertDatabaseCount('waste_weighings', 0);
+    $this->assertDatabaseCount('point_ledgers', 0);
 });
 
 test('petugas cannot verify already finalized or unassigned complaints', function () {
@@ -263,7 +310,22 @@ test('multi-item weighing replays idempotently by client_reference_id without do
     $schedule = PickupSchedule::factory()->create([
         'petugas_id' => $petugas->id,
         'warga_id' => $warga->id,
+        'id_wilayah_rute' => 'RUTE-MULTI-01',
         'status' => 'berlangsung',
+    ]);
+
+    $route = RouteAssignment::factory()->create([
+        'petugas_id' => $petugas->id,
+        'route_code' => $schedule->id_wilayah_rute,
+    ]);
+
+    RouteSession::create([
+        'route_assignment_id' => $route->id,
+        'petugas_id' => $petugas->id,
+        'route_code' => $route->route_code,
+        'tanggal' => now()->toDateString(),
+        'status' => 'berlangsung',
+        'waktu_mulai' => now()->format('H:i'),
     ]);
 
     Sanctum::actingAs($petugas, ['role:petugas_lapangan']);

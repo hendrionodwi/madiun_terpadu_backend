@@ -435,8 +435,11 @@
                 }
             });
 
-            // Plot Jadwal Armada Truk Berjalan
+            // Plot Jadwal Armada Truk Berjalan (hanya yang aktif / selesai hari ini, ditolak/batal tidak dimunculkan)
             schedulesData.forEach(function (s) {
+                if (s.status === 'ditolak' || s.status === 'batal' || s.status === 'dibatalkan') {
+                    return;
+                }
                 if (s.latitude && s.longitude) {
                     const slat = parseFloat(s.latitude);
                     const slng = parseFloat(s.longitude);

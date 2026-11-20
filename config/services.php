@@ -51,6 +51,15 @@ return [
         'timeout' => (int) env('RAJAONGKIR_TIMEOUT', 10),
         'destination_cache_seconds' => (int) env('RAJAONGKIR_DESTINATION_CACHE_SECONDS', 604800),
         'cost_cache_seconds' => (int) env('RAJAONGKIR_COST_CACHE_SECONDS', 900),
+        'tracking_poll_minutes' => (int) env('RAJAONGKIR_TRACKING_POLL_MINUTES', 180),
+        'tracking_daily_limit' => (int) env('RAJAONGKIR_TRACKING_DAILY_LIMIT', 80),
+        'tracking_batch_size' => (int) env('RAJAONGKIR_TRACKING_BATCH_SIZE', 20),
+        'auto_complete_hours' => (int) env('MARKETPLACE_AUTO_COMPLETE_HOURS', 48),
+        'simulation_auto_complete_minutes' => (int) env('MARKETPLACE_SIMULATION_AUTO_COMPLETE_MINUTES', 2),
+    ],
+
+    'mobile_app' => [
+        'password_reset_url' => env('MOBILE_PASSWORD_RESET_URL', 'madiunterpadu://auth/reset-password'),
     ],
 
 ];

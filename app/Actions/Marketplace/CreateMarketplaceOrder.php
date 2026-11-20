@@ -24,6 +24,7 @@ class CreateMarketplaceOrder
         public MidtransService $midtransService,
         public CancelMarketplaceOrder $cancelMarketplaceOrder,
         public MarketplaceShippingService $marketplaceShippingService,
+        public SendMarketplaceTransactionNotifications $transactionNotifications,
     ) {}
 
     /**
@@ -207,14 +208,17 @@ class CreateMarketplaceOrder
                     'order_id' => $order->nomor_pesanan,
                     'error' => $exception->getMessage(),
                 ]);
-                $this->cancelMarketplaceOrder->handle($order, 'Gateway pembayaran gagal diinisialisasi.');
+                $this->cancelMarketplaceOrder->handle($order, 'Gateway pembayaran gagal diinisialisasi.', false);
                 throw ValidationException::withMessages([
                     'metode_pembayaran' => 'Pembayaran online sedang tidak dapat diproses. Silakan coba kembali.',
                 ]);
             }
         }
 
-        return $order->fresh(['items.product', 'buyer:id,name,email,phone_number', 'fulfillments.seller:id,name']);
+        $order = $order->fresh(['items.product', 'buyer:id,name,email,phone_number', 'fulfillments.seller:id,name']);
+        $this->transactionNotifications->orderCreated($order);
+
+        return $order;
     }
 
     private function resolvePaymentProfile(int $sellerId, string $paymentMethod): ?PengelolaTps3rProfile

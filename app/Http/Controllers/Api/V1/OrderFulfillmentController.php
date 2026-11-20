@@ -80,6 +80,7 @@ class OrderFulfillmentController extends Controller
             $fulfillment,
             OrderFulfillmentStatus::from($validated['status']),
             $validated['catatan_status'] ?? null,
+            $validated['tracking_number'] ?? null,
         );
         $fulfillment = $this->sellerFulfillmentsQuery($seller)->findOrFail($fulfillment->id);
 
@@ -120,6 +121,12 @@ class OrderFulfillmentController extends Controller
                 $fulfillment->status->allowedTransitions(),
             ),
             'catatan_status' => $fulfillment->catatan_status,
+            'tracking_number' => $fulfillment->tracking_number,
+            'courier_status' => $fulfillment->courier_status,
+            'courier_status_description' => $fulfillment->courier_status_description,
+            'shipping_source' => $order->shipping_source,
+            'shipping_courier' => $order->shipping_courier,
+            'shipping_service' => $order->shipping_service,
             'subtotal' => (float) $order->items->sum('subtotal'),
             'metode_pembayaran' => $order->metode_pembayaran,
             'alamat_pengiriman' => $order->alamat_pengiriman,
@@ -138,6 +145,10 @@ class OrderFulfillmentController extends Controller
             ])->values(),
             'processed_at' => $fulfillment->processed_at?->toISOString(),
             'ready_at' => $fulfillment->ready_at?->toISOString(),
+            'shipped_at' => $fulfillment->shipped_at?->toISOString(),
+            'tracking_checked_at' => $fulfillment->tracking_checked_at?->toISOString(),
+            'delivered_at' => $fulfillment->delivered_at?->toISOString(),
+            'auto_complete_at' => $fulfillment->auto_complete_at?->toISOString(),
             'completed_at' => $fulfillment->completed_at?->toISOString(),
             'cancelled_at' => $fulfillment->cancelled_at?->toISOString(),
             'created_at' => $order->created_at?->toISOString(),

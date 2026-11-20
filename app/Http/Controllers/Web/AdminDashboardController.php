@@ -248,7 +248,7 @@ class AdminDashboardController extends Controller
             ->whereIn('id_wilayah_rute', $activeRouteCodes)
             ->where(function ($query) use ($today) {
                 // Tampilkan semua jadwal yang belum diambil/selesai dari hari apapun
-                $query->whereNotIn('status', ['selesai', 'dibatalkan', 'batal'])
+                $query->whereNotIn('status', ['selesai', 'dibatalkan', 'batal', 'ditolak'])
                     // Atau jadwal yang sudah diambil/selesai HANYA jika jadwalnya hari ini
                     ->orWhere(function ($sub) use ($today) {
                         $sub->where('status', 'selesai')

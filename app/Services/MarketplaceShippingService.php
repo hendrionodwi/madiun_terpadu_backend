@@ -147,6 +147,11 @@ final class MarketplaceShippingService
         $destinationId = (int) ($data['rajaongkir_destination_id'] ?? 0);
         $courier = mb_strtolower(trim((string) ($data['shipping_courier'] ?? '')));
         $service = trim((string) ($data['shipping_service'] ?? ''));
+        if (! $this->rajaOngkirService->isCourierAllowed($courier)) {
+            throw ValidationException::withMessages([
+                'shipping_courier' => 'Kurir tersebut tidak diaktifkan oleh pengelola sistem.',
+            ]);
+        }
         $quotes = $this->rajaOngkirService->calculateDomesticCosts(
             $profile->rajaongkir_origin_id,
             $destinationId,

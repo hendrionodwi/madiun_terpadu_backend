@@ -143,7 +143,7 @@
                             </div>
                             <div class="self-center">
                                 <label for="tps3r_foto" class="{{ $labelClass }}">Foto utama fasilitas</label>
-                                <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Rekomendasi 1200 × 800 px (rasio 3:2, lanskap). Pastikan objek utama berada di tengah. JPG, PNG, atau WebP, maksimal 4 MB.</p>
+                                <x-civic.image-upload-guidance ideal="1600 × 900 px" ratio="16:9" minimum="1200 × 675 px" max-size="4 MB" note="Pastikan bangunan atau aktivitas utama berada di tengah karena kartu fasilitas memakai beberapa ukuran potongan." />
                                 <input
                                     id="tps3r_foto"
                                     type="file"
@@ -220,6 +220,7 @@
                                         accept=".pdf,.jpg,.jpeg,.png"
                                         class="block w-full text-xs text-slate-700 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-civic-100 file:px-3.5 file:py-2 file:text-xs file:font-bold file:text-civic-800 hover:file:bg-civic-200 dark:text-slate-300 dark:file:bg-civic-900 dark:file:text-civic-200"
                                     >
+                                    <x-civic.image-upload-guidance ideal="1240 × 1754 px" ratio="A4/portrait" minimum="1000 × 1414 px" formats="PDF, JPG, atau PNG" max-size="5 MB" note="Jika memakai foto, pastikan seluruh dokumen terlihat, lurus, dan teks dapat dibaca." />
                                 </div>
                             </div>
 

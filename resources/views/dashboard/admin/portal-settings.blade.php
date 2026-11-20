@@ -49,7 +49,7 @@
                         {{-- Foto Background Hero --}}
                         <div class="lg:col-span-2">
                             <label class="{{ $labelClass }}">Foto Latar Belakang Hero (Background Banner Penuh)</label>
-                            <p class="text-[11px] text-slate-500 mb-2">Foto lanskap Kota Madiun, landmark, atau aktivitas lingkungan (rasio 16:9 disarankan, format PNG/JPG/WebP, maks. 5MB). Bagian bawah foto akan otomatis diberikan efek blur dan pudar (*fade-out*) menyatu halus dengan warna palet di bawahnya.</p>
+                            <x-civic.image-upload-guidance class="mb-3" ideal="1920 × 1080 px" ratio="16:9" minimum="1600 × 900 px" max-size="5 MB" note="Pilih foto lanskap dan letakkan objek utama di tengah; sisi gambar dapat terpotong pada layar ponsel." />
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                                 @if (!empty($portalSettings['hero_background_image']))
                                     <div class="relative shrink-0">
@@ -119,7 +119,7 @@
                         </div>
                         <div class="lg:col-span-2 border-t border-slate-100 pt-3 dark:border-slate-800">
                             <label class="{{ $labelClass }}">Gambar QR Code Kustom (Opsional)</label>
-                            <p class="text-[11px] text-slate-500 mb-2">Kosongkan untuk menggunakan QR Code dinamis otomatis dari tautan di atas. Unggah di sini jika Anda memiliki gambar QR berlogo resmi DLH khusus (format PNG, JPG, WebP, maks. 3MB).</p>
+                            <x-civic.image-upload-guidance class="mb-3" ideal="1200 × 1200 px" ratio="1:1" minimum="800 × 800 px" formats="PNG disarankan; JPG atau WebP" max-size="3 MB" note="Gunakan kontras tinggi dan sisakan ruang putih di sekeliling kode. Kosongkan untuk memakai QR otomatis." />
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                                 @if (!empty($portalSettings['app_qr_custom_image']))
                                     <div class="relative shrink-0">

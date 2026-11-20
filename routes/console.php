@@ -11,3 +11,15 @@ Artisan::command('inspire', function () {
 Schedule::command('retribution:generate-bills')
     ->monthlyOn(1, '00:10')
     ->withoutOverlapping();
+
+Schedule::command('marketplace:poll-shipments')
+    ->hourly()
+    ->withoutOverlapping(10);
+
+Schedule::command('marketplace:auto-complete-deliveries')
+    ->everyMinute()
+    ->withoutOverlapping(5);
+
+Schedule::command('auth:clear-resets')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping();

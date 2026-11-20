@@ -19,6 +19,14 @@ use Illuminate\Support\Carbon;
  * @property int $seller_id
  * @property OrderFulfillmentStatus $status
  * @property string|null $catatan_status
+ * @property string|null $tracking_number
+ * @property string|null $courier_status
+ * @property string|null $courier_status_description
+ * @property Carbon|null $tracking_checked_at
+ * @property Carbon|null $next_tracking_check_at
+ * @property string|null $tracking_last_error
+ * @property Carbon|null $delivered_at
+ * @property Carbon|null $auto_complete_at
  * @property Carbon|null $processed_at
  * @property Carbon|null $ready_at
  * @property Carbon|null $shipped_at
@@ -34,6 +42,14 @@ use Illuminate\Support\Carbon;
     'seller_id',
     'status',
     'catatan_status',
+    'tracking_number',
+    'courier_status',
+    'courier_status_description',
+    'tracking_checked_at',
+    'next_tracking_check_at',
+    'tracking_last_error',
+    'delivered_at',
+    'auto_complete_at',
     'processed_at',
     'ready_at',
     'shipped_at',
@@ -44,6 +60,9 @@ class OrderFulfillment extends Model
 {
     /** @use HasFactory<OrderFulfillmentFactory> */
     use HasFactory, HasUlids;
+
+    /** @var list<string> */
+    protected $hidden = ['tracking_last_error'];
 
     /** @return list<string> */
     public function uniqueIds(): array
@@ -61,6 +80,10 @@ class OrderFulfillment extends Model
     {
         return [
             'status' => OrderFulfillmentStatus::class,
+            'tracking_checked_at' => 'datetime',
+            'next_tracking_check_at' => 'datetime',
+            'delivered_at' => 'datetime',
+            'auto_complete_at' => 'datetime',
             'processed_at' => 'datetime',
             'ready_at' => 'datetime',
             'shipped_at' => 'datetime',

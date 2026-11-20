@@ -211,6 +211,37 @@ test('rajaongkir delivery rejects point payment before contacting the provider',
     $this->assertDatabaseCount('orders', 0);
 });
 
+test('rajaongkir delivery rejects a courier outside the system allowlist', function () {
+    config()->set([
+        'services.rajaongkir.enabled' => true,
+        'services.rajaongkir.api_key' => 'test-api-key',
+        'services.rajaongkir.base_url' => 'https://rajaongkir.test/api/v1',
+        'services.rajaongkir.couriers' => 'jne:jnt',
+    ]);
+    Http::preventStrayRequests();
+    Http::fake([]);
+    $buyer = User::factory()->warga()->create();
+    $seller = User::factory()->pengelolaTps3r()->create();
+    PengelolaTps3rProfile::factory()->create(['user_id' => $seller->id, 'rajaongkir_origin_id' => 501]);
+    $product = WasteProduct::factory()->create(['seller_id' => $seller->id]);
+    Sanctum::actingAs($buyer, ['role:warga']);
+
+    $this->postJson('/api/v1/marketplace/checkout', [
+        'items' => [['product_id' => $product->id, 'jumlah' => 1]],
+        'metode_pengiriman' => 'diantar',
+        'alamat_pengiriman' => 'Jl. Gajah Mada, Ponorogo',
+        'shipping_source' => 'rajaongkir',
+        'rajaongkir_destination_id' => 1200,
+        'shipping_courier' => 'pos',
+        'shipping_service' => 'REG',
+        'metode_pembayaran' => 'transfer_bank',
+    ])->assertUnprocessable()
+        ->assertInvalid(['shipping_courier' => 'tidak diaktifkan']);
+
+    Http::assertNothingSent();
+    $this->assertDatabaseCount('orders', 0);
+});
+
 test('checkout rejects products from different tps3r stores for every payment method', function (string $paymentMethod) {
     $buyer = User::factory()->warga()->create();
     $sellerA = User::factory()->pengelolaTps3r()->create();
@@ -543,6 +574,10 @@ test('users can browse list of tps3r stores with available product counts', func
 });
 
 test('users can view tps3r store detail and its active products', function () {
+    config()->set([
+        'services.rajaongkir.enabled' => true,
+        'services.rajaongkir.api_key' => 'test-api-key',
+    ]);
     $seller = User::factory()->pengelolaTps3r()->create([
         'name' => 'TPS3R Winongo Berseri',
         'phone_number' => '081234567890',
@@ -573,6 +608,7 @@ test('users can view tps3r store detail and its active products', function () {
                 'deskripsi' => 'Fasilitas pengolahan organik dan anorganik warga.',
                 'kontak_publik' => '0351-400001',
                 'layanan_tersedia' => ['Penerimaan sampah pilah'],
+                'is_rajaongkir_active' => true,
                 'total_products' => 1,
                 'products' => [
                     [
